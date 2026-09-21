@@ -232,7 +232,7 @@ export function Features() {
 }
 
 const games = [
-  { name: 'Counter-Strike 2', note: 'Your own servers with MatchZy Enhanced. Veto, live scores, demos and stats.', built: true },
+  { name: 'Counter-Strike 2', note: 'Your own servers with the Auto Tournament CS2 plugin. Veto, live scores, demos and stats.', built: true },
   { name: 'Team Fortress 2', note: 'Self-hosted servers, same model as CS2.' },
   { name: 'Dota 2', note: 'Lobbies created by a bot, results from the Steam Web API.' },
   { name: 'League of Legends', note: "Tournament codes and results through Riot's Tournament API." },
