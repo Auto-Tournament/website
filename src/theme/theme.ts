@@ -38,6 +38,9 @@ export const theme = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         'html, body': { overflowX: 'clip' },
+        html: { scrollBehavior: 'smooth', '@media (prefers-reduced-motion: reduce)': { scrollBehavior: 'auto' } },
+        // Keep anchored sections clear of the floating nav.
+        '[id]': { scrollMarginTop: '96px' },
         body: {
           backgroundImage: `radial-gradient(60rem 40rem at 50% -10%, ${color.bloom}, transparent 70%), radial-gradient(40rem 30rem at 90% 55%, ${color.bloom2}, transparent 70%)`,
           backgroundAttachment: 'fixed',

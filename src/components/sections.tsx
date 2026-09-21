@@ -74,7 +74,7 @@ export function Nav() {
           borderRadius: `${radius.pill}px`,
         }}
       >
-        <Box component="a" href="/" sx={{ display: 'flex', alignItems: 'center', gap: 1, textDecoration: 'none', color: 'inherit', fontFamily: fontDisplay, fontWeight: 600, whiteSpace: 'nowrap' }}>
+        <Box component="a" href="#top" aria-label="Auto Tournament, back to top" sx={{ display: 'flex', alignItems: 'center', gap: 1, textDecoration: 'none', color: 'inherit', fontFamily: fontDisplay, fontWeight: 600, whiteSpace: 'nowrap' }}>
           <Box component="img" src="/at-icon.svg" alt="" sx={{ width: 26, height: 26, borderRadius: '7px' }} />
           Auto Tournament
         </Box>
