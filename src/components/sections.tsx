@@ -115,12 +115,12 @@ export function Hero() {
           boxShadow: `0 24px 80px -20px ${color.accent}`,
         }}
       />
-      <Typography variant="h1" sx={{ maxWidth: '13ch', mx: 'auto' }}>
-        Set it up. We handle{' '}
+      <Typography variant="h1" sx={{ maxWidth: '15ch', mx: 'auto' }}>
+        Ditch the spreadsheet.{' '}
         <Box component="span" sx={{ color: color.accent, textDecoration: 'underline', textDecorationThickness: '0.08em', textUnderlineOffset: '0.12em' }}>
-          the rest
-        </Box>
-        .
+          Enjoy
+        </Box>{' '}
+        the LAN.
       </Typography>
       <Typography sx={{ mt: 3, mx: 'auto', maxWidth: '58ch', color: color.ink2, fontSize: '1.125rem' }}>
         Create the tournament and add your servers. Auto Tournament runs the veto, loads every match, tracks the scores and moves the bracket on, so you can

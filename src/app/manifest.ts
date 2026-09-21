@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Auto Tournament',
     short_name: 'Auto Tournament',
-    description: 'Self-hosted tournament platform. Set it up, we handle the rest.',
+    description: 'Self-hosted tournament platform. Ditch the spreadsheet, enjoy the LAN.',
     start_url: '/',
     display: 'browser',
     background_color: tokens.color.paper,
