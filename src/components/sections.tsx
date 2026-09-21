@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -24,12 +24,43 @@ export const links = {
   discord: 'https://discord.gg/n7gHYau7aW',
 };
 
-/* N5 floating pill */
+/** True while the visitor is scrolling down past the top of the page. */
+function useScrollingDown(threshold = 80) {
+  const [down, setDown] = useState(false);
+  useEffect(() => {
+    let last = window.scrollY;
+    let frame = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const y = window.scrollY;
+        // Ignore tiny moves (trackpad jitter) so the nav doesn't flicker.
+        if (Math.abs(y - last) < 6) return;
+        setDown(y > last && y > threshold);
+        last = y;
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(frame);
+    };
+  }, [threshold]);
+  return down;
+}
+
+/* N5 floating pill: shrinks while scrolling down, grows back on scroll up. */
 export function Nav() {
+  const compact = useScrollingDown();
   return (
     <Box component="header" sx={{ position: 'sticky', top: 16, zIndex: 10, display: 'flex', justifyContent: 'center', px: 2 }}>
       <Box
+        data-compact={compact || undefined}
         sx={{
+          transform: compact ? 'translateY(-6px) scale(0.86)' : 'none',
+          transformOrigin: 'top center',
+          transition: `transform ${tokens.duration.base}ms ${tokens.ease.out}, background-color ${tokens.duration.base}ms ${tokens.ease.out}`,
+          '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
           display: 'flex',
           alignItems: 'center',
           gap: 3,
