@@ -6,6 +6,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { theme } from '@/theme/theme';
 import { hex } from '@/theme/tokens';
 import { ThemeLab } from '@/components/ThemeLab';
+import { ShaderBackground } from '@/components/background/ShaderBackground';
 import { themeBootScript } from '@/theme/siteThemes';
 
 // `optional` keeps the hero text from repainting when the fonts arrive late on slow
@@ -91,6 +92,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
             <CssBaseline />
+            <ShaderBackground />
             {children}
             <ThemeLab />
           </ThemeProvider>
