@@ -84,3 +84,47 @@ export function LiveChip({ label = 'Live' }: { label?: string }) {
 }
 
 export const mono = { fontFamily: fontMono } as const;
+
+/**
+ * Drives a scripted card: returns the current step (0..length) and a ref for
+ * the card. Plays only while the card is on screen, holds on the last step,
+ * then loops. With reduced motion it sits on the final step.
+ */
+export function useScript(length: number, { stepMs = 1600, firstMs = 900, holdMs = 4500 } = {}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  const [reduced, setReduced] = useState(false);
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    const q = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReduced(q.matches);
+    const on = () => setReduced(q.matches);
+    q.addEventListener('change', on);
+    return () => q.removeEventListener('change', on);
+  }, []);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { threshold: 0.3 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (reduced || !visible) return;
+    const atEnd = step >= length;
+    const t = setTimeout(() => setStep(atEnd ? 0 : step + 1), atEnd ? holdMs : step === 0 ? firstMs : stepMs);
+    return () => clearTimeout(t);
+  }, [step, visible, reduced, length, stepMs, firstMs, holdMs]);
+
+  return { ref, step: reduced ? length : step, reduced };
+}
+
+/** Fades a value in whenever it changes (keyed remount). */
+export const tickIn = {
+  animation: `tickIn 400ms ${ease.out}`,
+  '@keyframes tickIn': { from: { opacity: 0, transform: 'translateY(-4px)' }, to: { opacity: 1, transform: 'none' } },
+  '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+} as const;

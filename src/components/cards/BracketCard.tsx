@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import { tokens } from '@/theme/tokens';
-import { CardHead, LiveChip, ProductCard, mono } from '../ui';
+import { CardHead, LiveChip, ProductCard, mono, useScript } from '../ui';
 import { HOLD_MS, STEP_MS, script, stateAt, type MatchId, type MatchState, type State } from './bracketScript';
 
 const { color, radius, ease } = tokens;
@@ -15,41 +15,9 @@ function stageLabel(step: number, state: State) {
   return current.startsWith('qf') ? 'Quarterfinals' : current.startsWith('sf') ? 'Semifinals' : 'Final';
 }
 
-function useReducedMotion() {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const q = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReduced(q.matches);
-    const on = () => setReduced(q.matches);
-    q.addEventListener('change', on);
-    return () => q.removeEventListener('change', on);
-  }, []);
-  return reduced;
-}
-
 export function BracketCard() {
-  const reduced = useReducedMotion();
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  const [step, setStep] = useState(0);
-
-  // Only play while the card is on screen.
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { threshold: 0.3 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (reduced || !visible) return;
-    const atEnd = step >= script.length;
-    const t = setTimeout(() => setStep(atEnd ? 0 : step + 1), atEnd ? HOLD_MS : step === 0 ? 900 : STEP_MS);
-    return () => clearTimeout(t);
-  }, [step, visible, reduced]);
-
-  const shownStep = reduced ? script.length : step;
+  const { ref, step } = useScript(script.length, { stepMs: STEP_MS, holdMs: HOLD_MS });
+  const shownStep = step;
   const state = useMemo(() => stateAt(shownStep), [shownStep]);
   const finished = state.f.winner !== null;
 
