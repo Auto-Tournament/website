@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto Tournament — hero options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Hallmark · three hero options on the locked site system (Night Arena)
+ * paper #100908 · accent #ff6a3d · Sora + Geist + Geist Mono · radius 8/14/22/pill
+ * A: Poster (left, huge type, ram as backdrop) · B: Ticker (centred, live automation feed) · C: Split (copy left, live bracket right)
+ */
+:root {
+  --paper: #100908; --paper-2: #18110e; --paper-3: #211815; --ink: #f4edeb; --ink-2: #c4bcb9; --muted: #938a87; --rule: #322926;
+  --accent: #ff6a3d; --accent-2: #fe8f5b; --accent-ink: #140e0c; --live: #3fc168;
+  --f-display: "Sora", sans-serif; --f-body: "Geist", sans-serif; --f-mono: "Geist Mono", monospace;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1rem/1.55 var(--f-body); }
+h1 { font-family: var(--f-display); font-weight: 700; letter-spacing: -0.035em; line-height: 1.0; margin: 0; overflow-wrap: anywhere; min-width: 0; }
+p { margin: 0; }
+.label { position: sticky; top: 0; z-index: 5; background: var(--accent); color: var(--accent-ink); font: 600 0.875rem/1 var(--f-body); padding: 0.7rem 1rem; }
+.opt { position: relative; min-height: 92vh; display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; overflow: hidden; border-bottom: 1px solid var(--rule); }
+.opt > * { min-width: 0; }
+.wrap { width: min(74rem, 100% - 2rem); margin-inline: auto; }
+.btn { display: inline-flex; align-items: center; padding: 0.8rem 1.3rem; border-radius: 999px; font: 600 0.9375rem/1 var(--f-body); text-decoration: none; white-space: nowrap; border: 1px solid transparent; }
+.btn.p { background: var(--accent); color: var(--accent-ink); }
+.btn.g { border-color: var(--rule); color: var(--ink); }
+.ctas { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2rem; }
+.meta { margin-top: 1rem; color: var(--muted); font-size: 0.875rem; }
+
+/* ---------- A · Poster ---------- */
+.a { background: radial-gradient(50rem 36rem at 80% 30%, rgba(255,106,61,0.26), transparent 70%), var(--paper); }
+.a .ram { position: absolute; right: -8vw; top: 50%; transform: translateY(-50%); width: min(58vw, 760px); opacity: 0.12; pointer-events: none; }
+.a h1 { font-size: clamp(3.2rem, 9vw + 0.5rem, 8.5rem); letter-spacing: -0.05em; max-width: 11ch; }
+.a h1 .second { display: block; color: var(--accent); }
+.a .lede { margin-top: 2rem; max-width: 46ch; color: var(--ink-2); font-size: 1.1875rem; }
+.a .tag { display: inline-flex; gap: 0.5rem; align-items: center; margin-bottom: 2rem; font: 500 0.8125rem/1 var(--f-mono); color: var(--ink-2); padding: 0.5rem 0.8rem; border: 1px solid var(--rule); border-radius: 999px; }
+.a .tag i { width: 7px; height: 7px; border-radius: 50%; background: var(--live); }
+
+/* ---------- B · Ticker ---------- */
+.b { text-align: center; background: radial-gradient(60rem 36rem at 50% 0%, rgba(255,106,61,0.22), transparent 70%), var(--paper); }
+.b .logo { width: 88px; height: 88px; border-radius: 20px; margin: 0 auto 2rem; display: block; box-shadow: 0 24px 80px -20px var(--accent); }
+.b h1 { font-size: clamp(2.6rem, 5.4vw + 1rem, 5.5rem); max-width: 16ch; margin-inline: auto; }
+.b h1 em { font-style: normal; color: var(--accent); }
+.b .lede { margin: 1.5rem auto 0; max-width: 54ch; color: var(--ink-2); font-size: 1.125rem; }
+.b .ctas { justify-content: center; }
+.ticker { margin-top: 3.5rem; border-block: 1px solid var(--rule); overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+.ticker-track { display: flex; width: max-content; gap: 2.5rem; padding-block: 0.9rem; animation: tick 38s linear infinite; }
+.ticker span { font: 500 0.875rem/1 var(--f-mono); color: var(--ink-2); white-space: nowrap; display: inline-flex; gap: 0.6rem; align-items: center; }
+.ticker span b { font-weight: 500; color: var(--accent); }
+.ticker span i { width: 6px; height: 6px; border-radius: 50%; background: var(--live); }
+@keyframes tick { to { transform: translateX(-50%); } }
+
+/* ---------- C · Split ---------- */
+.c { background: radial-gradient(44rem 32rem at 75% 50%, rgba(255,106,61,0.2), transparent 70%), var(--paper); }
+.c .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4rem; align-items: center; }
+.c h1 { font-size: clamp(2.6rem, 4.6vw + 1rem, 5rem); max-width: 12ch; }
+.c h1 u { text-decoration-color: var(--accent); text-decoration-thickness: 0.1em; text-underline-offset: 0.12em; }
+.c .lede { margin-top: 1.5rem; max-width: 44ch; color: var(--ink-2); font-size: 1.125rem; }
+.card { background: var(--paper-2); border: 1px solid var(--rule); border-radius: 22px; padding: 1.5rem; font-size: 0.875rem; box-shadow: 0 40px 100px -40px var(--accent); }
+.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.card-head b { font: 600 1rem/1 var(--f-display); }
+.chip { font: 500 0.75rem/1 var(--f-mono); padding: 0.35rem 0.6rem; border-radius: 999px; background: var(--paper-3); color: var(--live); }
+.br { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; align-items: center; }
+.rd { display: grid; gap: 0.6rem; }
+.rd h4 { margin: 0; font: 500 0.75rem/1 var(--f-mono); color: var(--muted); }
+.m { background: var(--paper-3); border-radius: 8px; overflow: hidden; border: 1px solid transparent; }
+.m.now { border-color: var(--accent); }
+.t { display: flex; justify-content: space-between; padding: 0.4rem 0.6rem; }
+.t + .t { border-top: 1px solid var(--rule); }
+.t.w { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.t.l { color: var(--muted); }
+.t s { text-decoration: none; font-family: var(--f-mono); }
+
+@media (max-width: 860px) {
+  .c .grid { grid-template-columns: minmax(0, 1fr); gap: 2.5rem; }
+  .a .ram { opacity: 0.08; }
+}
+@media (max-width: 480px) { .br { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .br .rd:last-child { grid-column: 1 / -1; } }
+@media (prefers-reduced-motion: reduce) { .ticker-track { animation: none; } }
+</style>
+</head>
+<body>
+
+<div class="label">Option A · Poster: left-aligned, very large type, ram as a faint backdrop</div>
+<section class="opt a">
+  <img class="ram" src="../src/content/at-mark.svg" alt="">
+  <div class="wrap">
+    <span class="tag"><i></i>Spring Cup · 7 matches running</span>
+    <h1>Start the bracket. <span class="second">Then go play.</span></h1>
+    <p class="lede">Auto Tournament runs the veto, loads every match on a free server, tracks the scores and moves the bracket on. Self-hosted, open source, CS2 built in.</p>
+    <div class="ctas"><a class="btn p" href="#">Install Auto Tournament</a><a class="btn g" href="#">View on GitHub</a></div>
+  </div>
+</section>
+
+<div class="label">Option B · Ticker: centred, with a live feed of what the platform is doing</div>
+<section class="opt b">
+  <div>
+    <div class="wrap">
+      <img class="logo" src="../public/at-icon.svg" alt="">
+      <h1>Your LAN, on <em>autopilot</em>.</h1>
+      <p class="lede">Create the tournament and add your servers. Auto Tournament handles the veto, the servers, the scores and the bracket, so you can spend the day at the event.</p>
+      <div class="ctas"><a class="btn p" href="#">Install Auto Tournament</a><a class="btn g" href="#">View on GitHub</a></div>
+    </div>
+    <div class="ticker" aria-hidden="true"><div class="ticker-track">
+      <span><i></i>Nordlys vs Polar loaded on <b>cs2-1</b></span><span><i></i>Veto done · <b>Mirage, Inferno, Dust II</b></span><span><i></i>Ironside advance to the <b>final</b></span><span><i></i>cs2-3 free · next match <b>Fjord vs Kvarken</b></span><span><i></i>Demo uploaded · <b>semifinal map 2</b></span><span><i></i>Ratings updated · <b>32 players</b></span>
+      <span><i></i>Nordlys vs Polar loaded on <b>cs2-1</b></span><span><i></i>Veto done · <b>Mirage, Inferno, Dust II</b></span><span><i></i>Ironside advance to the <b>final</b></span><span><i></i>cs2-3 free · next match <b>Fjord vs Kvarken</b></span><span><i></i>Demo uploaded · <b>semifinal map 2</b></span><span><i></i>Ratings updated · <b>32 players</b></span>
+    </div></div>
+  </div>
+</section>
+
+<div class="label">Option C · Split: copy on the left, the live bracket above the fold on the right</div>
+<section class="opt c">
+  <div class="wrap grid">
+    <div>
+      <h1>The tournament runs. <u>You play.</u></h1>
+      <p class="lede">Brackets, map veto, server allocation and results, handled for you. Self-hosted and open source, with CS2 built in.</p>
+      <div class="ctas"><a class="btn p" href="#">Install Auto Tournament</a><a class="btn g" href="#">View on GitHub</a></div>
+      <p class="meta">Free and MIT licensed · Runs on one Docker host</p>
+    </div>
+    <div class="card" aria-label="Example bracket">
+      <div class="card-head"><b>Spring Cup · Semifinals</b><span class="chip">● Live</span></div>
+      <div class="br">
+        <div class="rd"><h4>Quarterfinals</h4>
+          <div class="m"><div class="t w"><span>Nordlys</span><s>2</s></div><div class="t l"><span>Baltic Five</span><s>0</s></div></div>
+          <div class="m"><div class="t l"><span>Fjord</span><s>1</s></div><div class="t w"><span>Polar</span><s>2</s></div></div>
+          <div class="m"><div class="t w"><span>Ironside</span><s>2</s></div><div class="t l"><span>Kvarken</span><s>1</s></div></div>
+          <div class="m"><div class="t w"><span>Midnight</span><s>2</s></div><div class="t l"><span>Tundra</span><s>0</s></div></div>
+        </div>
+        <div class="rd"><h4>Semifinals</h4>
+          <div class="m now"><div class="t"><span>Nordlys</span><s>1</s></div><div class="t"><span>Polar</span><s>1</s></div></div>
+          <div class="m now"><div class="t"><span>Ironside</span><s>1</s></div><div class="t"><span>Midnight</span><s>0</s></div></div>
+        </div>
+        <div class="rd"><h4>Final</h4>
+          <div class="m"><div class="t l"><span>TBD</span><s>–</s></div><div class="t l"><span>TBD</span><s>–</s></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

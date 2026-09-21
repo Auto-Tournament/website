@@ -15,9 +15,9 @@ const body = Geist({ subsets: ['latin'], variable: '--font-body', display: 'opti
 const mono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono', preload: false });
 
 const url = 'https://autotournament.gg';
-const title = 'Auto Tournament: ditch the spreadsheet, enjoy the LAN';
+const title = 'Auto Tournament: the tournament runs, you play';
 const description =
-  'Auto Tournament is a free, self-hosted tournament platform: it builds the bracket, runs the map veto, puts every match on a free server and records the results. Open source, with CS2 built in.';
+  'Ditch the spreadsheet. Auto Tournament is a free, self-hosted tournament platform: it builds the bracket, runs the map veto, puts every match on a free server and records the results. Open source, with CS2 built in.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(url),

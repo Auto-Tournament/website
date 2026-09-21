@@ -100,81 +100,86 @@ export function Nav() {
 
 export function Hero() {
   return (
-    <Container maxWidth="lg" component="section" sx={{ textAlign: 'center', pt: { xs: 8, md: 12 }, pb: { xs: 4, md: 6 } }}>
-      <Box
-        component="img"
-        src="/at-icon.svg"
-        alt="Auto Tournament"
+    <Box component="section">
+      <Container
+        maxWidth="lg"
         sx={{
-          display: 'block',
-          width: { xs: 96, md: 128 },
-          height: { xs: 96, md: 128 },
-          mx: 'auto',
-          mb: { xs: 4, md: 5 },
-          borderRadius: { xs: '22px', md: '29px' },
-          boxShadow: `0 24px 80px -20px ${color.accent}`,
-        }}
-      />
-      <Typography variant="h1" sx={{ maxWidth: '15ch', mx: 'auto' }}>
-        Ditch the spreadsheet.{' '}
-        <Box component="span" sx={{ color: color.accent, textDecoration: 'underline', textDecorationThickness: '0.08em', textUnderlineOffset: '0.12em' }}>
-          Enjoy
-        </Box>{' '}
-        the LAN.
-      </Typography>
-      <Typography sx={{ mt: 3, mx: 'auto', maxWidth: '58ch', color: color.ink2, fontSize: '1.125rem' }}>
-        Create the tournament and add your servers. Auto Tournament runs the veto, loads every match, tracks the scores and moves the bracket on, so you can
-        spend the day on the event instead of the admin. Self-hosted and open source, with CS2 built in.
-      </Typography>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1.5, mt: 4 }}>
-        <Button variant="contained" href={links.install}>
-          Install Auto Tournament
-        </Button>
-        <Button variant="outlined" href={links.repo}>
-          View on GitHub
-        </Button>
-      </Box>
-      <Box
-        component="figure"
-        aria-label="Product preview"
-        sx={{
-          m: 0,
-          mt: { xs: 6, md: 10 },
-          mx: 'auto',
-          width: 'min(64rem, 100%)',
-          aspectRatio: '16 / 9',
-          borderRadius: `${radius.lg}px`,
-          overflow: 'hidden',
-          border: `1px solid ${color.rule}`,
-          bgcolor: color.paper2,
-          position: 'relative',
-          boxShadow: `0 40px 120px -40px ${color.accent}`,
+          display: 'grid',
+          gridTemplateColumns: { xs: 'minmax(0,1fr)', md: 'minmax(0,1fr) minmax(0,1fr)' },
+          gap: { xs: 5, md: 8 },
+          alignItems: 'center',
+          pt: { xs: 8, md: 14 },
+          pb: { xs: 6, md: 10 },
         }}
       >
-        {/* Replace with the real recording: public/preview.mp4 + poster. */}
-        <Box component="figcaption" sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', p: 3, color: color.muted, fontSize: '0.875rem' }}>
-          <span>
-            <Box component="strong" sx={{ display: 'block', color: color.ink, fontFamily: fontDisplay, fontSize: '1.375rem', mb: 0.5 }}>
-              Product preview
+        <div>
+          <Box
+            component="img"
+            src="/at-icon.svg"
+            alt="Auto Tournament"
+            sx={{ display: 'block', width: { xs: 72, md: 88 }, height: { xs: 72, md: 88 }, mb: 4, borderRadius: { xs: '17px', md: '20px' }, boxShadow: `0 24px 80px -20px ${color.accent}` }}
+          />
+          <Typography variant="h1" sx={{ fontSize: 'clamp(2.5rem, 3.6vw + 1rem, 4.5rem)' }}>
+            The tournament runs.{' '}
+            <Box
+              component="span"
+              sx={{ display: 'block', color: color.accent, textDecoration: 'underline', textDecorationThickness: '0.08em', textUnderlineOffset: '0.12em' }}
+            >
+              You play.
             </Box>
-            90-second recording of a tournament from bracket to final. To record.
-          </span>
+          </Typography>
+          <Typography sx={{ mt: 3, maxWidth: '46ch', color: color.ink2, fontSize: '1.125rem' }}>
+            Create the tournament and add your servers. Auto Tournament runs the veto, loads every match, tracks the scores and moves the bracket on. Self-hosted
+            and open source, with CS2 built in.
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 4 }}>
+            <Button variant="contained" href={links.install}>
+              Install Auto Tournament
+            </Button>
+            <Button variant="outlined" href={links.repo}>
+              View on GitHub
+            </Button>
+          </Box>
+          <Typography sx={{ mt: 2, color: color.muted, fontSize: '0.875rem' }}>Free and MIT licensed · Runs on one Docker host</Typography>
+        </div>
+        <Box sx={{ boxShadow: `0 40px 100px -40px ${color.accent}`, borderRadius: `${radius.lg}px` }}>
+          <BracketCard />
         </Box>
-      </Box>
-      <Typography sx={{ mt: 2, color: color.muted, fontSize: '0.875rem' }}>Free and MIT licensed · Runs on one Docker host</Typography>
-    </Container>
+      </Container>
+      <Container maxWidth="lg" sx={{ pb: { xs: 4, md: 6 } }}>
+        <Box
+          component="figure"
+          aria-label="Product preview"
+          sx={{
+            m: 0,
+            mx: 'auto',
+            width: 'min(64rem, 100%)',
+            aspectRatio: '16 / 9',
+            borderRadius: `${radius.lg}px`,
+            overflow: 'hidden',
+            border: `1px solid ${color.rule}`,
+            bgcolor: color.paper2,
+            position: 'relative',
+          }}
+        >
+          {/* Replace with the real recording: public/preview.mp4 + poster. */}
+          <Box component="figcaption" sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', p: 3, color: color.muted, fontSize: '0.875rem', textAlign: 'center' }}>
+            <span>
+              <Box component="strong" sx={{ display: 'block', color: color.ink, fontFamily: fontDisplay, fontSize: '1.375rem', mb: 0.5 }}>
+                Product preview
+              </Box>
+              90-second recording of a tournament from bracket to final. To record.
+            </span>
+          </Box>
+        </Box>
+      </Container>
+    </Box>
   );
 }
 
 type Row = { title: string; body: string; points?: string[]; card: React.ReactNode };
 
 const rows: Row[] = [
-  {
-    title: 'The bracket moves on by itself.',
-    body: "When a match ends, the winner goes through and the next match is set up. You watch; you don't copy scores.",
-    points: ['Single and double elimination', 'Round robin and Swiss', 'Shuffle tournaments with balanced teams'],
-    card: <BracketCard />,
-  },
   {
     title: 'Map veto in the browser.',
     body: 'Team captains ban and pick maps from their phone. When the veto is done, the server loads the right maps and sides.',
@@ -184,6 +189,7 @@ const rows: Row[] = [
   {
     title: 'Every match finds a server.',
     body: 'Add your game servers once. Auto Tournament loads each match on a free one, waits when they are all busy, and tells you when one goes offline or needs an update.',
+    points: ['Single and double elimination, round robin, Swiss', 'Shuffle tournaments with balanced teams', 'Demos uploaded after every map'],
     card: <ServersCard />,
   },
   {

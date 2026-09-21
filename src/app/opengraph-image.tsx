@@ -6,7 +6,7 @@ import { tokens } from '@/theme/tokens';
 /* Hallmark · OG image · genre: atmospheric · same tokens as the site
  * dark paper + one warm bloom, ram as the background figure, Sora headline, Geist body. */
 
-export const alt = 'Auto Tournament: ditch the spreadsheet, enjoy the LAN. Self-hosted tournament platform, CS2 built in.';
+export const alt = 'Auto Tournament: the tournament runs, you play. Self-hosted tournament platform, CS2 built in.';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 export const dynamic = 'force-static';
@@ -50,10 +50,9 @@ export default async function OpengraphImage() {
 
           <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 900 }}>
             <div style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: 76, lineHeight: 1.04, letterSpacing: -2.5, display: 'flex', flexDirection: 'column' }}>
-              <span>Ditch the spreadsheet.</span>
+              <span>The tournament runs.</span>
               <div style={{ display: 'flex' }}>
-                <span style={{ color: color.accent, textDecoration: 'underline', textDecorationThickness: 6 }}>Enjoy</span>
-                <span>&nbsp;the LAN.</span>
+                <span style={{ color: color.accent, textDecoration: 'underline', textDecorationThickness: 6 }}>You play.</span>
               </div>
             </div>
             <div style={{ marginTop: 26, fontSize: 27, lineHeight: 1.4, color: color.ink2, maxWidth: 580 }}>
