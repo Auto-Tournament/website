@@ -45,10 +45,6 @@ export const theme = createTheme({
         html: { scrollBehavior: 'smooth', '@media (prefers-reduced-motion: reduce)': { scrollBehavior: 'auto' } },
         // Keep anchored sections clear of the floating nav.
         '[id]': { scrollMarginTop: '96px' },
-        body: {
-          backgroundImage: `radial-gradient(60rem 40rem at 50% -10%, ${color.bloom}, transparent 70%), radial-gradient(40rem 30rem at 90% 55%, ${color.bloom2}, transparent 70%)`,
-          backgroundAttachment: 'fixed',
-        },
         ':focus-visible': { outline: `2px solid ${color.focus}`, outlineOffset: 3 },
         'h1, h2, h3': { overflowWrap: 'anywhere', minWidth: 0 },
       },
@@ -60,11 +56,11 @@ export const theme = createTheme({
           borderRadius: radius.pill,
           padding: '0.7rem 1.2rem',
           whiteSpace: 'nowrap',
-          transition: `background-color ${duration.fast}ms ${ease.out}, box-shadow ${duration.base}ms ${ease.out}, transform ${duration.fast}ms ${ease.out}`,
+          transition: `background-color ${duration.fast}ms ${ease.out}, transform ${duration.fast}ms ${ease.out}`,
           '&:active': { transform: 'translateY(1px)' },
         },
         contained: {
-          '&:hover': { backgroundColor: color.accent2, boxShadow: `0 10px 30px -12px ${color.accent}` },
+          '&:hover': { backgroundColor: color.accent2 },
         },
         outlined: {
           borderColor: color.rule,

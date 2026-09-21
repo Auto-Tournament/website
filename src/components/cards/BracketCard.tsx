@@ -66,7 +66,7 @@ function MatchBox({ match, champion }: { match: MatchState; champion: boolean })
         borderRadius: `${radius.sm}px`,
         overflow: 'hidden',
         border: `1px solid ${match.live ? color.accent : 'transparent'}`,
-        boxShadow: champion ? `0 0 0 1px ${color.accent}, 0 12px 40px -16px ${color.accent}` : 'none',
+        boxShadow: champion ? `0 0 0 1px ${color.accent}` : 'none',
         transition: `${fade}, box-shadow 600ms ${ease.out}`,
       }}
     >

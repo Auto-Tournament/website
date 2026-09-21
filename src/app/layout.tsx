@@ -6,6 +6,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { theme } from '@/theme/theme';
 import { hex } from '@/theme/tokens';
 import { ThemeLab } from '@/components/ThemeLab';
+import { themeBootScript } from '@/theme/siteThemes';
 
 // `optional` keeps the hero text from repainting when the fonts arrive late on slow
 // connections (that repaint was the mobile LCP). The metric-matched fallback
@@ -81,7 +82,10 @@ const jsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable} ${mono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${display.variable} ${body.variable} ${mono.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript() }} />
+      </head>
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
         <AppRouterCacheProvider>

@@ -14,6 +14,7 @@ import { VetoCard } from './cards/VetoCard';
 import { ServersCard } from './cards/ServersCard';
 import { ProfileCard } from './cards/ProfileCard';
 import { AtIcon } from './AtIcon';
+import { ThemePicker } from './ThemePicker';
 
 const { color, radius } = tokens;
 
@@ -114,7 +115,7 @@ export function Hero() {
         }}
       >
         <div>
-          <Box sx={{ width: { xs: 72, md: 88 }, height: { xs: 72, md: 88 }, mb: 4, borderRadius: { xs: '17px', md: '20px' }, overflow: 'hidden', boxShadow: `0 24px 80px -20px ${color.accent}` }}>
+          <Box sx={{ width: { xs: 72, md: 88 }, height: { xs: 72, md: 88 }, mb: 4, borderRadius: { xs: '17px', md: '20px' }, overflow: 'hidden' }}>
             <AtIcon size="100%" title="Auto Tournament" />
           </Box>
           <Typography variant="h1" sx={{ fontSize: 'clamp(2.5rem, 3.6vw + 1rem, 4.5rem)' }}>
@@ -140,7 +141,7 @@ export function Hero() {
           </Box>
           <Typography sx={{ mt: 2, color: color.muted, fontSize: '0.875rem' }}>Free and MIT licensed · Runs on one Docker host</Typography>
         </div>
-        <Box sx={{ boxShadow: `0 40px 100px -40px ${color.accent}`, borderRadius: `${radius.lg}px` }}>
+        <Box sx={{ borderRadius: `${radius.lg}px` }}>
           <BracketCard />
         </Box>
       </Container>
@@ -396,7 +397,10 @@ export function Footer() {
             </Box>
           ))}
         </Box>
-        <span>MIT licensed</span>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <ThemePicker />
+          <span>MIT licensed</span>
+        </Box>
       </Box>
     </Container>
   );

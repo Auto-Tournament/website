@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
@@ -12,8 +12,8 @@ import { fontMono } from '@/theme/theme';
 import { PATHS } from './AtIcon';
 
 /**
- * Theme lab: try palettes on the live page. Only shows in development or with
- * ?themes in the URL, so visitors never see it. Paste any colours (a palette
+ * Theme lab: try palettes on the page. Development only; visitors get the
+ * four-theme ThemePicker in the footer. Paste any colours (a palette
  * site's hex codes), pick a preset, or click a swatch to make it the accent.
  */
 
@@ -87,7 +87,7 @@ export function ThemeLab() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const on = process.env.NODE_ENV === 'development' || new URLSearchParams(window.location.search).has('themes');
+    const on = process.env.NODE_ENV === 'development';
     setEnabled(on);
     if (!on) return;
     try {
@@ -104,10 +104,18 @@ export function ThemeLab() {
     return preset ? presetTheme(preset, saved.accent) : deriveTheme(saved.colors, { accent: saved.accent });
   }, [saved]);
 
+  // Only undo what the lab applied itself, so the footer ThemePicker's choice
+  // survives until the lab is actually used.
+  const applied = useRef(false);
   useEffect(() => {
     if (!enabled) return;
-    if (theme) applyTheme(theme);
-    else clearTheme();
+    if (theme) {
+      applyTheme(theme);
+      applied.current = true;
+    } else if (applied.current) {
+      clearTheme();
+      applied.current = false;
+    }
   }, [enabled, theme]);
 
   const choose = useCallback((next: Saved | null) => {

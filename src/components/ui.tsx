@@ -51,9 +51,6 @@ export function ProductCard({ sx, ...props }: BoxProps) {
         borderRadius: `${radius.lg}px`,
         p: 3,
         fontSize: '0.875rem',
-        transition: `transform ${duration.base}ms ${ease.out}, box-shadow ${duration.base}ms ${ease.out}`,
-        '&:hover': { transform: 'translateY(-3px)', boxShadow: `0 24px 60px -30px ${color.accent}` },
-        '@media (prefers-reduced-motion: reduce)': { '&:hover': { transform: 'none' } },
         ...sx,
       }}
       {...props}
