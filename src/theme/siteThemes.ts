@@ -4,13 +4,13 @@ import { themeCssVars } from './palette';
 import { PATHS } from '@/components/AtIcon';
 
 /** The themes visitors can pick. Ember is the default (no stored choice). */
-export const SITE_THEME_IDS = ['ember', 'ultraviolet', 'mint', 'coral'] as const;
+export const SITE_THEME_IDS = ['ember', 'ultraviolet', 'mint', 'aurora', 'coral'] as const;
 export type SiteThemeId = (typeof SITE_THEME_IDS)[number];
 export const THEME_STORAGE_KEY = 'at-theme';
 
 export const siteThemes = SITE_THEME_IDS.map((id) => {
   const preset = curated.find((p) => p.id === id)!;
-  return { id, name: preset.name.replace(' (current)', ''), colors: presetTheme(preset) };
+  return { id, name: preset.name, colors: presetTheme(preset) };
 });
 
 /** The favicon as an SVG data URL in a theme's colours. */

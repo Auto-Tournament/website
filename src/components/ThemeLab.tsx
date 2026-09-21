@@ -7,7 +7,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { tokens, type ThemeColors } from '@/theme/tokens';
 import { parseColors, themeCssVars, deriveTheme } from '@/theme/palette';
-import { curated, esportsPresets, presetTheme, type ThemePreset } from '@/theme/presets';
+import { curated, presetTheme, type ThemePreset } from '@/theme/presets';
 import { fontMono } from '@/theme/theme';
 import { PATHS } from './AtIcon';
 
@@ -46,7 +46,7 @@ function clearTheme() {
   document.querySelector('link[rel="icon"][data-theme-lab]')?.remove();
 }
 
-const allPresets = [...curated, ...esportsPresets];
+const allPresets = curated;
 const groups = Object.entries(
   allPresets.reduce<Record<string, ThemePreset[]>>((acc, p) => {
     (acc[p.group ?? 'Other'] ??= []).push(p);
