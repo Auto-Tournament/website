@@ -90,11 +90,15 @@ export const mono = { fontFamily: fontMono } as const;
  * the card. Plays only while the card is on screen, holds on the last step,
  * then loops. With reduced motion it sits on the final step.
  */
-export function useScript(length: number, { stepMs = 1600, firstMs = 900, holdMs = 4500 } = {}) {
+export function useScript(
+  length: number,
+  { stepMs = 1600, firstMs = 900, holdMs = 4500, delayFor }: { stepMs?: number; firstMs?: number; holdMs?: number; delayFor?: (step: number) => number } = {},
+) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const [reduced, setReduced] = useState(false);
   const [step, setStep] = useState(0);
+  const [loop, setLoop] = useState(0);
 
   useEffect(() => {
     const q = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -115,11 +119,17 @@ export function useScript(length: number, { stepMs = 1600, firstMs = 900, holdMs
   useEffect(() => {
     if (reduced || !visible) return;
     const atEnd = step >= length;
-    const t = setTimeout(() => setStep(atEnd ? 0 : step + 1), atEnd ? holdMs : step === 0 ? firstMs : stepMs);
+    const wait = atEnd ? holdMs : step === 0 ? firstMs : (delayFor?.(step) ?? stepMs);
+    const t = setTimeout(() => {
+      if (atEnd) {
+        setStep(0);
+        setLoop((n) => n + 1);
+      } else setStep(step + 1);
+    }, wait);
     return () => clearTimeout(t);
-  }, [step, visible, reduced, length, stepMs, firstMs, holdMs]);
+  }, [step, visible, reduced, length, stepMs, firstMs, holdMs, delayFor]);
 
-  return { ref, step: reduced ? length : step, reduced };
+  return { ref, step: reduced ? length : step, reduced, loop };
 }
 
 /** Fades a value in whenever it changes (keyed remount). */

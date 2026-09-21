@@ -1,24 +1,33 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import { tokens } from '@/theme/tokens';
 import { CardHead, LiveChip, ProductCard, mono, useScript } from '../ui';
-import { HOLD_MS, STEP_MS, script, stateAt, type MatchId, type MatchState, type State } from './bracketScript';
+import { HOLD_MS, buildRun, script, stateAfter, type MatchId, type MatchState, type State } from './bracketScript';
 
 const { color, radius, ease } = tokens;
 
-function stageLabel(step: number, state: State) {
+function stageLabel(state: State) {
   if (state.f.winner !== null) return `Champion: ${state.f.teams[state.f.winner]}`;
-  const current = script[Math.min(step, script.length - 1)]?.[0]?.m ?? 'qf1';
-  return current.startsWith('qf') ? 'Quarterfinals' : current.startsWith('sf') ? 'Semifinals' : 'Final';
+  if (state.sf1.winner !== null && state.sf2.winner !== null) return 'Final';
+  if ([state.qf1, state.qf2, state.qf3, state.qf4].every((m) => m.winner !== null)) return 'Semifinals';
+  return 'Quarterfinals';
 }
 
+const OPS = script.flat().length;
+
 export function BracketCard() {
-  const { ref, step } = useScript(script.length, { stepMs: STEP_MS, holdMs: HOLD_MS });
-  const shownStep = step;
-  const state = useMemo(() => stateAt(shownStep), [shownStep]);
+  // A fresh random order and timing every loop. Only the order of updates is
+  // random, and step 0 is the same for every order, so server and client
+  // markup still match.
+  const [loopKey, setLoopKey] = useState(0);
+  const run = useMemo(() => buildRun(), [loopKey]);
+  const delayFor = useCallback((i: number) => run.delays[i - 1] ?? 1200, [run]);
+  const { ref, step, loop } = useScript(OPS, { holdMs: HOLD_MS, delayFor });
+  useEffect(() => setLoopKey(loop), [loop]);
+  const state = useMemo(() => stateAfter(run.ops, step), [run, step]);
   const finished = state.f.winner !== null;
 
   const rounds: { label: string; ids: MatchId[] }[] = [
@@ -30,7 +39,7 @@ export function BracketCard() {
   return (
     <ProductCard ref={ref} aria-label="Example bracket playing through a tournament">
       <CardHead
-        title={`Spring Cup · ${stageLabel(shownStep, state)}`}
+        title={`Spring Cup · ${stageLabel(state)}`}
         tag={finished ? <Chip size="small" color="primary" label="Finished" /> : <LiveChip />}
       />
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', sm: 'repeat(3, minmax(0,1fr))' }, gap: 2, alignItems: 'center' }}>

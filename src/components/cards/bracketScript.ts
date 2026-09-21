@@ -54,11 +54,39 @@ export type State = Record<MatchId, MatchState>;
 
 const ids: MatchId[] = ['qf1', 'qf2', 'qf3', 'qf4', 'sf1', 'sf2', 'f'];
 
+/**
+ * One play-through as single updates with their own delays. Updates inside a
+ * tick are shuffled and each waits a random 0.5–2.2 s, so scores don't land on
+ * a beat; a round only ends after all its series are done, then pauses.
+ */
+export function buildRun(rand: () => number = Math.random): { ops: Step[]; delays: number[] } {
+  const ops: Step[] = [];
+  const delays: number[] = [];
+  script.forEach((tick, i) => {
+    const shuffled = [...tick].sort(() => rand() - 0.5);
+    const nextIsNewRound = script[i + 1] && script[i + 1][0].m.slice(0, 2) !== tick[0].m.slice(0, 2);
+    shuffled.forEach((op, j) => {
+      ops.push(op);
+      const lastOfRound = nextIsNewRound && j === shuffled.length - 1;
+      delays.push(lastOfRound ? 2600 : 500 + Math.round(rand() * 1700));
+    });
+  });
+  return { ops, delays };
+}
+
+export function stateAfter(ops: Step[], count: number): State {
+  return applyOps(ops.slice(0, count));
+}
+
 export function stateAt(stepCount: number): State {
+  return applyOps(script.slice(0, stepCount).flat());
+}
+
+function applyOps(ops: Step[]): State {
   const s = Object.fromEntries(
     ids.map((id) => [id, { teams: seeds[id] ?? [null, null], score: [0, 0], winner: null, live: false }]),
   ) as unknown as State;
-  for (const step of script.slice(0, stepCount).flat()) {
+  for (const step of ops) {
     const match = s[step.m];
     if (step.score) {
       match.score = step.score;
