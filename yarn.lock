@@ -269,6 +269,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@fontsource/geist-sans@npm:^5.3.0":
+  version: 5.3.0
+  resolution: "@fontsource/geist-sans@npm:5.3.0"
+  checksum: 10c0/8df0e2aa46ad701195a2c9d7de9bd9165a5814c4086a10b97cfa76a4548ea2c602c259b3132b6c08906b1708d92d5df03c3e4d77b81a728bff259ff328e383a6
+  languageName: node
+  linkType: hard
+
+"@fontsource/sora@npm:^5.3.0":
+  version: 5.3.0
+  resolution: "@fontsource/sora@npm:5.3.0"
+  checksum: 10c0/001b30c96ba3db20000a22e966b0f590e1886e1e6aa1fd3c36a4f3b89c039abed47c2da7d37340234b51dced45da8ad2671b353afff30f160939f4fea83bc6f4
+  languageName: node
+  linkType: hard
+
 "@img/colour@npm:^1.1.0":
   version: 1.1.0
   resolution: "@img/colour@npm:1.1.0"
@@ -852,6 +866,8 @@ __metadata:
     "@emotion/cache": "npm:^11.14.0"
     "@emotion/react": "npm:^11.14.0"
     "@emotion/styled": "npm:^11.14.1"
+    "@fontsource/geist-sans": "npm:^5.3.0"
+    "@fontsource/sora": "npm:^5.3.0"
     "@mui/material": "npm:^9.4.0"
     "@mui/material-nextjs": "npm:^9.4.0"
     "@types/node": "npm:^24"

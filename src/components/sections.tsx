@@ -115,16 +115,16 @@ export function Hero() {
           boxShadow: `0 24px 80px -20px ${color.accent}`,
         }}
       />
-      <Typography variant="h1" sx={{ maxWidth: '14ch', mx: 'auto' }}>
-        Run the tournament.{' '}
+      <Typography variant="h1" sx={{ maxWidth: '13ch', mx: 'auto' }}>
+        Set it up. We handle{' '}
         <Box component="span" sx={{ color: color.accent, textDecoration: 'underline', textDecorationThickness: '0.08em', textUnderlineOffset: '0.12em' }}>
-          Skip
-        </Box>{' '}
-        the spreadsheet.
+          the rest
+        </Box>
+        .
       </Typography>
-      <Typography sx={{ mt: 3, mx: 'auto', maxWidth: '56ch', color: color.ink2, fontSize: '1.125rem' }}>
-        Auto Tournament builds the bracket, runs the map veto, puts every match on a free server and records the result. Self-hosted and open source, with
-        CS2 built in.
+      <Typography sx={{ mt: 3, mx: 'auto', maxWidth: '58ch', color: color.ink2, fontSize: '1.125rem' }}>
+        Create the tournament and add your servers. Auto Tournament runs the veto, loads every match, tracks the scores and moves the bracket on, so you can
+        spend the day on the event instead of the admin. Self-hosted and open source, with CS2 built in.
       </Typography>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1.5, mt: 4 }}>
         <Button variant="contained" href={links.install}>
