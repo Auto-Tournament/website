@@ -398,7 +398,7 @@ export function Footer() {
             </Box>
           ))}
         </Box>
-        <span>MIT licensed · Logo generated with an AI image model, cleaned up by hand</span>
+        <span>MIT licensed</span>
       </Box>
     </Container>
   );
