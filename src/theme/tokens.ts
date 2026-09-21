@@ -19,6 +19,8 @@ export const tokens = {
     accentInk: '#140e0c', // text on accent
     focus: '#ff6b33',
     live: '#3fc168', // oklch(72% 0.17 150)
+    pick: '#3fc168', // same green as live
+    ban: '#f2645f', // oklch(67% 0.17 25)
     bloom: 'rgba(255, 106, 61, 0.22)',
     bloom2: 'rgba(230, 70, 50, 0.14)',
   },

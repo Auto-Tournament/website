@@ -29,6 +29,8 @@ export function VetoCard() {
   const locked = step >= turns.length;
   const loading = step >= turns.length + 1;
   const current = turns[step];
+  // Play order: picks in the order they were made, then the decider.
+  const picks = done.filter((t) => t.action === 'pick').map((t) => t.map);
 
   return (
     <ProductCard ref={ref} aria-label="Example map veto playing through">
@@ -53,18 +55,28 @@ export function VetoCard() {
                 py: 1.2,
                 borderRadius: `${radius.sm}px`,
                 bgcolor: color.paper3,
-                outline: `1px solid ${state === 'pick' ? color.accent : current?.map === name ? color.rule : 'transparent'}`,
-                color: state === 'ban' ? color.muted : color.ink,
+                outline: `1px solid ${state === 'pick' ? color.pick : current?.map === name ? color.rule : 'transparent'}`,
+                color: state === 'ban' ? color.ban : state === 'pick' ? color.pick : color.ink,
                 transition: `color 400ms ${ease.out}, outline-color 400ms ${ease.out}`,
               }}
             >
-              <Box component="span" sx={{ textDecoration: state === 'ban' ? 'line-through' : 'none' }}>
+              <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, textDecoration: state === 'ban' ? 'line-through' : 'none', textDecorationThickness: '2px' }}>
+                {state === 'pick' && (
+                  <Box
+                    component="span"
+                    key={`${name}-n`}
+                    aria-label={`Map ${decider ? picks.length + 1 : picks.indexOf(name) + 1}`}
+                    sx={{ ...mono, ...tickIn, display: 'inline-grid', placeItems: 'center', width: 20, height: 20, flex: 'none', borderRadius: '50%', bgcolor: color.pick, color: color.accentInk, fontSize: '0.7rem', fontWeight: 600 }}
+                  >
+                    {decider ? picks.length + 1 : picks.indexOf(name) + 1}
+                  </Box>
+                )}
                 {name}
               </Box>
               <Box
                 component="span"
                 key={`${name}-${state}`}
-                sx={{ ...mono, ...(state !== 'open' ? tickIn : {}), fontSize: '0.75rem', color: state === 'pick' ? color.accent : color.muted, whiteSpace: 'nowrap' }}
+                sx={{ ...mono, ...(state !== 'open' ? tickIn : {}), fontSize: '0.75rem', color: state === 'pick' ? color.pick : state === 'ban' ? color.ban : color.muted, whiteSpace: 'nowrap' }}
               >
                 {t ? `${t.team} ${t.action}` : decider ? 'decider' : 'open'}
               </Box>
