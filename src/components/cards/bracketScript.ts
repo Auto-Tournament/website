@@ -47,7 +47,7 @@ export const script: Step[][] = [
 ];
 
 export const STEP_MS = 1800;
-export const HOLD_MS = 4500;
+export const HOLD_MS = 3200;
 
 export type MatchState = { teams: [string | null, string | null]; score: [number, number]; winner: 0 | 1 | null; live: boolean };
 export type State = Record<MatchId, MatchState>;
@@ -56,7 +56,7 @@ const ids: MatchId[] = ['qf1', 'qf2', 'qf3', 'qf4', 'sf1', 'sf2', 'f'];
 
 /**
  * One play-through as single updates with their own delays. Updates inside a
- * tick are shuffled and each waits a random 0.5–2.2 s, so scores don't land on
+ * tick are shuffled and each waits a random 0.18–0.7 s, so scores don't land on
  * a beat; a round only ends after all its series are done, then pauses.
  */
 export function buildRun(rand: () => number = Math.random): { ops: Step[]; delays: number[] } {
@@ -68,7 +68,7 @@ export function buildRun(rand: () => number = Math.random): { ops: Step[]; delay
     shuffled.forEach((op, j) => {
       ops.push(op);
       const lastOfRound = nextIsNewRound && j === shuffled.length - 1;
-      delays.push(lastOfRound ? 2600 : 500 + Math.round(rand() * 1700));
+      delays.push(lastOfRound ? 1100 : 180 + Math.round(rand() * 520));
     });
   });
   return { ops, delays };

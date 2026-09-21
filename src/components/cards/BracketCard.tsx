@@ -25,7 +25,7 @@ export function BracketCard() {
   const [loopKey, setLoopKey] = useState(0);
   const run = useMemo(() => buildRun(), [loopKey]);
   const delayFor = useCallback((i: number) => run.delays[i - 1] ?? 1200, [run]);
-  const { ref, step, loop } = useScript(OPS, { holdMs: HOLD_MS, delayFor });
+  const { ref, step, loop } = useScript(OPS, { holdMs: HOLD_MS, firstMs: 500, delayFor });
   useEffect(() => setLoopKey(loop), [loop]);
   const state = useMemo(() => stateAfter(run.ops, step), [run, step]);
   const finished = state.f.winner !== null;
