@@ -34,7 +34,14 @@ const classicMat: ThemeColors = {
 };
 
 export const curated: ThemePreset[] = [
-  { id: 'ember', name: 'Ember (current)', group: 'Current', colors: [ember.accent, ember.accent2, ember.paper3, ember.ink], theme: ember },
+  // The five to choose between.
+  { id: 'ember', name: 'Ember (current)', group: 'Shortlist', colors: [ember.accent, ember.accent2, ember.paper3, ember.ink], theme: ember },
+  { id: 'ultraviolet', name: 'Ultraviolet', group: 'Shortlist', colors: ['#9D7BFF', '#C4B1FF', '#15112A', '#EFEAFF'] },
+  { id: 'mint', name: 'Mint', group: 'Shortlist', colors: ['#2DCE89', '#20B2AA', '#1A6B5D', '#E0FBFC'] },
+  // New: mint on a violet night, the two favourites in one.
+  { id: 'aurora', name: 'Aurora', group: 'Shortlist', colors: ['#5EEAB5', '#9AF5D2', '#120F24', '#EAFFF6'] },
+  // New: a pink-leaning coral, warm like Ember but brighter and less brown.
+  { id: 'coral', name: 'Coral', group: 'Shortlist', colors: ['#FF5F7E', '#FF8FA3', '#1A0F16', '#FFEAF0'] },
 
   // Picks from the existing palettes.
   // The 2.x purple, but on the darker page and surfaces the other themes use.
@@ -42,10 +49,8 @@ export const curated: ThemePreset[] = [
   { id: 'neon-violet', name: 'Neon violet', group: 'Picks', colors: ['#A855F7', '#D946EF', '#1E293B', '#F3E8FF'] },
   { id: 'color-drop', name: 'Color Drop', group: 'Picks', colors: ['#4B47E3', '#1B1C3A'] },
   { id: 'violet', name: 'Violet', group: 'Picks', colors: ['#7C3AED', '#A78BFA', '#1F2937', '#F3F4F6'] },
-  { id: 'mint', name: 'Mint', group: 'Picks', colors: ['#2DCE89', '#20B2AA', '#1A6B5D', '#E0FBFC'] },
 
   // New palettes, tuned so the accent reads as text on the dark page.
-  { id: 'ultraviolet', name: 'Ultraviolet', group: 'New', colors: ['#9D7BFF', '#C4B1FF', '#15112A', '#EFEAFF'] },
   { id: 'synthwave', name: 'Synthwave', group: 'New', colors: ['#FF4FD8', '#FF8BE6', '#140B24', '#FBE9FF'] },
   { id: 'plum-gold', name: 'Plum & gold', group: 'New', colors: ['#F2B84B', '#F7CF7E', '#1A1024', '#FFF4E0'] },
   { id: 'acid', name: 'Acid', group: 'New', colors: ['#C6FF3D', '#DBFF85', '#161A22', '#F4FFE0'] },
