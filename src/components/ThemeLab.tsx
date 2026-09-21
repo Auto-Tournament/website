@@ -47,6 +47,12 @@ function clearTheme() {
 }
 
 const allPresets = [...curated, ...esportsPresets];
+const groups = Object.entries(
+  allPresets.reduce<Record<string, ThemePreset[]>>((acc, p) => {
+    (acc[p.group ?? 'Other'] ??= []).push(p);
+    return acc;
+  }, {}),
+);
 
 function Swatches({ colors, active, onPick, height = 22 }: { colors: string[]; active?: number; onPick?: (i: number) => void; height?: number }) {
   return (
@@ -230,16 +236,14 @@ export function ThemeLab() {
             )}
           </div>
 
-          <div>
-            <Typography sx={{ color: color.muted, fontSize: '0.75rem', mb: 0.5, fontFamily: fontMono }}>PICKS</Typography>
-            {curated.map(row)}
-          </div>
-          <div>
-            <Typography sx={{ color: color.muted, fontSize: '0.75rem', mb: 0.5, fontFamily: fontMono }}>
-              ESPORTS PALETTES (PRODUKTO.IO)
-            </Typography>
-            {esportsPresets.map(row)}
-          </div>
+          {groups.map(([group, presets]) => (
+            <div key={group}>
+              <Typography sx={{ color: color.muted, fontSize: '0.75rem', mb: 0.5, fontFamily: fontMono, textTransform: 'uppercase' }}>
+                {group}
+              </Typography>
+              {presets.map(row)}
+            </div>
+          ))}
         </Box>
       )}
     </>

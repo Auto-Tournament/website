@@ -4,6 +4,7 @@ import { deriveTheme } from './palette';
 export type ThemePreset = {
   id: string;
   name: string;
+  group?: string;
   /** The palette as given; shown as swatches and fed to deriveTheme. */
   colors: string[];
   /** Full colours when the theme isn't derived (the brand theme, the old app). */
@@ -33,16 +34,28 @@ const classicMat: ThemeColors = {
 };
 
 export const curated: ThemePreset[] = [
-  { id: 'ember', name: 'Ember (current)', colors: [ember.accent, ember.accent2, ember.paper3, ember.ink], theme: ember },
-  { id: 'classic-mat', name: 'Classic MAT (2.x purple)', colors: ['#d0bcff', '#e8def8', '#1c1b1f', '#e6e1e5'], theme: classicMat },
-  { id: 'indigo', name: 'Indigo', colors: ['#4F46E5', '#4338CA', '#1F2937', '#E9D5FF'] },
-  { id: 'color-drop', name: 'Color Drop', colors: ['#4B47E3', '#1B1C3A'] },
-  { id: 'neon-violet', name: 'Neon violet', colors: ['#A855F7', '#D946EF', '#1E293B', '#F3E8FF'] },
-  { id: 'amethyst', name: 'Amethyst', colors: ['#8B2BE2', '#A25CDB', '#2D2A4D', '#EDE7F6'] },
-  { id: 'violet', name: 'Violet', colors: ['#7C3AED', '#A78BFA', '#1F2937', '#F3F4F6'] },
-  { id: 'royal', name: 'Royal', colors: ['#5B21B6', '#A855F7', '#1F2937', '#F3F4F6'] },
-  { id: 'periwinkle', name: 'Periwinkle', colors: ['#5C6BC0', '#8E99F3', '#1C1C2E', '#E1E1E1'] },
-  { id: 'orchid', name: 'Orchid', colors: ['#8E24AA', '#AB47BC', '#1A1A1A', '#F3E5F5'] },
+  { id: 'ember', name: 'Ember (current)', group: 'Current', colors: [ember.accent, ember.accent2, ember.paper3, ember.ink], theme: ember },
+
+  // Picks from the existing palettes.
+  { id: 'classic-mat', name: 'Classic MAT', group: 'Picks', colors: ['#d0bcff', '#e8def8', '#1c1b1f', '#e6e1e5'], theme: classicMat },
+  { id: 'neon-violet', name: 'Neon violet', group: 'Picks', colors: ['#A855F7', '#D946EF', '#1E293B', '#F3E8FF'] },
+  { id: 'color-drop', name: 'Color Drop', group: 'Picks', colors: ['#4B47E3', '#1B1C3A'] },
+  { id: 'violet', name: 'Violet', group: 'Picks', colors: ['#7C3AED', '#A78BFA', '#1F2937', '#F3F4F6'] },
+  { id: 'mint', name: 'Mint', group: 'Picks', colors: ['#2DCE89', '#20B2AA', '#1A6B5D', '#E0FBFC'] },
+
+  // New palettes, tuned so the accent reads as text on the dark page.
+  { id: 'ultraviolet', name: 'Ultraviolet', group: 'New', colors: ['#9D7BFF', '#C4B1FF', '#15112A', '#EFEAFF'] },
+  { id: 'synthwave', name: 'Synthwave', group: 'New', colors: ['#FF4FD8', '#FF8BE6', '#140B24', '#FBE9FF'] },
+  { id: 'plum-gold', name: 'Plum & gold', group: 'New', colors: ['#F2B84B', '#F7CF7E', '#1A1024', '#FFF4E0'] },
+  { id: 'acid', name: 'Acid', group: 'New', colors: ['#C6FF3D', '#DBFF85', '#161A22', '#F4FFE0'] },
+  { id: 'frost', name: 'Frost', group: 'New', colors: ['#5EC8FF', '#9ADCFF', '#0B1320', '#E6F6FF'] },
+
+  // Other purples.
+  { id: 'indigo', name: 'Indigo', group: 'More', colors: ['#4F46E5', '#4338CA', '#1F2937', '#E9D5FF'] },
+  { id: 'amethyst', name: 'Amethyst', group: 'More', colors: ['#8B2BE2', '#A25CDB', '#2D2A4D', '#EDE7F6'] },
+  { id: 'royal', name: 'Royal', group: 'More', colors: ['#5B21B6', '#A855F7', '#1F2937', '#F3F4F6'] },
+  { id: 'periwinkle', name: 'Periwinkle', group: 'More', colors: ['#5C6BC0', '#8E99F3', '#1C1C2E', '#E1E1E1'] },
+  { id: 'orchid', name: 'Orchid', group: 'More', colors: ['#8E24AA', '#AB47BC', '#1A1A1A', '#F3E5F5'] },
 ];
 
 /** Every palette on produkto.io/color-palettes/esports (fetched 2026-09-21). */
@@ -101,6 +114,7 @@ const esports: string[][] = [
 export const esportsPresets: ThemePreset[] = esports.map((colors, i) => ({
   id: `esports-${i + 1}`,
   name: `Esports ${i + 1}`,
+  group: 'Esports palettes (produkto.io)',
   colors,
 }));
 
