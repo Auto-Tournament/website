@@ -11,7 +11,7 @@ const { color, radius, ease } = tokens;
 
 function stageLabel(step: number, state: State) {
   if (state.f.winner !== null) return `Champion: ${state.f.teams[state.f.winner]}`;
-  const current = script[Math.min(step, script.length - 1)]?.m ?? 'qf1';
+  const current = script[Math.min(step, script.length - 1)]?.[0]?.m ?? 'qf1';
   return current.startsWith('qf') ? 'Quarterfinals' : current.startsWith('sf') ? 'Semifinals' : 'Final';
 }
 

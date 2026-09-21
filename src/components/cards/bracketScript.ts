@@ -1,5 +1,5 @@
 /**
- * A scripted playoff: every step changes one match (a map result or the end
+ * A scripted playoff: every tick moves the matches of one round forward (a map result or the end
  * of a series). Winners feed into the next round, the final crowns a
  * champion, then the whole thing resets and plays again.
  */
@@ -24,19 +24,29 @@ const feeds: Partial<Record<MatchId, [MatchId, 0 | 1]>> = {
   sf2: ['f', 1],
 };
 
-const series = (m: MatchId, maps: [number, number][]): Step[] => [...maps.map((score) => ({ m, score })), { m, done: true }];
-
-export const script: Step[] = [
-  ...series('qf1', [[1, 0], [2, 0]]),
-  ...series('qf2', [[0, 1], [1, 1], [1, 2]]),
-  ...series('qf3', [[1, 0], [1, 1], [2, 1]]),
-  ...series('qf4', [[1, 0], [2, 0]]),
-  ...series('sf1', [[1, 0], [1, 1], [1, 2]]),
-  ...series('sf2', [[0, 1], [1, 1], [2, 1]]),
-  ...series('f', [[0, 1], [1, 1], [1, 2]]),
+/**
+ * One tick of the script. Every match in a round plays at the same time, so a
+ * tick carries a map result for each of them; series end on different ticks.
+ */
+export const script: Step[][] = [
+  // Quarterfinals: all four live at once.
+  [{ m: 'qf1', score: [1, 0] }, { m: 'qf2', score: [0, 1] }, { m: 'qf3', score: [1, 0] }, { m: 'qf4', score: [1, 0] }],
+  [{ m: 'qf1', score: [2, 0] }, { m: 'qf2', score: [1, 1] }, { m: 'qf3', score: [1, 1] }, { m: 'qf4', score: [2, 0] }],
+  [{ m: 'qf1', done: true }, { m: 'qf4', done: true }, { m: 'qf2', score: [1, 2] }, { m: 'qf3', score: [2, 1] }],
+  [{ m: 'qf2', done: true }, { m: 'qf3', done: true }],
+  // Semifinals: both live.
+  [{ m: 'sf1', score: [1, 0] }, { m: 'sf2', score: [0, 1] }],
+  [{ m: 'sf1', score: [1, 1] }, { m: 'sf2', score: [1, 1] }],
+  [{ m: 'sf1', score: [1, 2] }, { m: 'sf2', score: [2, 1] }],
+  [{ m: 'sf1', done: true }, { m: 'sf2', done: true }],
+  // Final.
+  [{ m: 'f', score: [0, 1] }],
+  [{ m: 'f', score: [1, 1] }],
+  [{ m: 'f', score: [1, 2] }],
+  [{ m: 'f', done: true }],
 ];
 
-export const STEP_MS = 1300;
+export const STEP_MS = 1800;
 export const HOLD_MS = 4500;
 
 export type MatchState = { teams: [string | null, string | null]; score: [number, number]; winner: 0 | 1 | null; live: boolean };
@@ -48,7 +58,7 @@ export function stateAt(stepCount: number): State {
   const s = Object.fromEntries(
     ids.map((id) => [id, { teams: seeds[id] ?? [null, null], score: [0, 0], winner: null, live: false }]),
   ) as unknown as State;
-  for (const step of script.slice(0, stepCount)) {
+  for (const step of script.slice(0, stepCount).flat()) {
     const match = s[step.m];
     if (step.score) {
       match.score = step.score;
