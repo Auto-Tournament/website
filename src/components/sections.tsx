@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -68,7 +69,21 @@ export function Nav() {
 
 export function Hero() {
   return (
-    <Container maxWidth="lg" component="section" sx={{ textAlign: 'center', pt: { xs: 10, md: 16 }, pb: { xs: 4, md: 6 } }}>
+    <Container maxWidth="lg" component="section" sx={{ textAlign: 'center', pt: { xs: 8, md: 12 }, pb: { xs: 4, md: 6 } }}>
+      <Box
+        component="img"
+        src="/at-icon.svg"
+        alt="Auto Tournament"
+        sx={{
+          display: 'block',
+          width: { xs: 96, md: 128 },
+          height: { xs: 96, md: 128 },
+          mx: 'auto',
+          mb: { xs: 4, md: 5 },
+          borderRadius: { xs: '22px', md: '29px' },
+          boxShadow: `0 24px 80px -20px ${color.accent}`,
+        }}
+      />
       <Typography variant="h1" sx={{ maxWidth: '14ch', mx: 'auto' }}>
         Run the tournament.{' '}
         <Box component="span" sx={{ color: color.accent, textDecoration: 'underline', textDecorationThickness: '0.08em', textUnderlineOffset: '0.12em' }}>
@@ -216,6 +231,82 @@ export function Games() {
   );
 }
 
+const installCommands = `mkdir autotournament && cd autotournament
+curl -fsSLO https://autotournament.gg/docker-compose.yml
+cat > .env <<EOF
+SESSION_SECRET=$(openssl rand -base64 32)
+SERVER_TOKEN=$(openssl rand -base64 24 | tr -d '=+/')
+FRONTEND_BASE_URL=http://localhost:3069
+STEAM_API_KEY=
+AUTH_STEAM_ENABLED=true
+EOF
+docker compose up -d`;
+
+/** Wrapping code block with a copy button. Copies the commands, not the comment. */
+function CodeBlock({ code, comment }: { code: string; comment?: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(code);
+      ok = true;
+    } catch {
+      // The async clipboard API is blocked on plain http and in some embeds;
+      // fall back to a hidden textarea and the legacy copy command.
+      const ta = document.createElement('textarea');
+      ta.value = code;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      ok = document.execCommand('copy');
+      ta.remove();
+    }
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+  return (
+    <Box sx={{ position: 'relative', minWidth: 0 }}>
+      <Box
+        component="pre"
+        sx={{
+          ...mono,
+          m: 0,
+          p: 3,
+          pr: { xs: 3, sm: 11 },
+          borderRadius: `${radius.md}px`,
+          bgcolor: color.paper,
+          border: `1px solid ${color.rule}`,
+          fontSize: '0.875rem',
+          lineHeight: 1.7,
+          color: color.ink2,
+          whiteSpace: 'pre-wrap',
+          overflowWrap: 'anywhere',
+        }}
+      >
+        {comment && (
+          <Box component="span" sx={{ color: color.muted, display: 'block' }}>
+            {comment}
+          </Box>
+        )}
+        {code}
+      </Box>
+      <Button
+        size="small"
+        variant="outlined"
+        onClick={copy}
+        aria-label={copied ? 'Commands copied' : 'Copy commands'}
+        sx={{ position: { xs: 'static', sm: 'absolute' }, top: 12, right: 12, mt: { xs: 1.5, sm: 0 }, minWidth: 76, bgcolor: color.paper2 }}
+      >
+        <span aria-live="polite">{copied ? 'Copied' : 'Copy'}</span>
+      </Button>
+    </Box>
+  );
+}
+
 export function Install() {
   return (
     <Container maxWidth="lg" component="section" sx={{ py: { xs: 6, md: 10 } }}>
@@ -234,7 +325,7 @@ export function Install() {
         <div>
           <Typography variant="h2">Up in five minutes.</Typography>
           <Typography sx={{ mt: 2, color: color.ink2 }}>
-            One Docker Compose file: the web app, the API and the database. Point it at your servers and create a tournament.
+            One Docker Compose file runs the web app, the API and the database. Add your Steam API key to <code>.env</code>, open http://localhost:3069 and create a tournament.
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 3 }}>
             <Button variant="contained" href={links.install}>
@@ -245,19 +336,7 @@ export function Install() {
             </Button>
           </Box>
         </div>
-        <Box
-          component="pre"
-          sx={{ ...mono, m: 0, p: 3, borderRadius: `${radius.md}px`, bgcolor: color.paper, border: `1px solid ${color.rule}`, overflowX: 'auto', fontSize: '0.875rem', lineHeight: 1.7, color: color.ink2 }}
-        >
-          <Box component="span" sx={{ color: color.muted }}>
-            # clone and start
-          </Box>
-          {`
-git clone https://github.com/Auto-Tournament/auto-tournament.git
-cd auto-tournament
-cp example.env .env
-docker compose -f docker/docker-compose.yml up -d`}
-        </Box>
+        <CodeBlock comment="# no clone needed: download the compose file and start" code={installCommands} />
       </Box>
     </Container>
   );
