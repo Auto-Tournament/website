@@ -37,7 +37,8 @@ export const curated: ThemePreset[] = [
   { id: 'ember', name: 'Ember (current)', group: 'Current', colors: [ember.accent, ember.accent2, ember.paper3, ember.ink], theme: ember },
 
   // Picks from the existing palettes.
-  { id: 'classic-mat', name: 'Classic MAT', group: 'Picks', colors: ['#d0bcff', '#e8def8', '#1c1b1f', '#e6e1e5'], theme: classicMat },
+  // The 2.x purple, but on the darker page and surfaces the other themes use.
+  { id: 'classic-mat-dark', name: 'Classic MAT dark', group: 'Picks', colors: ['#B69DF8', '#D0BCFF', '#1C1B1F', '#E6E1E5'] },
   { id: 'neon-violet', name: 'Neon violet', group: 'Picks', colors: ['#A855F7', '#D946EF', '#1E293B', '#F3E8FF'] },
   { id: 'color-drop', name: 'Color Drop', group: 'Picks', colors: ['#4B47E3', '#1B1C3A'] },
   { id: 'violet', name: 'Violet', group: 'Picks', colors: ['#7C3AED', '#A78BFA', '#1F2937', '#F3F4F6'] },
@@ -51,6 +52,7 @@ export const curated: ThemePreset[] = [
   { id: 'frost', name: 'Frost', group: 'New', colors: ['#5EC8FF', '#9ADCFF', '#0B1320', '#E6F6FF'] },
 
   // Other purples.
+  { id: 'classic-mat', name: 'Classic MAT (exact)', group: 'More', colors: ['#d0bcff', '#e8def8', '#1c1b1f', '#e6e1e5'], theme: classicMat },
   { id: 'indigo', name: 'Indigo', group: 'More', colors: ['#4F46E5', '#4338CA', '#1F2937', '#E9D5FF'] },
   { id: 'amethyst', name: 'Amethyst', group: 'More', colors: ['#8B2BE2', '#A25CDB', '#2D2A4D', '#EDE7F6'] },
   { id: 'royal', name: 'Royal', group: 'More', colors: ['#5B21B6', '#A855F7', '#1F2937', '#F3F4F6'] },
