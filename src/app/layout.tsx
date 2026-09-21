@@ -6,11 +6,11 @@ import { ThemeProvider } from '@mui/material/styles';
 import { theme } from '@/theme/theme';
 import { tokens } from '@/theme/tokens';
 
-// `optional` keeps the headline from repainting when Sora arrives late on slow
+// `optional` keeps the hero text from repainting when the fonts arrive late on slow
 // connections (that repaint was the mobile LCP). The metric-matched fallback
 // is close enough for a first visit; later visits have Sora cached.
 const display = Sora({ subsets: ['latin'], weight: ['600', '700'], variable: '--font-display', display: 'optional' });
-const body = Geist({ subsets: ['latin'], variable: '--font-body' });
+const body = Geist({ subsets: ['latin'], variable: '--font-body', display: 'optional' });
 // Only used in the product cards below the fold, so don't preload it.
 const mono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono', preload: false });
 
