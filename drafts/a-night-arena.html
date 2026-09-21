@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto Tournament — Draft A · Night Arena</title>
+<link rel="icon" href="at-icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Hallmark · genre: atmospheric · macrostructure: Split Studio · H centred-video hero
+ * theme: custom · vibe: "LAN at night, stage lights, orange" · paper: oklch(15% 0.012 38) · accent: oklch(69% 0.19 38)
+ * display: Sora · body: Geist · axes: dark / geometric-sans / warm
+ * nav: N5 Floating pill · footer: Ft5 Statement · enrichment: E1 centred demo video (placeholder until recorded)
+ * pre-emit critique: P4 H5 E4 S5 R4 V4 · studied: no · context: user-provided
+ */
+:root {
+  /* colour */
+  --color-paper:   oklch(15% 0.012 38);
+  --color-paper-2: oklch(18.5% 0.014 38);
+  --color-paper-3: oklch(22% 0.016 38);
+  --color-ink:     oklch(95% 0.008 38);
+  --color-ink-2:   oklch(80% 0.010 38);
+  --color-muted:   oklch(64% 0.012 38);
+  --color-rule:    oklch(29% 0.014 38);
+  --color-accent:  oklch(69% 0.19 38);
+  --color-accent-2:oklch(76% 0.15 45);
+  --color-accent-ink: oklch(17% 0.012 38);
+  --color-focus:   oklch(73% 0.21 38);
+  --color-live:    oklch(72% 0.17 150);
+  --color-bloom:   oklch(69% 0.19 38 / 0.22);
+  --color-bloom-2: oklch(62% 0.17 20 / 0.14);
+  /* type */
+  --font-display: "Sora", sans-serif;
+  --font-body: "Geist", sans-serif;
+  --font-mono: "Geist Mono", monospace;
+  --text-xs: 0.75rem; --text-sm: 0.875rem; --text-base: 1rem; --text-lg: 1.125rem;
+  --text-xl: 1.375rem; --text-2xl: 1.75rem; --text-3xl: clamp(1.9rem, 2.2vw + 1rem, 2.75rem);
+  --text-display: clamp(2.6rem, 5.2vw + 1rem, 5.25rem);
+  /* space (4pt) */
+  --space-2xs: 0.25rem; --space-xs: 0.5rem; --space-sm: 0.75rem; --space-md: 1rem; --space-lg: 1.5rem;
+  --space-xl: 2rem; --space-2xl: 3rem; --space-3xl: 5rem; --space-4xl: 8rem;
+  /* shape */
+  --radius-sm: 8px; --radius-md: 14px; --radius-lg: 22px; --radius-pill: 999px;
+  /* motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1); --ease-in: cubic-bezier(0.55, 0, 1, 0.45); --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 150ms; --dur-base: 240ms; --dur-slow: 600ms;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; font-family: var(--font-body); font-size: var(--text-base); line-height: 1.55;
+  color: var(--color-ink); background-color: var(--color-paper);
+  background-image:
+    radial-gradient(60rem 40rem at 50% -10%, var(--color-bloom), transparent 70%),
+    radial-gradient(40rem 30rem at 90% 55%, var(--color-bloom-2), transparent 70%);
+  background-attachment: fixed;
+}
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; margin: 0; font-style: normal; overflow-wrap: anywhere; min-width: 0; }
+p { margin: 0; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+.wrap { width: min(72rem, 100% - 2 * var(--space-lg)); margin-inline: auto; }
+
+/* N5 floating pill */
+.nav { position: sticky; top: var(--space-md); z-index: 10; display: flex; justify-content: center; padding-inline: var(--space-md); }
+.nav-pill { display: flex; align-items: center; gap: var(--space-lg); padding: var(--space-xs) var(--space-xs) var(--space-xs) var(--space-md);
+  background: oklch(18.5% 0.014 38 / 0.82); backdrop-filter: blur(14px); border: 1px solid var(--color-rule); border-radius: var(--radius-pill); max-width: 100%; }
+.brand { display: flex; align-items: center; gap: var(--space-xs); text-decoration: none; font-family: var(--font-display); font-weight: 600; white-space: nowrap; }
+.brand img { width: 26px; height: 26px; border-radius: 7px; }
+.nav-links { display: flex; gap: var(--space-lg); font-size: var(--text-sm); color: var(--color-ink-2); }
+.nav-links a { text-decoration: none; white-space: nowrap; transition: color var(--dur-fast) var(--ease-out); }
+.nav-links a:hover { color: var(--color-ink); }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; gap: var(--space-xs); padding: 0.7rem 1.2rem; border-radius: var(--radius-pill);
+  font: 600 var(--text-sm)/1 var(--font-body); text-decoration: none; white-space: nowrap; border: 1px solid transparent;
+  transition: transform var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); }
+.btn-primary { background: var(--color-accent); color: var(--color-accent-ink); }
+.btn-primary:hover { background: var(--color-accent-2); box-shadow: 0 10px 30px -12px var(--color-accent); }
+.btn-primary:active { transform: translateY(1px); }
+.btn-ghost { border-color: var(--color-rule); color: var(--color-ink); background: transparent; }
+.btn-ghost:hover { background: var(--color-paper-3); }
+.btn-sm { padding: 0.55rem 0.95rem; }
+
+/* hero */
+.hero { text-align: center; padding-block: var(--space-4xl) var(--space-2xl); }
+.hero h1 { font-size: var(--text-display); max-width: 14ch; margin-inline: auto; }
+.hero h1 .mark { color: var(--color-accent); text-decoration: underline; text-decoration-thickness: 0.08em; text-underline-offset: 0.12em; }
+.hero .lede { margin: var(--space-lg) auto 0; max-width: 56ch; color: var(--color-ink-2); font-size: var(--text-lg); }
+.hero .ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-sm); margin-top: var(--space-xl); }
+.video { margin: var(--space-3xl) auto 0; width: min(64rem, 100%); aspect-ratio: 16 / 9; border-radius: var(--radius-lg); overflow: hidden;
+  border: 1px solid var(--color-rule); background: var(--color-paper-2); position: relative;
+  box-shadow: 0 40px 120px -40px var(--color-accent); }
+.video video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.video .pending { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: var(--space-lg); color: var(--color-muted); font-size: var(--text-sm); }
+.video .pending strong { display: block; color: var(--color-ink); font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-2xs); }
+.hero .meta { margin-top: var(--space-md); color: var(--color-muted); font-size: var(--text-sm); }
+
+/* split studio rows */
+.rows { display: grid; gap: var(--space-4xl); padding-block: var(--space-4xl); }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: var(--space-3xl); align-items: center; }
+.row.flip > .copy { order: 2; }
+.copy h2 { font-size: var(--text-3xl); max-width: 16ch; }
+.copy p { margin-top: var(--space-md); color: var(--color-ink-2); max-width: 44ch; }
+.copy ul { margin: var(--space-lg) 0 0; padding: 0; list-style: none; display: grid; gap: var(--space-xs); color: var(--color-ink-2); font-size: var(--text-sm); }
+.copy li::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--color-accent); margin-right: var(--space-sm); vertical-align: middle; }
+.reveal { opacity: 0; transition: opacity var(--dur-slow) var(--ease-out); }
+.reveal.in { opacity: 1; }
+.row .card.reveal { transition-delay: 120ms; }
+
+/* product cards */
+.card { background: var(--color-paper-2); border: 1px solid var(--color-rule); border-radius: var(--radius-lg); padding: var(--space-lg); font-size: var(--text-sm);
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); }
+.card:hover { transform: translateY(-3px); box-shadow: 0 24px 60px -30px var(--color-accent); }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md); }
+.card-title { font-family: var(--font-display); font-weight: 600; font-size: var(--text-base); }
+.tag { font: 500 var(--text-xs)/1 var(--font-mono); padding: 0.35rem 0.55rem; border-radius: var(--radius-pill); background: var(--color-paper-3); color: var(--color-ink-2); white-space: nowrap; }
+.tag.live { color: var(--color-live); }
+.tag.live::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--color-live); margin-right: 6px; vertical-align: 1px; }
+.tag.accent { background: var(--color-accent); color: var(--color-accent-ink); }
+.mono { font-family: var(--font-mono); }
+
+/* bracket */
+.bracket { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-md); align-items: center; }
+.round { display: grid; gap: var(--space-sm); }
+.round h4 { margin: 0 0 var(--space-2xs); font: 500 var(--text-xs)/1 var(--font-mono); color: var(--color-muted); }
+.match { background: var(--color-paper-3); border-radius: var(--radius-sm); overflow: hidden; border: 1px solid transparent; }
+.match.now { border-color: var(--color-accent); }
+.team { display: flex; justify-content: space-between; gap: var(--space-xs); padding: 0.4rem 0.6rem; }
+.team + .team { border-top: 1px solid var(--color-rule); }
+.team .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.team.win { color: var(--color-ink); font-weight: 600; }
+.team.lose { color: var(--color-muted); }
+.team .s { font-family: var(--font-mono); }
+.team.tbd { color: var(--color-muted); font-style: normal; }
+
+/* veto */
+.maps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-xs); }
+.map { display: flex; justify-content: space-between; align-items: center; gap: var(--space-xs); padding: 0.6rem 0.75rem; border-radius: var(--radius-sm); background: var(--color-paper-3); }
+.map.ban { color: var(--color-muted); text-decoration: line-through; text-decoration-color: var(--color-muted); }
+.map.pick { outline: 1px solid var(--color-accent); }
+.map .who { font: 500 var(--text-xs)/1 var(--font-mono); color: var(--color-muted); text-decoration: none; }
+.map.pick .who { color: var(--color-accent); }
+.turn { margin-top: var(--space-md); display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); background: var(--color-paper-3); }
+.bar { height: 4px; border-radius: 4px; background: var(--color-rule); overflow: hidden; margin-top: var(--space-xs); }
+.bar i { display: block; height: 100%; width: 62%; background: var(--color-accent); }
+
+/* servers */
+.servers { display: grid; gap: var(--space-xs); }
+.server { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-md); align-items: center; padding: 0.7rem 0.85rem; border-radius: var(--radius-md); background: var(--color-paper-3); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--color-muted); }
+.dot.live { background: var(--color-live); }
+.dot.load { background: var(--color-accent); }
+.server .sub { color: var(--color-muted); font-size: var(--text-xs); }
+.queue { margin-top: var(--space-md); color: var(--color-muted); font-size: var(--text-xs); }
+
+/* profile */
+.profile-top { display: flex; gap: var(--space-md); align-items: center; }
+.avatar { width: 56px; height: 56px; border-radius: var(--radius-md); background: var(--color-accent); color: var(--color-accent-ink); display: grid; place-items: center; font: 700 var(--text-xl)/1 var(--font-display); flex: none; }
+.profile-name { font: 600 var(--text-lg)/1.2 var(--font-display); }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-xs); margin-top: var(--space-lg); }
+.stat { background: var(--color-paper-3); border-radius: var(--radius-sm); padding: var(--space-sm); }
+.stat b { display: block; font: 600 var(--text-lg)/1.1 var(--font-mono); }
+.stat span { color: var(--color-muted); font-size: var(--text-xs); }
+.spark { margin-top: var(--space-md); width: 100%; height: 56px; display: block; }
+.spark path { fill: none; stroke: var(--color-accent); stroke-width: 2; }
+.trophies { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-top: var(--space-md); }
+
+/* games */
+.games { padding-block: var(--space-3xl) var(--space-4xl); }
+.games-head { display: grid; gap: var(--space-md); max-width: 40rem; }
+.games-head h2 { font-size: var(--text-3xl); }
+.games-head p { color: var(--color-ink-2); }
+.game-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--space-md); margin-top: var(--space-2xl); }
+.game { background: var(--color-paper-2); border: 1px solid var(--color-rule); border-radius: var(--radius-lg); padding: var(--space-lg); display: grid; gap: var(--space-xs); align-content: start; }
+.game.built { border-color: var(--color-accent); }
+.game h3 { font-size: var(--text-xl); }
+.game p { color: var(--color-muted); font-size: var(--text-sm); }
+.game .tag { justify-self: start; }
+
+/* install */
+.install { padding-block: var(--space-3xl); }
+.install-box { background: var(--color-paper-2); border: 1px solid var(--color-rule); border-radius: var(--radius-lg); padding: var(--space-2xl); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: var(--space-2xl); align-items: center; }
+.install h2 { font-size: var(--text-3xl); }
+.install p { margin-top: var(--space-md); color: var(--color-ink-2); }
+.install .ctas { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-lg); }
+pre { margin: 0; padding: var(--space-lg); border-radius: var(--radius-md); background: var(--color-paper); border: 1px solid var(--color-rule); overflow-x: auto; font: 400 var(--text-sm)/1.7 var(--font-mono); color: var(--color-ink-2); }
+pre .c { color: var(--color-muted); }
+
+/* Ft5 statement */
+footer { padding-block: var(--space-4xl) var(--space-2xl); border-top: 1px solid var(--color-rule); margin-top: var(--space-3xl); }
+.statement { font: 700 var(--text-3xl)/1.1 var(--font-display); letter-spacing: -0.03em; max-width: 20ch; }
+.foot-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-md); margin-top: var(--space-2xl); color: var(--color-muted); font-size: var(--text-sm); }
+.foot-row nav { display: flex; flex-wrap: wrap; gap: var(--space-lg); }
+.foot-row a { text-decoration: none; white-space: nowrap; }
+.foot-row a:hover { color: var(--color-ink); }
+
+@media (max-width: 820px) {
+  .row, .install-box { grid-template-columns: minmax(0, 1fr); gap: var(--space-xl); }
+  .row.flip > .copy { order: 0; }
+  .nav-links { display: none; }
+  .rows { gap: var(--space-3xl); padding-block: var(--space-3xl); }
+  .hero { padding-block: var(--space-3xl) var(--space-xl); }
+}
+@media (max-width: 480px) {
+  .bracket { grid-template-columns: minmax(0, 1fr); }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .install-box { padding: var(--space-lg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transition: none; }
+  .card:hover { transform: none; }
+}
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-pill">
+    <a class="brand" href="#"><img src="at-icon.svg" alt="">Auto Tournament</a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="#features">Features</a>
+      <a href="#games">Games</a>
+      <a href="https://docs.autotournament.gg">Docs</a>
+      <a href="https://github.com/Auto-Tournament">GitHub</a>
+    </nav>
+    <a class="btn btn-primary btn-sm" href="https://docs.autotournament.gg/getting-started/install">Install</a>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap">
+    <h1>Run the tournament. <span class="mark">Skip</span> the spreadsheet.</h1>
+    <p class="lede">Auto Tournament builds the bracket, runs the map veto, puts every match on a free server and records the result. Self-hosted and open source, with CS2 built in.</p>
+    <div class="ctas">
+      <a class="btn btn-primary" href="https://docs.autotournament.gg/getting-started/install">Install Auto Tournament</a>
+      <a class="btn btn-ghost" href="https://github.com/Auto-Tournament/auto-tournament">View on GitHub</a>
+    </div>
+    <figure class="video" aria-label="Product preview">
+      <video autoplay muted loop playsinline poster="" src="preview.mp4"></video>
+      <figcaption class="pending"><span><strong>Product preview</strong>90-second recording of a tournament from bracket to final. To record.</span></figcaption>
+    </figure>
+    <p class="meta">Free and MIT licensed · Runs on one Docker host</p>
+  </section>
+
+  <div class="rows wrap" id="features">
+    <section class="row">
+      <div class="copy reveal">
+        <h2>The bracket moves on by itself.</h2>
+        <p>When a match ends, the winner goes through and the next match is set up. You watch; you don't copy scores.</p>
+        <ul><li>Single and double elimination</li><li>Round robin and Swiss</li><li>Shuffle tournaments with balanced teams</li></ul>
+      </div>
+      <div class="card reveal" aria-label="Example bracket">
+        <div class="card-head"><span class="card-title">Spring Cup · Playoffs</span><span class="tag live">Live</span></div>
+        <div class="bracket">
+          <div class="round"><h4>Quarterfinals</h4>
+            <div class="match"><div class="team win"><span class="n">Nordlys</span><span class="s">2</span></div><div class="team lose"><span class="n">Baltic Five</span><span class="s">0</span></div></div>
+            <div class="match"><div class="team lose"><span class="n">Fjord</span><span class="s">1</span></div><div class="team win"><span class="n">Polar</span><span class="s">2</span></div></div>
+            <div class="match"><div class="team win"><span class="n">Ironside</span><span class="s">2</span></div><div class="team lose"><span class="n">Kvarken</span><span class="s">1</span></div></div>
+            <div class="match"><div class="team win"><span class="n">Midnight</span><span class="s">2</span></div><div class="team lose"><span class="n">Tundra</span><span class="s">0</span></div></div>
+          </div>
+          <div class="round"><h4>Semifinals</h4>
+            <div class="match now"><div class="team"><span class="n">Nordlys</span><span class="s">1</span></div><div class="team"><span class="n">Polar</span><span class="s">1</span></div></div>
+            <div class="match"><div class="team win"><span class="n">Ironside</span><span class="s">2</span></div><div class="team lose"><span class="n">Midnight</span><span class="s">1</span></div></div>
+          </div>
+          <div class="round"><h4>Final</h4>
+            <div class="match"><div class="team tbd"><span class="n">Winner SF1</span><span class="s">–</span></div><div class="team win"><span class="n">Ironside</span><span class="s">–</span></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="row flip">
+      <div class="copy reveal">
+        <h2>Map veto in the browser.</h2>
+        <p>Team captains ban and pick maps from their phone. When the veto is done, the server loads the right maps and sides.</p>
+        <ul><li>Bo1, Bo3 and Bo5 formats</li><li>Knife round or side pick</li><li>Custom veto order per tournament</li></ul>
+      </div>
+      <div class="card reveal" aria-label="Example map veto">
+        <div class="card-head"><span class="card-title">Nordlys vs Polar · Bo3</span><span class="tag">Veto 4 of 7</span></div>
+        <div class="maps">
+          <div class="map ban"><span>Vertigo</span><span class="who">Nordlys ban</span></div>
+          <div class="map ban"><span>Anubis</span><span class="who">Polar ban</span></div>
+          <div class="map pick"><span>Mirage</span><span class="who">Nordlys pick</span></div>
+          <div class="map pick"><span>Inferno</span><span class="who">Polar pick</span></div>
+          <div class="map"><span>Nuke</span><span class="who">open</span></div>
+          <div class="map"><span>Ancient</span><span class="who">open</span></div>
+          <div class="map"><span>Dust II</span><span class="who">open</span></div>
+        </div>
+        <div class="turn"><div><div>Nordlys to ban</div><div class="bar"><i></i></div></div><span class="tag">0:18</span></div>
+      </div>
+    </section>
+
+    <section class="row">
+      <div class="copy reveal">
+        <h2>Every match finds a server.</h2>
+        <p>Add your game servers once. Auto Tournament loads each match on a free one, waits when they are all busy, and tells you when one goes offline or needs an update.</p>
+      </div>
+      <div class="card reveal" aria-label="Example server list">
+        <div class="card-head"><span class="card-title">Servers</span><span class="tag">3 of 3 online</span></div>
+        <div class="servers">
+          <div class="server"><span class="dot live"></span><div><div>cs2-1 · Nordlys vs Polar</div><div class="sub mono">Mirage · 9–7 · round 17</div></div><span class="tag live">Live</span></div>
+          <div class="server"><span class="dot load"></span><div><div>cs2-2 · Ironside vs Midnight</div><div class="sub mono">Loading config</div></div><span class="tag">Loading</span></div>
+          <div class="server"><span class="dot"></span><div><div>cs2-3</div><div class="sub mono">Idle · ready for the next match</div></div><span class="tag">Free</span></div>
+        </div>
+        <p class="queue">Next in queue: Fjord vs Kvarken (lower bracket)</p>
+      </div>
+    </section>
+
+    <section class="row flip">
+      <div class="copy reveal">
+        <h2>Players keep their history.</h2>
+        <p>Ratings, stats and match history carry over from one tournament to the next, so seeding gets fairer every event.</p>
+      </div>
+      <div class="card reveal" aria-label="Example player profile">
+        <div class="profile-top">
+          <div class="avatar" aria-hidden="true">E</div>
+          <div><div class="profile-name">elkjop_enjoyer</div><div class="sub" style="color:var(--color-muted)">Nordlys · 14 tournaments</div></div>
+        </div>
+        <div class="stats">
+          <div class="stat"><b>1 842</b><span>Rating</span></div>
+          <div class="stat"><b>1.21</b><span>K/D</span></div>
+          <div class="stat"><b>86.4</b><span>ADR</span></div>
+          <div class="stat"><b>74%</b><span>KAST</span></div>
+        </div>
+        <svg class="spark" viewBox="0 0 300 56" preserveAspectRatio="none" aria-hidden="true"><path d="M0 44 L30 40 L60 42 L90 34 L120 36 L150 26 L180 30 L210 20 L240 22 L270 12 L300 14"/></svg>
+        <div class="trophies"><span class="tag accent">Spring Cup 2026 · 1st</span><span class="tag">Winter LAN · 3rd</span><span class="tag">Most clutches</span></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="games wrap" id="games">
+    <div class="games-head">
+      <h2>CS2 today. More games as modules.</h2>
+      <p>Games plug in as modules. CS2 ships built in. The rest are planned, starting with games that let you host servers or run lobbies through an API.</p>
+    </div>
+    <div class="game-grid">
+      <article class="game built"><span class="tag accent">Built in</span><h3>Counter-Strike 2</h3><p>Your own servers with MatchZy Enhanced. Veto, live scores, demos and stats.</p></article>
+      <article class="game"><span class="tag">Planned</span><h3>Team Fortress 2</h3><p>Self-hosted servers, same model as CS2.</p></article>
+      <article class="game"><span class="tag">Planned</span><h3>Dota 2</h3><p>Lobbies created by a bot, results from the Steam Web API.</p></article>
+      <article class="game"><span class="tag">Planned</span><h3>League of Legends</h3><p>Tournament codes and results through Riot's Tournament API.</p></article>
+      <article class="game"><span class="tag">Planned</span><h3>Trackmania</h3><p>Dedicated servers you host, plus the Nadeo API.</p></article>
+      <article class="game"><span class="tag">Planned</span><h3>osu!</h3><p>Multiplayer lobbies run by a bot, results from the osu! API.</p></article>
+      <article class="game"><span class="tag">Planned</span><h3>Chess</h3><p>Games and results through the open Lichess API.</p></article>
+      <article class="game"><span class="tag">Planned</span><h3>Any other game</h3><p>Manual result reporting for games without an API.</p></article>
+    </div>
+  </section>
+
+  <section class="install wrap">
+    <div class="install-box">
+      <div>
+        <h2>Up in five minutes.</h2>
+        <p>One Docker Compose file: the web app, the API and the database. Point it at your servers and create a tournament.</p>
+        <div class="ctas"><a class="btn btn-primary" href="https://docs.autotournament.gg/getting-started/install">Read the install guide</a><a class="btn btn-ghost" href="https://discord.gg/n7gHYau7aW">Ask on Discord</a></div>
+      </div>
+<pre><span class="c"># clone and start</span>
+git clone https://github.com/Auto-Tournament/auto-tournament.git
+cd auto-tournament
+cp example.env .env
+docker compose -f docker/docker-compose.yml up -d</pre>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <p class="statement">Made by people who run LANs, for people who run LANs.</p>
+  <div class="foot-row">
+    <nav aria-label="Footer"><a href="https://docs.autotournament.gg">Docs</a><a href="https://github.com/Auto-Tournament">GitHub</a><a href="https://discord.gg/n7gHYau7aW">Discord</a></nav>
+    <span>MIT licensed · Logo generated with an AI image model, cleaned up by hand</span>
+  </div>
+</footer>
+
+<script>
+  const io = new IntersectionObserver((es) => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: 0.15 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+  const v = document.querySelector('.video video');
+  v.addEventListener('loadeddata', () => v.nextElementSibling.hidden = true);
+</script>
+</body>
+</html>

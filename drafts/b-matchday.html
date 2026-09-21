@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto Tournament — Draft B · Matchday</title>
+<link rel="icon" href="at-icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Geist:wght@400;500;600&family=Geist+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Hallmark · genre: playful · macrostructure: Narrative Workflow · H centred-video hero on accent block
+ * theme: custom · vibe: "matchday poster, chunky, warm, friendly" · paper: oklch(97% 0.014 70) · accent: oklch(69% 0.19 38)
+ * display: Bricolage Grotesque 800 · body: Geist · axes: light / display-heavy / warm
+ * nav: N7 Brutal slab · footer: Ft8 Marquee · enrichment: E1 centred demo video (placeholder until recorded)
+ * pre-emit critique: P4 H4 E4 S5 R4 V5 · studied: no · context: user-provided
+ */
+:root {
+  --color-paper:   oklch(97% 0.014 70);
+  --color-paper-2: oklch(93.5% 0.02 65);
+  --color-paper-3: oklch(89% 0.026 60);
+  --color-ink:     oklch(21% 0.014 38);
+  --color-ink-2:   oklch(38% 0.014 38);
+  --color-muted:   oklch(52% 0.014 38);
+  --color-rule:    oklch(21% 0.014 38);
+  --color-accent:  oklch(69% 0.19 38);
+  --color-accent-deep: oklch(58% 0.18 36);
+  --color-accent-ink: oklch(21% 0.014 38);
+  --color-on-ink:  oklch(97% 0.014 70);
+  --color-focus:   oklch(55% 0.21 38);
+  --color-live:    oklch(58% 0.15 150);
+  --font-display: "Bricolage Grotesque", sans-serif;
+  --font-body: "Geist", sans-serif;
+  --font-mono: "Geist Mono", monospace;
+  --text-xs: 0.75rem; --text-sm: 0.875rem; --text-base: 1rem; --text-lg: 1.125rem; --text-xl: 1.375rem;
+  --text-3xl: clamp(2rem, 2.6vw + 1rem, 3.25rem);
+  --text-display: clamp(2.8rem, 6vw + 1rem, 6rem);
+  --text-num: clamp(4rem, 8vw + 1rem, 8rem);
+  --space-2xs: 0.25rem; --space-xs: 0.5rem; --space-sm: 0.75rem; --space-md: 1rem; --space-lg: 1.5rem;
+  --space-xl: 2rem; --space-2xl: 3rem; --space-3xl: 5rem; --space-4xl: 8rem;
+  --radius-sm: 12px; --radius-md: 20px; --radius-lg: 32px; --radius-pill: 999px;
+  --border: 2px solid var(--color-rule);
+  --shadow-block: 6px 6px 0 var(--color-rule);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1); --ease-in: cubic-bezier(0.55, 0, 1, 0.45); --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 150ms; --dur-base: 260ms; --dur-slow: 700ms;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+body { margin: 0; font-family: var(--font-body); font-size: var(--text-base); line-height: 1.55; color: var(--color-ink); background: var(--color-paper); }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.035em; line-height: 0.98; margin: 0; font-style: normal; overflow-wrap: anywhere; min-width: 0; }
+p { margin: 0; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.wrap { width: min(74rem, 100% - 2 * var(--space-lg)); margin-inline: auto; }
+
+/* N7 brutal slab */
+.nav { border-bottom: var(--border); background: var(--color-paper); position: sticky; top: 0; z-index: 10; }
+.nav .wrap { display: flex; align-items: center; justify-content: space-between; gap: var(--space-lg); padding-block: var(--space-sm); }
+.brand { display: flex; align-items: center; gap: var(--space-sm); text-decoration: none; font: 800 var(--text-xl)/1 var(--font-display); letter-spacing: -0.03em; white-space: nowrap; }
+.brand img { width: 36px; height: 36px; border-radius: 10px; }
+.nav-links { display: flex; gap: var(--space-xl); font: 600 var(--text-sm)/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.06em; }
+.nav-links a { text-decoration: none; white-space: nowrap; }
+.nav-links a:hover { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+
+.btn { display: inline-flex; align-items: center; gap: var(--space-xs); padding: 0.85rem 1.4rem; border-radius: var(--radius-pill); border: var(--border);
+  font: 700 var(--text-base)/1 var(--font-body); text-decoration: none; white-space: nowrap; box-shadow: 4px 4px 0 var(--color-rule);
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out); }
+.btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--color-rule); }
+.btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--color-rule); }
+.btn-primary { background: var(--color-ink); color: var(--color-on-ink); }
+.btn-primary:hover { transition-timing-function: var(--ease-spring); }
+.btn-light { background: var(--color-paper); color: var(--color-ink); }
+.btn-sm { padding: 0.6rem 1rem; font-size: var(--text-sm); box-shadow: 3px 3px 0 var(--color-rule); }
+
+/* hero: accent block */
+.hero { padding-block: var(--space-2xl) var(--space-3xl); }
+.hero-block { background: var(--color-accent); border: var(--border); border-radius: var(--radius-lg); padding: var(--space-3xl) var(--space-xl) 0; text-align: center; overflow: hidden; position: relative; }
+.hero h1 { font-size: var(--text-display); max-width: 13ch; margin-inline: auto; color: var(--color-accent-ink); }
+.hero .lede { max-width: 52ch; margin: var(--space-lg) auto 0; font-size: var(--text-lg); color: var(--color-accent-ink); }
+.hero .ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-sm); margin-top: var(--space-xl); }
+.video { margin: var(--space-2xl) auto 0; width: min(60rem, 100%); aspect-ratio: 16 / 9; border: var(--border); border-bottom: 0; border-radius: var(--radius-md) var(--radius-md) 0 0; background: var(--color-paper); overflow: hidden; position: relative; }
+.video video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.video .pending { position: absolute; inset: 0; display: grid; place-items: center; padding: var(--space-lg); color: var(--color-muted); font-size: var(--text-sm); }
+.video .pending strong { display: block; color: var(--color-ink); font: 800 var(--text-xl)/1.1 var(--font-display); margin-bottom: var(--space-2xs); }
+.ram { position: absolute; width: clamp(64px, 9vw, 110px); right: clamp(12px, 4vw, 48px); top: clamp(12px, 3vw, 36px); border-radius: 24px; border: var(--border); transform: rotate(8deg); }
+
+/* stages (narrative workflow, zig-zag) */
+.intro { text-align: center; padding-block: var(--space-2xl) var(--space-xl); }
+.intro h2 { font-size: var(--text-3xl); max-width: 18ch; margin-inline: auto; }
+.intro p { margin: var(--space-md) auto 0; max-width: 50ch; color: var(--color-ink-2); }
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: var(--space-3xl); align-items: center; padding-block: var(--space-3xl); border-top: var(--border); }
+.stage:nth-of-type(even) .copy { order: 2; }
+.num { font: 800 var(--text-num)/0.8 var(--font-display); letter-spacing: -0.06em; color: var(--color-accent); -webkit-text-stroke: 2px var(--color-rule); }
+.stage h2 { font-size: var(--text-3xl); margin-top: var(--space-md); max-width: 14ch; }
+.stage p { margin-top: var(--space-md); color: var(--color-ink-2); max-width: 44ch; }
+.reveal { opacity: 0; transform: translateX(-24px); transition: opacity var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out); }
+.stage:nth-of-type(even) .reveal { transform: translateX(24px); }
+.reveal.in { opacity: 1; transform: none; }
+
+/* cards */
+.card { background: var(--color-paper); border: var(--border); border-radius: var(--radius-md); padding: var(--space-lg); box-shadow: var(--shadow-block); font-size: var(--text-sm);
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); }
+.card:hover { transform: translate(-3px, -3px); box-shadow: 9px 9px 0 var(--color-rule); }
+.card.tint { background: var(--color-paper-2); }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md); }
+.card-title { font: 800 var(--text-lg)/1.1 var(--font-display); letter-spacing: -0.02em; }
+.chip { font: 500 var(--text-xs)/1 var(--font-mono); padding: 0.4rem 0.65rem; border-radius: var(--radius-pill); border: 1.5px solid var(--color-rule); white-space: nowrap; background: var(--color-paper); }
+.chip.hot { background: var(--color-accent); }
+.chip.ink { background: var(--color-ink); color: var(--color-on-ink); }
+.chip.live::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--color-live); margin-right: 6px; vertical-align: 0; }
+
+/* bracket */
+.bracket { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-md); align-items: center; }
+.round { display: grid; gap: var(--space-sm); }
+.round h4 { margin: 0; font: 500 var(--text-xs)/1 var(--font-mono); color: var(--color-muted); }
+.match { border: 1.5px solid var(--color-rule); border-radius: var(--radius-sm); overflow: hidden; background: var(--color-paper); }
+.match.now { background: var(--color-accent); }
+.team { display: flex; justify-content: space-between; gap: var(--space-xs); padding: 0.4rem 0.6rem; }
+.team + .team { border-top: 1.5px solid var(--color-rule); }
+.team .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.team.win { font-weight: 700; }
+.team.lose { color: var(--color-muted); }
+.team .s { font-family: var(--font-mono); }
+
+/* veto */
+.maps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-xs); }
+.map { border: 1.5px solid var(--color-rule); border-radius: var(--radius-sm); padding: var(--space-sm); display: grid; gap: var(--space-2xs); }
+.map b { font: 800 var(--text-base)/1 var(--font-display); }
+.map span { font: 500 var(--text-xs)/1 var(--font-mono); color: var(--color-muted); }
+.map.ban { background: var(--color-paper-3); color: var(--color-muted); }
+.map.ban b { text-decoration: line-through; }
+.map.pick { background: var(--color-accent); }
+.map.pick span { color: var(--color-accent-ink); }
+
+/* live match */
+.score { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--space-md); text-align: center; padding-block: var(--space-md); }
+.score .t { font: 800 var(--text-xl)/1.1 var(--font-display); }
+.score .v { font: 800 var(--text-3xl)/1 var(--font-display); letter-spacing: -0.04em; }
+.feed { display: grid; gap: var(--space-xs); margin-top: var(--space-md); }
+.feed div { display: flex; justify-content: space-between; gap: var(--space-sm); padding: 0.55rem 0.75rem; border-radius: var(--radius-sm); background: var(--color-paper-2); }
+.feed span:last-child { font-family: var(--font-mono); color: var(--color-muted); white-space: nowrap; }
+
+/* profile + leaderboard */
+.duo { display: grid; gap: var(--space-md); }
+.who { display: flex; align-items: center; gap: var(--space-md); }
+.avatar { width: 52px; height: 52px; flex: none; border-radius: 16px; border: var(--border); background: var(--color-accent); display: grid; place-items: center; font: 800 var(--text-xl)/1 var(--font-display); }
+.who b { font: 800 var(--text-lg)/1.1 var(--font-display); }
+.who small { display: block; color: var(--color-muted); }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-xs); margin-top: var(--space-md); }
+.stats div { border: 1.5px solid var(--color-rule); border-radius: var(--radius-sm); padding: var(--space-sm); }
+.stats b { display: block; font: 800 var(--text-xl)/1 var(--font-display); }
+.stats span { font-size: var(--text-xs); color: var(--color-muted); }
+.lb { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2xs); counter-reset: lb; }
+.lb li { counter-increment: lb; display: grid; grid-template-columns: 2ch minmax(0, 1fr) auto; gap: var(--space-sm); padding: 0.5rem 0.25rem; border-bottom: 1.5px dashed var(--color-paper-3); }
+.lb li::before { content: counter(lb); font: 800 var(--text-base)/1.3 var(--font-display); color: var(--color-accent-deep); }
+.lb li span:last-child { font-family: var(--font-mono); }
+
+/* games */
+.games { padding-block: var(--space-3xl); border-top: var(--border); }
+.games h2 { font-size: var(--text-3xl); max-width: 16ch; }
+.games > .wrap > p { margin-top: var(--space-md); color: var(--color-ink-2); max-width: 52ch; }
+.game-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--space-md); margin-top: var(--space-2xl); }
+.game { border: var(--border); border-radius: var(--radius-md); padding: var(--space-lg); display: grid; gap: var(--space-xs); align-content: start; background: var(--color-paper-2); }
+.game.built { background: var(--color-accent); box-shadow: var(--shadow-block); }
+.game h3 { font-size: var(--text-xl); letter-spacing: -0.02em; }
+.game p { font-size: var(--text-sm); color: var(--color-ink-2); }
+.game .chip { justify-self: start; }
+
+/* install */
+.install { margin-block: var(--space-3xl); background: var(--color-ink); color: var(--color-on-ink); border-radius: var(--radius-lg); padding: var(--space-3xl) var(--space-xl); text-align: center; }
+.install h2 { font-size: var(--text-3xl); }
+.install p { margin: var(--space-md) auto 0; max-width: 46ch; opacity: 0.8; }
+.install pre { text-align: left; margin: var(--space-xl) auto 0; max-width: 40rem; padding: var(--space-lg); border-radius: var(--radius-md); background: oklch(27% 0.014 38); overflow-x: auto; font: 500 var(--text-sm)/1.7 var(--font-mono); }
+.install .ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-sm); margin-top: var(--space-xl); }
+.install .btn { border-color: var(--color-on-ink); box-shadow: 4px 4px 0 var(--color-accent); }
+.install .btn-accent { background: var(--color-accent); color: var(--color-accent-ink); }
+
+/* Ft8 marquee */
+footer { border-top: var(--border); }
+.marquee { overflow: hidden; border-bottom: var(--border); background: var(--color-accent); }
+.marquee-track { display: flex; width: max-content; animation: slide 40s linear infinite; }
+.marquee span { font: 800 var(--text-3xl)/1 var(--font-display); letter-spacing: -0.03em; padding: var(--space-lg) var(--space-lg); white-space: nowrap; }
+@keyframes slide { to { transform: translateX(-50%); } }
+.foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-md); padding-block: var(--space-xl); font-size: var(--text-sm); color: var(--color-ink-2); }
+.foot nav { display: flex; flex-wrap: wrap; gap: var(--space-lg); }
+.foot a { text-decoration: none; font-weight: 600; white-space: nowrap; }
+.foot a:hover { text-decoration: underline; }
+
+@media (max-width: 860px) {
+  .stage { grid-template-columns: minmax(0, 1fr); gap: var(--space-xl); padding-block: var(--space-2xl); }
+  .stage:nth-of-type(even) .copy { order: 0; }
+  .nav-links { display: none; }
+  .hero-block { padding: var(--space-2xl) var(--space-md) 0; }
+}
+@media (max-width: 480px) {
+  .bracket, .maps { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .bracket .round:last-child { grid-column: 1 / -1; }
+  .ram { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .stage:nth-of-type(even) .reveal { opacity: 1; transform: none; transition: none; }
+  .marquee-track { animation: none; }
+  .btn, .card { transition: none; }
+}
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#"><img src="at-icon.svg" alt="">Auto Tournament</a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="#how">How it works</a>
+      <a href="#games">Games</a>
+      <a href="https://docs.autotournament.gg">Docs</a>
+      <a href="https://github.com/Auto-Tournament">GitHub</a>
+    </nav>
+    <a class="btn btn-primary btn-sm" href="https://docs.autotournament.gg/getting-started/install">Install</a>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap">
+    <div class="hero-block">
+      <img class="ram" src="at-icon.svg" alt="">
+      <h1>Your tournament runs itself.</h1>
+      <p class="lede">Build the bracket, let captains pick maps, and Auto Tournament puts every match on a free server and writes down the score. Self-hosted, open source, CS2 built in.</p>
+      <div class="ctas">
+        <a class="btn btn-primary" href="https://docs.autotournament.gg/getting-started/install">Install Auto Tournament</a>
+        <a class="btn btn-light" href="https://discord.gg/n7gHYau7aW">Join the Discord</a>
+      </div>
+      <figure class="video" aria-label="Product preview">
+        <video autoplay muted loop playsinline src="preview.mp4"></video>
+        <figcaption class="pending"><span><strong>Product preview</strong>90-second recording of a tournament from bracket to final. To record.</span></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <div class="wrap" id="how">
+    <div class="intro">
+      <h2>From sign-up to trophy in four steps.</h2>
+      <p>This is what matchday looks like when the admin gets to play too.</p>
+    </div>
+
+    <section class="stage">
+      <div class="copy reveal">
+        <div class="num" aria-hidden="true">1</div>
+        <h2>Make the bracket.</h2>
+        <p>Pick a format, add teams, press start. Single or double elimination, round robin, Swiss, or shuffle with balanced teams.</p>
+      </div>
+      <div class="card reveal" aria-label="Example bracket">
+        <div class="card-head"><span class="card-title">Spring Cup</span><span class="chip live">Live</span></div>
+        <div class="bracket">
+          <div class="round"><h4>Quarters</h4>
+            <div class="match"><div class="team win"><span class="n">Nordlys</span><span class="s">2</span></div><div class="team lose"><span class="n">Baltic Five</span><span class="s">0</span></div></div>
+            <div class="match"><div class="team lose"><span class="n">Fjord</span><span class="s">1</span></div><div class="team win"><span class="n">Polar</span><span class="s">2</span></div></div>
+            <div class="match"><div class="team win"><span class="n">Ironside</span><span class="s">2</span></div><div class="team lose"><span class="n">Kvarken</span><span class="s">1</span></div></div>
+            <div class="match"><div class="team win"><span class="n">Midnight</span><span class="s">2</span></div><div class="team lose"><span class="n">Tundra</span><span class="s">0</span></div></div>
+          </div>
+          <div class="round"><h4>Semis</h4>
+            <div class="match now"><div class="team"><span class="n">Nordlys</span><span class="s">1</span></div><div class="team"><span class="n">Polar</span><span class="s">1</span></div></div>
+            <div class="match"><div class="team win"><span class="n">Ironside</span><span class="s">2</span></div><div class="team lose"><span class="n">Midnight</span><span class="s">1</span></div></div>
+          </div>
+          <div class="round"><h4>Final</h4>
+            <div class="match"><div class="team lose"><span class="n">TBD</span><span class="s">–</span></div><div class="team win"><span class="n">Ironside</span><span class="s">–</span></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="stage">
+      <div class="copy reveal">
+        <div class="num" aria-hidden="true">2</div>
+        <h2>Captains pick the maps.</h2>
+        <p>Veto happens in the browser, on a phone if they like. Bo1, Bo3 or Bo5, with knife round or side pick.</p>
+      </div>
+      <div class="card tint reveal" aria-label="Example map veto">
+        <div class="card-head"><span class="card-title">Nordlys vs Polar</span><span class="chip">Bo3 · veto</span></div>
+        <div class="maps">
+          <div class="map ban"><b>Vertigo</b><span>banned</span></div>
+          <div class="map ban"><b>Anubis</b><span>banned</span></div>
+          <div class="map pick"><b>Mirage</b><span>Nordlys pick</span></div>
+          <div class="map pick"><b>Inferno</b><span>Polar pick</span></div>
+          <div class="map"><b>Nuke</b><span>open</span></div>
+          <div class="map"><b>Ancient</b><span>open</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="stage">
+      <div class="copy reveal">
+        <div class="num" aria-hidden="true">3</div>
+        <h2>Play. The server is ready.</h2>
+        <p>Each match loads on a free server by itself. Scores update live on the bracket, so everyone at the LAN can follow along.</p>
+      </div>
+      <div class="card reveal" aria-label="Example live match">
+        <div class="card-head"><span class="card-title">Semifinal · map 2</span><span class="chip live">cs2-1</span></div>
+        <div class="score"><span class="t">Nordlys</span><span class="v">9 : 7</span><span class="t">Polar</span></div>
+        <div class="feed">
+          <div><span>Nordlys win the round (bomb defused)</span><span>R16</span></div>
+          <div><span>Polar call a tactical pause</span><span>R15</span></div>
+          <div><span>Mirage won by Nordlys 13–10</span><span>map 1</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="stage">
+      <div class="copy reveal">
+        <div class="num" aria-hidden="true">4</div>
+        <h2>Results, ratings, bragging rights.</h2>
+        <p>Winners move on, stats are saved, and every player keeps a profile and rating across tournaments.</p>
+      </div>
+      <div class="duo reveal">
+        <div class="card" aria-label="Example player profile">
+          <div class="who"><div class="avatar" aria-hidden="true">E</div><div><b>elkjop_enjoyer</b><small>Nordlys · 14 tournaments</small></div></div>
+          <div class="stats"><div><b>1 842</b><span>Rating</span></div><div><b>1.21</b><span>K/D</span></div><div><b>86.4</b><span>ADR</span></div></div>
+        </div>
+        <div class="card tint" aria-label="Example leaderboard">
+          <div class="card-head"><span class="card-title">Leaderboard</span><span class="chip hot">Spring Cup</span></div>
+          <ol class="lb">
+            <li><span>elkjop_enjoyer</span><span>1 842</span></li>
+            <li><span>fjordfox</span><span>1 796</span></li>
+            <li><span>kvarken_k</span><span>1 751</span></li>
+          </ol>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="games" id="games">
+    <div class="wrap">
+      <h2>CS2 today. Your game next.</h2>
+      <p>Games plug in as modules. CS2 is built in. These are planned, starting with games you can host yourself or run through an API.</p>
+      <div class="game-grid">
+        <article class="game built"><span class="chip ink">Built in</span><h3>Counter-Strike 2</h3><p>Your own servers with MatchZy Enhanced.</p></article>
+        <article class="game"><span class="chip">Planned</span><h3>Team Fortress 2</h3><p>Self-hosted servers, like CS2.</p></article>
+        <article class="game"><span class="chip">Planned</span><h3>Dota 2</h3><p>Bot-run lobbies and the Steam Web API.</p></article>
+        <article class="game"><span class="chip">Planned</span><h3>League of Legends</h3><p>Riot's Tournament API.</p></article>
+        <article class="game"><span class="chip">Planned</span><h3>Trackmania</h3><p>Your own servers plus the Nadeo API.</p></article>
+        <article class="game"><span class="chip">Planned</span><h3>osu!</h3><p>Bot-run lobbies and the osu! API.</p></article>
+        <article class="game"><span class="chip">Planned</span><h3>Chess</h3><p>The open Lichess API.</p></article>
+        <article class="game"><span class="chip">Planned</span><h3>Anything else</h3><p>Report results by hand.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="install">
+      <h2>Set it up before the pizza arrives.</h2>
+      <p>One Docker Compose file on any Linux box. The install guide takes you from here to your first tournament.</p>
+<pre>git clone https://github.com/Auto-Tournament/auto-tournament.git
+cd auto-tournament
+cp example.env .env
+docker compose -f docker/docker-compose.yml up -d</pre>
+      <div class="ctas"><a class="btn btn-accent" href="https://docs.autotournament.gg/getting-started/install">Read the install guide</a><a class="btn btn-primary" href="https://github.com/Auto-Tournament/auto-tournament">View on GitHub</a></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="marquee" aria-hidden="true"><div class="marquee-track">
+    <span>Brackets · Veto · Servers · Stats · Brackets · Veto · Servers · Stats ·</span>
+    <span>Brackets · Veto · Servers · Stats · Brackets · Veto · Servers · Stats ·</span>
+  </div></div>
+  <div class="wrap foot">
+    <nav aria-label="Footer"><a href="https://docs.autotournament.gg">Docs</a><a href="https://github.com/Auto-Tournament">GitHub</a><a href="https://discord.gg/n7gHYau7aW">Discord</a></nav>
+    <span>MIT licensed · Logo generated with an AI image model, cleaned up by hand</span>
+  </div>
+</footer>
+
+<script>
+  const io = new IntersectionObserver((es) => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: 0.15 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+  const v = document.querySelector('.video video');
+  v.addEventListener('loadeddata', () => v.nextElementSibling.hidden = true);
+</script>
+</body>
+</html>

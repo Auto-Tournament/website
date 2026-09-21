@@ -1,0 +1,13 @@
+services:
+  website:
+    build:
+      context: .
+      args:
+        # Set by scripts/auto_update.sh at deploy time.
+        GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:-dev}
+    container_name: autotournament-website
+    restart: unless-stopped
+    ports:
+      # The astro Cloudflare tunnel routes autotournament.gg to dev.lan:31236.
+      # Its connectors run on several LAN hosts, so bind on all interfaces.
+      - "0.0.0.0:31236:3000"
