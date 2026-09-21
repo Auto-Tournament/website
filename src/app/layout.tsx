@@ -4,7 +4,8 @@ import { AppRouterCacheProvider } from '@mui/material-nextjs/v16-appRouter';
 import CssBaseline from '@mui/material/CssBaseline';
 import { ThemeProvider } from '@mui/material/styles';
 import { theme } from '@/theme/theme';
-import { tokens } from '@/theme/tokens';
+import { hex } from '@/theme/tokens';
+import { ThemeLab } from '@/components/ThemeLab';
 
 // `optional` keeps the hero text from repainting when the fonts arrive late on slow
 // connections (that repaint was the mobile LCP). The metric-matched fallback
@@ -47,7 +48,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: tokens.color.paper,
+  themeColor: hex.paper,
   colorScheme: 'dark',
 };
 
@@ -87,6 +88,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ThemeProvider theme={theme}>
             <CssBaseline />
             {children}
+            <ThemeLab />
           </ThemeProvider>
         </AppRouterCacheProvider>
       </body>

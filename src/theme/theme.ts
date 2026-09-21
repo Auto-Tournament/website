@@ -1,7 +1,7 @@
 'use client';
 
 import { createTheme } from '@mui/material/styles';
-import { tokens } from './tokens';
+import { colorVars, hex, tokens } from './tokens';
 
 const { color, radius, ease, duration } = tokens;
 
@@ -13,11 +13,13 @@ export const theme = createTheme({
   cssVariables: true,
   palette: {
     mode: 'dark',
-    primary: { main: color.accent, light: color.accent2, contrastText: color.accentInk },
-    success: { main: color.live },
-    background: { default: color.paper, paper: color.paper2 },
-    text: { primary: color.ink, secondary: color.ink2, disabled: color.muted },
-    divider: color.rule,
+    // MUI needs real colours here; ThemeLab overrides the --mui-palette-*
+    // variables these produce when a different theme is picked.
+    primary: { main: hex.accent, light: hex.accent2, contrastText: hex.accentInk },
+    success: { main: hex.live },
+    background: { default: hex.paper, paper: hex.paper2 },
+    text: { primary: hex.ink, secondary: hex.ink2, disabled: hex.muted },
+    divider: hex.rule,
   },
   shape: { borderRadius: radius.md },
   typography: {
@@ -37,6 +39,8 @@ export const theme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: {
+        // Default values for the --at-* colour variables every component uses.
+        ':root': Object.fromEntries(Object.entries(colorVars).map(([key, name]) => [name, hex[key as keyof typeof hex]])),
         'html, body': { overflowX: 'clip' },
         html: { scrollBehavior: 'smooth', '@media (prefers-reduced-motion: reduce)': { scrollBehavior: 'auto' } },
         // Keep anchored sections clear of the floating nav.

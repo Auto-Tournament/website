@@ -13,6 +13,7 @@ import { BracketCard } from './cards/BracketCard';
 import { VetoCard } from './cards/VetoCard';
 import { ServersCard } from './cards/ServersCard';
 import { ProfileCard } from './cards/ProfileCard';
+import { AtIcon } from './AtIcon';
 
 const { color, radius } = tokens;
 
@@ -68,14 +69,14 @@ export function Nav() {
           py: 1,
           pr: 1,
           pl: 2,
-          bgcolor: 'rgba(24, 17, 14, 0.82)',
+          bgcolor: color.navGlass,
           backdropFilter: 'blur(14px)',
           border: `1px solid ${color.rule}`,
           borderRadius: `${radius.pill}px`,
         }}
       >
         <Box component="a" href="#top" aria-label="Auto Tournament, back to top" sx={{ display: 'flex', alignItems: 'center', gap: 1, textDecoration: 'none', color: 'inherit', fontFamily: fontDisplay, fontWeight: 600, whiteSpace: 'nowrap' }}>
-          <Box component="img" src="/at-icon.svg" alt="" sx={{ width: 26, height: 26, borderRadius: '7px' }} />
+          <AtIcon size={26} radius="7px" />
           Auto Tournament
         </Box>
         <Box component="nav" aria-label="Main" sx={{ display: { xs: 'none', md: 'flex' }, gap: 3, fontSize: '0.875rem' }}>
@@ -113,12 +114,9 @@ export function Hero() {
         }}
       >
         <div>
-          <Box
-            component="img"
-            src="/at-icon.svg"
-            alt="Auto Tournament"
-            sx={{ display: 'block', width: { xs: 72, md: 88 }, height: { xs: 72, md: 88 }, mb: 4, borderRadius: { xs: '17px', md: '20px' }, boxShadow: `0 24px 80px -20px ${color.accent}` }}
-          />
+          <Box sx={{ width: { xs: 72, md: 88 }, height: { xs: 72, md: 88 }, mb: 4, borderRadius: { xs: '17px', md: '20px' }, overflow: 'hidden', boxShadow: `0 24px 80px -20px ${color.accent}` }}>
+            <AtIcon size="100%" title="Auto Tournament" />
+          </Box>
           <Typography variant="h1" sx={{ fontSize: 'clamp(2.5rem, 3.6vw + 1rem, 4.5rem)' }}>
             The tournament runs.{' '}
             <Box

@@ -65,9 +65,9 @@ function RatingGraph() {
             : undefined
         }
       >
-        <path d={d} fill="none" stroke={color.accent} strokeWidth={2} vectorEffect="non-scaling-stroke" />
+        <path d={d} fill="none" style={{ stroke: color.accent }} strokeWidth={2} vectorEffect="non-scaling-stroke" />
       </g>
-      <circle cx={lastX} cy={points[points.length - 1]} r={3.5} fill={color.accent} />
+      <circle cx={lastX} cy={points[points.length - 1]} r={3.5} style={{ fill: color.accent }} />
       <style>{`@keyframes graphSlide { from { transform: translateX(0) } to { transform: translateX(-${STEP_X.toFixed(1)}px) } }`}</style>
     </Box>
   );
