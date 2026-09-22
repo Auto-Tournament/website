@@ -8,61 +8,68 @@
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="app.css" />
 <style>
-  /* Hub: identity header, tab strip, then a two-column overview (matches left, your entry right). */
+  /* Tournament overview reads like an event page: what it is, how it's played, what's at stake.
+     Matches and bracket live on their own tabs; a slim strip shows live matches while it runs. */
   .t-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-lg); align-items: end; }
-  .t-head .facts { display: flex; gap: var(--space-xs); flex-wrap: wrap; margin-bottom: var(--space-sm); }
+  .t-head .facts { display: flex; gap: var(--space-xs); flex-wrap: wrap; margin-bottom: var(--space-sm); align-items: center; }
   .t-head .by { margin-top: var(--space-xs); color: var(--color-muted); font-size: var(--text-sm); }
   @media (max-width: 720px) { .t-head { grid-template-columns: minmax(0, 1fr); } }
 
   .tabs { display: flex; gap: var(--space-lg); margin-top: var(--space-xl); border-bottom: 1px solid var(--color-rule); overflow-x: auto; }
   .tabs a { position: relative; padding: var(--space-sm) 0; color: var(--color-ink-2); font-size: var(--text-sm); font-weight: 500; white-space: nowrap; }
-  .tabs a:hover { color: var(--color-ink); }
-  .tabs a[aria-current='page'] { color: var(--color-ink); }
+  .tabs a:hover, .tabs a[aria-current='page'] { color: var(--color-ink); }
   .tabs a[aria-current='page']::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--color-accent); }
   .tabs .manage { margin-left: auto; }
 
-  .overview { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: var(--space-xl); margin-top: var(--space-xl); align-items: start; }
-  @media (max-width: 900px) { .overview { grid-template-columns: minmax(0, 1fr); } }
+  .live-strip { display: flex; gap: var(--space-sm); align-items: center; margin-top: var(--space-lg); padding: var(--space-sm) var(--space-md); border: 1px solid var(--color-rule); border-radius: var(--radius-pill); overflow-x: auto; font-size: var(--text-sm); white-space: nowrap; }
+  .live-strip .m { display: inline-flex; gap: var(--space-xs); padding-left: var(--space-sm); border-left: 1px solid var(--color-rule); }
+  .live-strip a { margin-left: auto; color: var(--color-muted); }
 
-  .section-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-md); margin-bottom: var(--space-md); }
+  .page { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: var(--space-2xl); margin-top: var(--space-2xl); align-items: start; }
+  @media (max-width: 900px) { .page { grid-template-columns: minmax(0, 1fr); } }
 
-  .match { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr) auto; gap: var(--space-lg); align-items: center; padding: var(--space-md) var(--space-lg); }
-  .match .teams { display: grid; gap: 2px; }
-  .match .teams div { display: flex; justify-content: space-between; gap: var(--space-md); }
-  .match .teams .win { font-weight: 600; }
-  .match .teams .num { color: var(--color-ink-2); }
-  .match .where { text-align: right; font-size: var(--text-xs); }
-  @media (max-width: 560px) { .match { grid-template-columns: minmax(0, 1fr); gap: var(--space-xs); } .match .where { text-align: left; } }
+  .about p { color: var(--color-ink-2); max-width: 64ch; font-size: var(--text-lg); line-height: 1.6; }
+  .about p + p { margin-top: var(--space-md); font-size: var(--text-md); }
 
-  /* Compact bracket preview: three rounds side by side, scrolls on small screens. */
-  .bracket { display: grid; grid-template-columns: repeat(3, minmax(170px, 1fr)); gap: var(--space-lg); overflow-x: auto; padding: var(--space-lg); }
-  .round { display: grid; gap: var(--space-sm); align-content: space-around; }
-  .round > span { font-size: var(--text-xs); color: var(--color-muted); font-family: var(--font-mono); }
-  .slot { border: 1px solid var(--color-rule); border-radius: var(--radius-sm); overflow: hidden; font-size: var(--text-sm); }
-  .slot div { display: flex; justify-content: space-between; padding: 0.35rem 0.6rem; }
-  .slot div + div { border-top: 1px solid var(--color-rule); }
-  .slot .w { background: var(--color-paper-3); font-weight: 600; }
-  .slot.is-live { border-color: var(--color-live); }
-  .slot .tbd { color: var(--color-muted); }
+  .block { margin-top: var(--space-2xl); }
+  .block h2 { margin-bottom: var(--space-md); }
 
-  /* Right column: your entry, requirements, organizer. */
-  .entry { padding: var(--space-lg); display: grid; gap: var(--space-md); }
-  .roster { display: grid; gap: var(--space-2xs); font-size: var(--text-sm); }
-  .roster div { display: flex; justify-content: space-between; gap: var(--space-sm); }
+  /* Key facts: label over value, a regular grid. */
+  .facts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); border: 1px solid var(--color-rule); border-radius: var(--radius-lg); overflow: hidden; }
+  .facts-grid div { padding: var(--space-md) var(--space-lg); border-right: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); margin: 0 -1px -1px 0; }
+  .facts-grid dt { font-size: var(--text-xs); color: var(--color-muted); font-family: var(--font-mono); }
+  .facts-grid dd { margin: var(--space-2xs) 0 0; font-weight: 500; }
+
+  .maps { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+  .map { padding: 0.4rem 0.8rem; border-radius: var(--radius-pill); border: 1px solid var(--color-rule); font-size: var(--text-sm); }
+  .note { font-size: var(--text-sm); color: var(--color-muted); margin-top: var(--space-sm); }
+
+  .rules { counter-reset: r; list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-sm); }
+  .rules li { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: var(--space-sm); color: var(--color-ink-2); }
+  .rules li::before { counter-increment: r; content: counter(r); font: 600 var(--text-sm) / 1.6 var(--font-mono); color: var(--color-muted); }
+
+  .schedule li { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: var(--space-md); padding: var(--space-sm) var(--space-lg); }
+  .schedule time { font-variant-numeric: tabular-nums; color: var(--color-muted); font-size: var(--text-sm); }
+  .schedule .now time, .schedule .now span { color: var(--color-ink); font-weight: 600; }
+
+  /* Side column. */
+  .side { display: grid; gap: var(--space-lg); position: sticky; top: 96px; }
+  @media (max-width: 900px) { .side { position: static; } }
+  .card { padding: var(--space-lg); display: grid; gap: var(--space-md); }
+  .prize li { display: flex; justify-content: space-between; gap: var(--space-md); padding: var(--space-xs) 0; font-size: var(--text-sm); }
+  .prize li b { font-family: var(--font-display); font-size: var(--text-lg); }
   .req { display: flex; gap: var(--space-sm); align-items: flex-start; font-size: var(--text-sm); }
   .req .mark { flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 0.7rem; font-weight: 700; background: var(--color-paper-3); }
   .req .mark.ok { background: var(--color-live); color: var(--color-paper); }
-  .stack { display: grid; gap: var(--space-lg); }
-  .kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-2xs) var(--space-md); font-size: var(--text-sm); padding: var(--space-lg); }
-  .kv dt { color: var(--color-muted); }
-  .kv dd { margin: 0; text-align: right; }
+  .org { display: flex; gap: var(--space-sm); align-items: center; }
 </style>
 </head>
 <body>
 <header class="nav">
   <a class="brand" href="index.html"><span data-logo></span>Auto Tournament</a>
   <nav class="nav-links" aria-label="Main">
-    <a href="index.html" aria-current="page">Tournaments</a>
+    <a href="index.html">Home</a>
+    <a href="#" aria-current="page">Browse</a>
     <a href="#">Teams</a>
     <a href="#">Leaderboards</a>
   </nav>
@@ -76,12 +83,11 @@
   <div class="t-head">
     <div>
       <div class="facts">
-        <span class="chip">Counter-Strike 2</span>
+        <span class="game"><span class="game-mark g-cs2">CS</span>Counter-Strike 2</span>
         <span class="chip live">Live · Quarterfinals</span>
-        <span class="chip">Double elimination · Bo3</span>
       </div>
       <h1>Spring Cup</h1>
-      <p class="by">Run by Edition 35 LAN · 8 teams · started Sat 14:00</p>
+      <p class="by">Edition 35 LAN · Sat 5 Apr, 14:00 – Sun 6 Apr, 20:00 · On site, Trondheim</p>
     </div>
     <a class="btn btn-quiet" href="#">Follow</a>
   </div>
@@ -92,86 +98,95 @@
     <a href="#">Matches</a>
     <a href="#">Teams</a>
     <a href="#">Standings</a>
-    <a href="#">Rules</a>
     <a href="#" class="manage">Manage</a>
   </nav>
 
-  <div class="overview">
-    <div class="stack">
-      <section>
-        <div class="section-head"><h2>Matches</h2><a class="muted" href="#">All matches</a></div>
-        <ul class="row-list panel">
-          <li class="match">
-            <span class="chip live">Map 2</span>
-            <div class="teams"><div class="win"><span>Nordlys</span><span class="num">1</span></div><div><span>Baltic Five</span><span class="num">0</span></div></div>
-            <div class="where"><span class="mono">Server 1</span><br /><span class="muted">Mirage · 9 – 7</span></div>
-          </li>
-          <li class="match">
-            <span class="chip live">Map 1</span>
-            <div class="teams"><div><span>Fjord</span><span class="num">0</span></div><div class="win"><span>Polar</span><span class="num">1</span></div></div>
-            <div class="where"><span class="mono">Server 2</span><br /><span class="muted">Inferno · 3 – 1</span></div>
-          </li>
-          <li class="match">
-            <span class="chip">Veto</span>
-            <div class="teams"><div><span>Ironside</span><span class="num">–</span></div><div><span>Kvasen</span><span class="num">–</span></div></div>
-            <div class="where"><span class="muted">Waiting for Kvasen to ban</span></div>
-          </li>
-          <li class="match">
-            <span class="chip">Queued</span>
-            <div class="teams"><div><span>Midnight</span><span class="num">–</span></div><div><span>Tundra</span><span class="num">–</span></div></div>
-            <div class="where"><span class="muted">Next free server</span></div>
-          </li>
-        </ul>
+  <div class="live-strip" aria-label="Live now">
+    <span class="chip live">2 live</span>
+    <span class="m">Nordlys <b class="num">1–0</b> Baltic Five</span>
+    <span class="m">Fjord <b class="num">0–1</b> Polar</span>
+    <a href="#">All matches</a>
+  </div>
+
+  <div class="page">
+    <div>
+      <section class="about" aria-label="About">
+        <p>The spring LAN's main event: eight teams, two days, double elimination, so every team gets a second chance before it's out.</p>
+        <p>Matches run on the LAN servers and start as soon as both teams are connected. Captains do the map veto in the browser. The grand final is played on stage on Sunday evening and streamed.</p>
       </section>
 
-      <section>
-        <div class="section-head"><h2>Bracket</h2><a class="muted" href="#">Full bracket</a></div>
-        <div class="panel bracket">
-          <div class="round"><span>QUARTERFINALS</span>
-            <div class="slot is-live"><div class="w"><span>Nordlys</span><span class="num">1</span></div><div><span>Baltic Five</span><span class="num">0</span></div></div>
-            <div class="slot is-live"><div><span>Fjord</span><span class="num">0</span></div><div class="w"><span>Polar</span><span class="num">1</span></div></div>
-            <div class="slot"><div><span>Ironside</span><span></span></div><div><span>Kvasen</span><span></span></div></div>
-            <div class="slot"><div><span>Midnight</span><span></span></div><div><span>Tundra</span><span></span></div></div>
-          </div>
-          <div class="round"><span>SEMIFINALS</span>
-            <div class="slot"><div class="tbd"><span>TBD</span></div><div class="tbd"><span>TBD</span></div></div>
-            <div class="slot"><div class="tbd"><span>TBD</span></div><div class="tbd"><span>TBD</span></div></div>
-          </div>
-          <div class="round"><span>FINAL</span>
-            <div class="slot"><div class="tbd"><span>TBD</span></div><div class="tbd"><span>TBD</span></div></div>
-          </div>
+      <section class="block" aria-labelledby="how">
+        <h2 id="how">How it's played</h2>
+        <dl class="facts-grid">
+          <div><dt>TEAMS</dt><dd>8 teams</dd></div>
+          <div><dt>TEAM SIZE</dt><dd>5 players + 1 sub</dd></div>
+          <div><dt>FORMAT</dt><dd>Double elimination</dd></div>
+          <div><dt>SERIES</dt><dd>Bo3 · grand final Bo5</dd></div>
+          <div><dt>MAP VETO</dt><dd>Captains, 30 s per turn</dd></div>
+          <div><dt>OVERTIME</dt><dd>MR3, unlimited</dd></div>
+        </dl>
+      </section>
+
+      <section class="block" aria-labelledby="maps">
+        <h2 id="maps">Map pool</h2>
+        <div class="maps">
+          <span class="map">Mirage</span><span class="map">Inferno</span><span class="map">Ancient</span><span class="map">Anubis</span><span class="map">Dust II</span><span class="map">Nuke</span><span class="map">Train</span>
         </div>
+        <p class="note">Active Duty pool. Deciders are picked by the veto, not at random.</p>
+      </section>
+
+      <section class="block" aria-labelledby="rules">
+        <h2 id="rules">Rules</h2>
+        <ol class="rules">
+          <li>Be connected and ready 10 minutes after your match is called, or the admins may award a forfeit.</li>
+          <li>Two tactical pauses per team per map, 60 seconds each. Technical pauses go through an admin.</li>
+          <li>Coaches may talk during pauses and between halves only.</li>
+          <li>Disputes go to the tournament admins in Discord before the next map starts.</li>
+        </ol>
+        <p class="note"><a href="#" style="text-decoration:underline">Full rulebook</a> · last updated by the organizer on 1 Apr.</p>
+      </section>
+
+      <section class="block" aria-labelledby="sched">
+        <h2 id="sched">Schedule</h2>
+        <ul class="row-list panel schedule">
+          <li><time>Sat 13:00</time><span>Check-in closes</span></li>
+          <li class="now"><time>Sat 14:00</time><span>Quarterfinals and lower round 1</span></li>
+          <li><time>Sat 19:00</time><span>Semifinals</span></li>
+          <li><time>Sun 12:00</time><span>Lower bracket final</span></li>
+          <li><time>Sun 18:00</time><span>Grand final, on stage</span></li>
+        </ul>
       </section>
     </div>
 
-    <aside class="stack">
-      <section class="panel entry" aria-label="Your team">
-        <div class="section-head" style="margin:0"><h2>Your team</h2><span class="chip live">Checked in</span></div>
-        <div class="roster">
-          <div><b>Nordlys</b><span class="muted">Seed 1</span></div>
-          <div><span>Simpert <span class="muted">· captain</span></span><span class="ok">Steam ✓</span></div>
-          <div><span>Aurora</span><span class="ok">Steam ✓</span></div>
-          <div><span>Kjell</span><span class="ok">Steam ✓</span></div>
-          <div><span>Mira</span><span class="ok">Steam ✓</span></div>
-          <div><span>Tobbe</span><span class="ok">Steam ✓</span></div>
-        </div>
-        <a class="btn btn-primary" href="#">Connect to server 1</a>
+    <aside class="side">
+      <section class="panel card" aria-label="Your team">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-sm)"><h3>You're playing</h3><span class="chip live">Checked in</span></div>
+        <p class="ink2">Nordlys · seed 1 · 5 of 5 players ready</p>
+        <a class="btn btn-primary" href="#">Connect to your match</a>
       </section>
 
-      <section class="panel entry" aria-label="Requirements">
-        <h3>To play in this tournament</h3>
-        <div class="req"><span class="mark ok">✓</span><span>A Steam account linked to your Auto Tournament account. CS2 matches need it so the server knows who you are.</span></div>
-        <div class="req"><span class="mark ok">✓</span><span>On a team roster before check-in closes.</span></div>
-        <a class="muted" href="connections.html">Manage linked accounts</a>
+      <section class="panel card" aria-labelledby="prizes">
+        <h3 id="prizes">Prizes</h3>
+        <ul class="row-list prize">
+          <li><span>1st</span><b>—</b></li>
+          <li><span>2nd</span><b>—</b></li>
+          <li><span>3rd</span><b>—</b></li>
+        </ul>
+        <p class="note" style="margin:0">Set by the organizer. Prize money, hardware or bragging rights.</p>
       </section>
 
-      <dl class="panel kv">
-        <dt>Format</dt><dd>Double elimination</dd>
-        <dt>Series</dt><dd>Bo3, final Bo5</dd>
-        <dt>Map veto</dt><dd>Captains, 30 s per turn</dd>
-        <dt>Servers</dt><dd>4 online</dd>
-        <dt>Organizer</dt><dd>Edition 35 LAN</dd>
-      </dl>
+      <section class="panel card" aria-labelledby="req">
+        <h3 id="req">To take part</h3>
+        <div class="req"><span class="mark ok">✓</span><span>Steam account linked. CS2 servers use it to know who you are.</span></div>
+        <div class="req"><span class="mark ok">✓</span><span>On a team roster before check-in closes (Sat 13:00).</span></div>
+        <div class="req"><span class="mark">!</span><span>On site at Edition 35. This is a LAN-only tournament.</span></div>
+        <a class="muted" href="connections.html" style="font-size:var(--text-sm)">Manage linked accounts</a>
+      </section>
+
+      <section class="panel card" aria-label="Organizer">
+        <div class="org"><span class="avatar">E</span><div><b>Edition 35 LAN</b><p class="muted" style="font-size:var(--text-sm)">Organizer · 6 tournaments</p></div></div>
+        <a class="btn btn-quiet btn-sm" href="#">Contact admins</a>
+      </section>
     </aside>
   </div>
 </main>

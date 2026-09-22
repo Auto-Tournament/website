@@ -91,3 +91,17 @@ main { padding-block: var(--space-2xl) var(--space-3xl); }
 .draft-nav a { padding: 0.35rem 0.7rem; border-radius: var(--radius-pill); color: var(--color-ink-2); white-space: nowrap; }
 .draft-nav a[aria-current='page'] { background: var(--color-paper-3); color: var(--color-ink); }
 @media (max-width: 560px) { .draft-nav { left: var(--space-md); bottom: calc(var(--space-md) + 44px); justify-content: center; } }
+
+/* ---------- Game badge ---------- */
+.game { display: inline-flex; align-items: center; gap: 0.45rem; font-size: var(--text-xs); color: var(--color-ink-2); white-space: nowrap; }
+.game-mark {
+  --g: var(--game-generic);
+  width: 1.5rem; height: 1.5rem; border-radius: 6px; flex: 0 0 auto;
+  display: grid; place-items: center;
+  background: color-mix(in oklab, var(--g) 22%, var(--color-paper-3));
+  color: var(--g); font: 700 0.62rem / 1 var(--font-display); letter-spacing: 0;
+  border: 1px solid color-mix(in oklab, var(--g) 40%, transparent);
+}
+.game-mark.lg { width: 2.75rem; height: 2.75rem; border-radius: var(--radius-sm); font-size: 0.9rem; }
+.g-cs2 { --g: var(--game-cs2); } .g-rl { --g: var(--game-rl); } .g-chess { --g: var(--game-chess); }
+.g-tm { --g: var(--game-tm); } .g-lol { --g: var(--game-lol); }

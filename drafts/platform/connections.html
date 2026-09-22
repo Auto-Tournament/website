@@ -30,6 +30,15 @@
   .acc .end { display: flex; gap: var(--space-xs); align-items: center; }
   @media (max-width: 560px) { .acc { grid-template-columns: 2.5rem minmax(0, 1fr); } .acc .end { grid-column: 2; } }
 
+  .soon { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-md); align-items: center; padding: var(--space-md) var(--space-lg); border: 1px solid var(--color-accent); border-radius: var(--radius-lg); margin-bottom: var(--space-2xl); }
+  @media (max-width: 560px) { .soon { grid-template-columns: auto minmax(0, 1fr); } .soon .btn { grid-column: 2; justify-self: start; } }
+  .uses { display: flex; gap: var(--space-xs); align-items: center; flex-wrap: wrap; margin-top: var(--space-2xs); font-size: var(--text-xs); }
+  .toggle { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-md); align-items: center; padding: var(--space-md) var(--space-lg); }
+  .toggle .for { font-size: var(--text-sm); color: var(--color-muted); }
+  .opts { display: flex; gap: var(--space-md); flex-wrap: wrap; font-size: var(--text-sm); color: var(--color-ink-2); }
+  .opts label { display: inline-flex; gap: 0.4rem; align-items: center; white-space: nowrap; cursor: pointer; }
+  .opts input { accent-color: var(--color-accent); width: 16px; height: 16px; }
+  @media (max-width: 640px) { .toggle { grid-template-columns: minmax(0, 1fr); } }
   .note { display: flex; gap: var(--space-sm); padding: var(--space-md) var(--space-lg); border: 1px dashed var(--color-rule); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--color-ink-2); margin-top: var(--space-md); }
 </style>
 </head>
@@ -37,7 +46,8 @@
 <header class="nav">
   <a class="brand" href="index.html"><span data-logo></span>Auto Tournament</a>
   <nav class="nav-links" aria-label="Main">
-    <a href="index.html">Tournaments</a>
+    <a href="index.html">Home</a>
+    <a href="#">Browse</a>
     <a href="#">Teams</a>
     <a href="#">Leaderboards</a>
   </nav>
@@ -63,29 +73,35 @@
         <div><h1 style="font-size:var(--text-2xl)">Simpert</h1><p class="muted">One account for every tournament on this site.</p></div>
       </div>
 
+      <div class="soon" role="status">
+        <span class="game-mark lg g-chess">♞</span>
+        <div><b>Weekend Blitz needs a Lichess account</b><p class="muted">Registration closes Sun 12:00. Link Lichess to join.</p></div>
+        <button class="btn btn-primary btn-sm" type="button">Link Lichess</button>
+      </div>
+
       <section class="block" aria-labelledby="games">
         <h2 id="games">Game accounts</h2>
         <p>Each game needs its own account so matches know who you are. Link the ones for the games you play; tournaments tell you when one is missing.</p>
         <ul class="row-list panel">
           <li class="acc">
             <span class="logo-tile">S</span>
-            <div><div class="name"><b>Steam</b><span class="chip ok">Verified</span></div><p class="for">Simpert · used for <b>Counter-Strike 2</b></p></div>
+            <div><div class="name"><b>Steam</b><span class="chip ok">Verified</span></div><p class="for">Simpert · linked 3 Feb</p><p class="uses"><span class="game"><span class="game-mark g-cs2">CS</span>Counter-Strike 2</span><span class="muted">· 2 of your tournaments</span></p></div>
             <div class="end"><button class="btn btn-quiet btn-sm" type="button">Unlink</button></div>
           </li>
           <li class="acc">
             <span class="logo-tile">E</span>
-            <div><div class="name"><b>Epic Games</b></div><p class="for">Needed for <b>Rocket League</b> tournaments</p></div>
-            <div class="end"><button class="btn btn-primary btn-sm" type="button">Link Epic</button></div>
+            <div><div class="name"><b>Epic Games</b></div><p class="for">Not linked</p><p class="uses"><span class="game"><span class="game-mark g-rl">RL</span>Rocket League</span></p></div>
+            <div class="end"><button class="btn btn-quiet btn-sm" type="button">Link Epic</button></div>
           </li>
           <li class="acc">
             <span class="logo-tile">R</span>
-            <div><div class="name"><b>Riot Games</b><span class="chip warn">Waiting for organizer</span></div><p class="for">Simpert#EUW, entered by hand · needed for <b>League of Legends</b></p></div>
+            <div><div class="name"><b>Riot Games</b><span class="chip warn">Waiting for organizer</span></div><p class="for">Simpert#EUW · entered by hand</p><p class="uses"><span class="game"><span class="game-mark g-lol">LoL</span>League of Legends</span></p></div>
             <div class="end"><button class="btn btn-quiet btn-sm" type="button">Edit</button></div>
           </li>
           <li class="acc">
             <span class="logo-tile">L</span>
-            <div><div class="name"><b>Lichess</b></div><p class="for">Needed for <b>Chess</b> tournaments</p></div>
-            <div class="end"><button class="btn btn-quiet btn-sm" type="button">Link Lichess</button></div>
+            <div><div class="name"><b>Lichess</b></div><p class="for">Not linked · <span class="warn">needed for Weekend Blitz</span></p><p class="uses"><span class="game"><span class="game-mark g-chess">♞</span>Chess</span></p></div>
+            <div class="end"><button class="btn btn-primary btn-sm" type="button">Link Lichess</button></div>
           </li>
         </ul>
         <div class="note"><span aria-hidden="true">i</span><span>Riot accounts can't be verified automatically yet, so an organizer confirms them. Tournaments can choose to accept verified accounts only.</span></div>
@@ -97,8 +113,8 @@
         <ul class="row-list panel">
           <li class="acc">
             <span class="logo-tile">S</span>
-            <div><div class="name"><b>Steam</b></div><p class="for">Also your CS2 game account</p></div>
-            <div class="end"><span class="mono muted">Last used today</span></div>
+            <div><div class="name"><b>Steam</b></div><p class="for">Also your CS2 game account · last used today</p></div>
+            <div class="end"><span class="chip">Primary</span></div>
           </li>
           <li class="acc">
             <span class="logo-tile">D</span>
@@ -115,6 +131,17 @@
             <div><div class="name"><b>GitHub</b></div><p class="for">Not connected</p></div>
             <div class="end"><button class="btn btn-quiet btn-sm" type="button">Connect</button></div>
           </li>
+        </ul>
+      </section>
+
+      <section class="block" aria-labelledby="notif">
+        <h2 id="notif">Notifications</h2>
+        <p>Where we tell you things that need you. Off by default except your own matches.</p>
+        <ul class="row-list panel">
+          <li class="toggle"><div><b>Your match is ready</b><p class="for">Server, connect link and who you play</p></div><div class="opts"><label><input type="checkbox" checked /> Desktop app</label><label><input type="checkbox" checked /> Discord DM</label><label><input type="checkbox" /> Email</label></div></li>
+          <li class="toggle"><div><b>Your turn in the veto</b><p class="for">Captains only</p></div><div class="opts"><label><input type="checkbox" checked /> Desktop app</label><label><input type="checkbox" checked /> Discord DM</label><label><input type="checkbox" /> Email</label></div></li>
+          <li class="toggle"><div><b>Check-in opens</b><p class="for">For tournaments you're registered in</p></div><div class="opts"><label><input type="checkbox" checked /> Desktop app</label><label><input type="checkbox" /> Discord DM</label><label><input type="checkbox" checked /> Email</label></div></li>
+          <li class="toggle"><div><b>New tournaments for your games</b><p class="for">Counter-Strike 2, Chess</p></div><div class="opts"><label><input type="checkbox" /> Desktop app</label><label><input type="checkbox" /> Discord DM</label><label><input type="checkbox" checked /> Email</label></div></li>
         </ul>
       </section>
     </div>

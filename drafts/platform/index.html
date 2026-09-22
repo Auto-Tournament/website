@@ -8,69 +8,86 @@
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="app.css" />
 <style>
-  /* Home: "your next match" strip, then tournaments grouped by state, filtered by game. */
-  .next {
-    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-lg); align-items: center;
-    padding: var(--space-lg) var(--space-xl); border-radius: var(--radius-lg);
-    background: var(--color-paper-2); border: 1px solid var(--color-accent);
-  }
-  .next .vs { display: flex; align-items: baseline; gap: var(--space-sm); flex-wrap: wrap; margin-top: var(--space-2xs); }
+  /* Home is about you: next match, your tournaments, then picks for the games you play. */
+  .hello { display: flex; justify-content: space-between; align-items: end; gap: var(--space-md); flex-wrap: wrap; margin-bottom: var(--space-xl); }
+  .hello p { color: var(--color-ink-2); margin-top: var(--space-xs); }
+  .my-games { display: flex; gap: var(--space-xs); align-items: center; flex-wrap: wrap; }
+  .my-games .edit { font-size: var(--text-sm); color: var(--color-muted); padding: 0.3rem 0.5rem; background: none; border: 0; cursor: pointer; }
+  .my-games .edit:hover { color: var(--color-ink); }
+  .pill-game { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.7rem 0.25rem 0.3rem; border-radius: var(--radius-pill); border: 1px solid var(--color-rule); font-size: var(--text-sm); white-space: nowrap; }
+
+  .next { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-lg); align-items: center; padding: var(--space-lg) var(--space-xl); border-radius: var(--radius-lg); background: var(--color-paper-2); border: 1px solid var(--color-accent); }
+  .next .vs { display: flex; align-items: baseline; gap: var(--space-sm); flex-wrap: wrap; margin-top: var(--space-xs); }
   .next .vs strong { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 700; letter-spacing: -0.03em; }
   .next .actions { display: flex; gap: var(--space-xs); flex-wrap: wrap; justify-content: flex-end; }
   @media (max-width: 720px) { .next { grid-template-columns: minmax(0, 1fr); } .next .actions { justify-content: flex-start; } }
 
-  .head { display: flex; align-items: end; justify-content: space-between; gap: var(--space-md); flex-wrap: wrap; margin: var(--space-3xl) 0 var(--space-lg); }
-  .filters { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
-  .filters button { font: 500 var(--text-sm) / 1 var(--font-body); padding: 0.45rem 0.85rem; border-radius: var(--radius-pill); border: 1px solid var(--color-rule); background: transparent; color: var(--color-ink-2); cursor: pointer; white-space: nowrap; }
-  .filters button:hover { background: var(--color-paper-3); }
-  .filters button[aria-pressed='true'] { background: var(--color-ink); color: var(--color-paper); border-color: var(--color-ink); }
+  .sec { margin-top: var(--space-3xl); }
+  .sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-md); margin-bottom: var(--space-md); }
+  .sec-head a { color: var(--color-muted); font-size: var(--text-sm); white-space: nowrap; }
+  .sec-head a:hover { color: var(--color-ink); }
 
-  .group-title { display: flex; align-items: center; gap: var(--space-sm); margin: var(--space-2xl) 0 var(--space-md); font-size: var(--text-sm); color: var(--color-ink-2); }
-  .group-title::after { content: ''; flex: 1; height: 1px; background: var(--color-rule); }
+  /* Your tournaments: one row each, the state you care about on the right. */
+  .mine li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-md); align-items: center; padding: var(--space-md) var(--space-lg); }
+  .mine .state { text-align: right; display: grid; gap: var(--space-2xs); justify-items: end; }
+  .mine .state small { color: var(--color-muted); font-size: var(--text-xs); }
+  @media (max-width: 640px) { .mine li { grid-template-columns: auto minmax(0, 1fr); } .mine .state { grid-column: 2; justify-items: start; text-align: left; } }
 
-  /* Live tournaments: wide cards with the current round visible. */
-  .live-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: var(--space-md); }
-  .tcard { display: grid; gap: var(--space-md); padding: var(--space-lg); border-radius: var(--radius-lg); background: var(--color-paper-2); border: 1px solid var(--color-rule); transition: border-color var(--dur-fast) var(--ease-out); }
-  .tcard:hover { border-color: var(--color-muted); }
-  .tcard .top { display: flex; justify-content: space-between; gap: var(--space-sm); align-items: center; }
-  .tcard .meta { display: flex; gap: var(--space-md); flex-wrap: wrap; font-size: var(--text-sm); color: var(--color-muted); }
-  .tcard .now { display: grid; gap: var(--space-2xs); padding-top: var(--space-md); border-top: 1px solid var(--color-rule); font-size: var(--text-sm); }
-  .tcard .now div { display: flex; justify-content: space-between; gap: var(--space-sm); }
+  /* Picks: cards for open tournaments in your games. */
+  .picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: var(--space-md); }
+  .pick { display: grid; gap: var(--space-sm); align-content: start; padding: var(--space-lg); border-radius: var(--radius-lg); background: var(--color-paper-2); border: 1px solid var(--color-rule); transition: border-color var(--dur-fast) var(--ease-out); }
+  .pick:hover { border-color: var(--color-muted); }
+  .pick .top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); }
+  .pick .meta { font-size: var(--text-sm); color: var(--color-muted); }
+  .pick .foot { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); margin-top: var(--space-xs); padding-top: var(--space-md); border-top: 1px solid var(--color-rule); }
+  .pick .need { font-size: var(--text-xs); }
 
-  /* Registration: a dense list, deadline first. */
-  .reg li { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr) auto; gap: var(--space-lg); align-items: center; padding: var(--space-md) var(--space-lg); }
-  .reg .when { font-variant-numeric: tabular-nums; }
-  .reg .when b { display: block; font-family: var(--font-display); font-size: var(--text-lg); }
-  .reg .need { font-size: var(--text-xs); }
-  @media (max-width: 640px) { .reg li { grid-template-columns: minmax(0, 1fr); gap: var(--space-xs); } }
-
-  .past { display: flex; gap: var(--space-md); overflow-x: auto; padding-bottom: var(--space-xs); scroll-snap-type: x mandatory; }
-  .past a { flex: 0 0 min(260px, 80%); scroll-snap-align: start; padding: var(--space-md) var(--space-lg); border-radius: var(--radius-md); border: 1px solid var(--color-rule); display: grid; gap: var(--space-2xs); }
-  .past a:hover { background: var(--color-paper-2); }
+  /* First-visit game picker (shown as an overlay in this draft; toggle below). */
+  .onboard[hidden] { display: none; }
+  .onboard { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: var(--space-md); background: color-mix(in oklab, var(--color-paper) 80%, transparent); }
+  .onboard .card { width: min(560px, 100%); padding: var(--space-xl); border-radius: var(--radius-lg); background: var(--color-paper-2); border: 1px solid var(--color-rule); display: grid; gap: var(--space-lg); }
+  .onboard .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: var(--space-sm); }
+  .onboard label { display: flex; gap: var(--space-sm); align-items: center; padding: var(--space-sm) var(--space-md); border: 1px solid var(--color-rule); border-radius: var(--radius-md); cursor: pointer; font-size: var(--text-sm); }
+  .onboard label:hover { background: var(--color-paper-3); }
+  .onboard input { position: absolute; opacity: 0; pointer-events: none; }
+  .onboard label:has(input:checked) { border-color: var(--color-accent); background: var(--color-paper-3); }
+  .onboard label:has(input:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  .onboard .row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); }
 </style>
 </head>
 <body>
 <header class="nav">
   <a class="brand" href="index.html"><span data-logo></span>Auto Tournament</a>
   <nav class="nav-links" aria-label="Main">
-    <a href="index.html" aria-current="page">Tournaments</a>
+    <a href="index.html" aria-current="page">Home</a>
+    <a href="#">Browse</a>
     <a href="#">Teams</a>
     <a href="#">Leaderboards</a>
   </nav>
   <div class="nav-end">
-    <span class="search">Search tournaments, teams, players <kbd>⌘K</kbd></span>
-    <a class="btn btn-quiet btn-sm" href="#">Create tournament</a>
+    <span class="search">Search <kbd>⌘K</kbd></span>
     <a class="avatar" href="connections.html" aria-label="Your account">S</a>
   </div>
 </header>
 
 <main class="wrap">
-  <!-- Signed-in players see their next match first; everyone else starts at the list. -->
+  <div class="hello">
+    <div>
+      <h1>Hi, Simpert</h1>
+      <p>One match today. Two tournaments open for games you play.</p>
+    </div>
+    <div class="my-games" aria-label="Games you play">
+      <span class="pill-game"><span class="game-mark g-cs2">CS</span>Counter-Strike 2</span>
+      <span class="pill-game"><span class="game-mark g-chess">♞</span>Chess</span>
+      <button class="edit" type="button" data-open-onboard>Edit games</button>
+    </div>
+  </div>
+
   <section class="next" aria-label="Your next match">
     <div>
       <span class="chip live">Ready · server assigned</span>
       <div class="vs"><strong>Nordlys</strong><span class="muted">vs</span><strong>Baltic Five</strong></div>
-      <p class="ink2">Spring Cup · Quarterfinal · Bo3 · Counter-Strike 2</p>
+      <p class="ink2">Spring Cup · Quarterfinal · Bo3 · starts when both teams connect</p>
     </div>
     <div class="actions">
       <a class="btn btn-quiet" href="tournament.html">Open match</a>
@@ -78,67 +95,67 @@
     </div>
   </section>
 
-  <div class="head">
-    <h1>Tournaments</h1>
-    <div class="filters" role="group" aria-label="Game">
-      <button type="button" aria-pressed="true">All games</button>
-      <button type="button" aria-pressed="false">Counter-Strike 2</button>
-      <button type="button" aria-pressed="false">Rocket League</button>
-      <button type="button" aria-pressed="false">Chess</button>
-      <button type="button" aria-pressed="false">Trackmania</button>
+  <section class="sec" aria-labelledby="mine">
+    <div class="sec-head"><h2 id="mine">Your tournaments</h2><a href="#">History</a></div>
+    <ul class="row-list panel mine">
+      <li>
+        <span class="game-mark lg g-cs2">CS</span>
+        <div><h3>Spring Cup</h3><p class="muted">Nordlys · Quarterfinals · Double elimination</p></div>
+        <div class="state"><span class="chip live">Playing now</span><small>Map 1 won 13–9</small></div>
+      </li>
+      <li>
+        <span class="game-mark lg g-cs2">CS</span>
+        <div><h3>LAN Party Main Event</h3><p class="muted">Nordlys · Registered · Starts Sat 12:00</p></div>
+        <div class="state"><span class="chip">Check-in opens Sat 11:00</span><small>Roster 5 of 5</small></div>
+      </li>
+      <li>
+        <span class="game-mark lg g-chess">♞</span>
+        <div><h3>Office Rapid</h3><p class="muted">Solo · Finished</p></div>
+        <div class="state"><span class="chip">3rd of 24</span><small>Rating +18</small></div>
+      </li>
+    </ul>
+  </section>
+
+  <section class="sec" aria-labelledby="picks">
+    <div class="sec-head"><h2 id="picks">Open for your games</h2><a href="#">Browse all tournaments</a></div>
+    <div class="picks">
+      <a class="pick" href="tournament.html">
+        <div class="top"><span class="game"><span class="game-mark g-cs2">CS</span>Counter-Strike 2</span><span class="chip">Closes Fri 18:00</span></div>
+        <h3>Autumn 5v5 Open</h3>
+        <p class="meta">5v5 · Single elimination · Bo1, final Bo3 · 3 of 16 spots left</p>
+        <div class="foot"><span class="need ok">✓ Steam linked</span><span class="btn btn-primary btn-sm">Register team</span></div>
+      </a>
+      <a class="pick" href="tournament.html">
+        <div class="top"><span class="game"><span class="game-mark g-chess">♞</span>Chess</span><span class="chip">Closes Sun 12:00</span></div>
+        <h3>Weekend Blitz</h3>
+        <p class="meta">Solo · Swiss, 7 rounds · 3+2</p>
+        <div class="foot"><span class="need warn">Needs a Lichess account</span><span class="btn btn-quiet btn-sm">Link Lichess</span></div>
+      </a>
     </div>
-  </div>
-
-  <h2 class="group-title">Live now</h2>
-  <div class="live-grid">
-    <a class="tcard" href="tournament.html">
-      <div class="top"><span class="chip">Counter-Strike 2</span><span class="chip live">Live</span></div>
-      <h3>Spring Cup</h3>
-      <div class="meta"><span>8 teams</span><span>Double elimination</span><span>Bo3</span></div>
-      <div class="now">
-        <div><span>Nordlys vs Baltic Five</span><span class="num">1 – 0</span></div>
-        <div><span>Fjord vs Polar</span><span class="num">0 – 1</span></div>
-        <div class="muted"><span>Quarterfinals</span><span>2 of 4 live</span></div>
-      </div>
-    </a>
-    <a class="tcard" href="tournament.html">
-      <div class="top"><span class="chip">Rocket League</span><span class="chip live">Live</span></div>
-      <h3>Friday 2v2 Night</h3>
-      <div class="meta"><span>16 teams</span><span>Swiss</span><span>Bo5</span></div>
-      <div class="now">
-        <div><span>Boost Brothers vs Flip Reset</span><span class="num">2 – 2</span></div>
-        <div><span>Kickoff Club vs Aerial Aces</span><span class="num">3 – 1</span></div>
-        <div class="muted"><span>Round 3</span><span>Results reported by captains</span></div>
-      </div>
-    </a>
-  </div>
-
-  <h2 class="group-title">Open for registration</h2>
-  <ul class="row-list panel reg">
-    <li>
-      <div class="when"><span class="mono muted">Closes</span><b>Fri 18:00</b></div>
-      <div><h3>LAN Party Main Event</h3><p class="muted">Counter-Strike 2 · 5v5 · Single elimination · 3 of 16 spots left</p><p class="need ok">✓ Your Steam account is linked</p></div>
-      <a class="btn btn-primary" href="tournament.html">Register team</a>
-    </li>
-    <li>
-      <div class="when"><span class="mono muted">Closes</span><b>Sun 12:00</b></div>
-      <div><h3>Weekend Blitz</h3><p class="muted">Chess · Solo · Swiss, 7 rounds</p><p class="need warn">Needs a Lichess account</p></div>
-      <a class="btn btn-quiet" href="connections.html">Link Lichess</a>
-    </li>
-    <li>
-      <div class="when"><span class="mono muted">Closes</span><b>12 Oct</b></div>
-      <div><h3>Autumn Time Attack</h3><p class="muted">Trackmania · Solo · Round robin groups into playoffs</p><p class="need warn">Needs an Ubisoft account</p></div>
-      <a class="btn btn-quiet" href="connections.html">Link Ubisoft</a>
-    </li>
-  </ul>
-
-  <h2 class="group-title">Finished</h2>
-  <div class="past">
-    <a href="tournament.html"><span class="chip">Counter-Strike 2</span><h3>Winter LAN</h3><span class="muted">Winner: Nordlys</span></a>
-    <a href="tournament.html"><span class="chip">Rocket League</span><h3>Summer 3v3</h3><span class="muted">Winner: Kickoff Club</span></a>
-    <a href="tournament.html"><span class="chip">Chess</span><h3>Office Rapid</h3><span class="muted">Winner: Ingrid H.</span></a>
-  </div>
+  </section>
 </main>
+
+<div class="onboard" hidden role="dialog" aria-modal="true" aria-labelledby="ob-title">
+  <form class="card" onsubmit="event.preventDefault(); this.closest('.onboard').hidden = true;">
+    <div><h2 id="ob-title">What do you play?</h2><p class="muted" style="margin-top:var(--space-xs)">We'll show tournaments for these games first. You can change this any time.</p></div>
+    <div class="grid">
+      <label><input type="checkbox" checked /><span class="game-mark g-cs2">CS</span>Counter-Strike 2</label>
+      <label><input type="checkbox" /><span class="game-mark g-rl">RL</span>Rocket League</label>
+      <label><input type="checkbox" checked /><span class="game-mark g-chess">♞</span>Chess</label>
+      <label><input type="checkbox" /><span class="game-mark g-tm">TM</span>Trackmania</label>
+      <label><input type="checkbox" /><span class="game-mark g-lol">LoL</span>League of Legends</label>
+      <label><input type="checkbox" /><span class="game-mark">+</span>Other games</label>
+    </div>
+    <div class="row"><button class="btn btn-quiet" type="button" onclick="this.closest('.onboard').hidden = true">Skip</button><button class="btn btn-primary" type="submit">Show my tournaments</button></div>
+  </form>
+</div>
+
 <script src="shell.js"></script>
+<script>
+  // Draft: the picker shows on first visit; "Edit games" reopens it.
+  const ob = document.querySelector('.onboard');
+  document.querySelector('[data-open-onboard]').onclick = () => (ob.hidden = false);
+  try { if (!localStorage.getItem('draft-onboarded')) { ob.hidden = false; localStorage.setItem('draft-onboarded', '1'); } } catch {}
+</script>
 </body>
 </html>

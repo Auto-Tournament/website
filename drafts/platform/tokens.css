@@ -40,6 +40,14 @@
 }
 
 :root {
+  /* Game badge colours. Placeholders until each game module ships its own icon. */
+  --game-cs2: #de9b35;
+  --game-rl: #1a8cff;
+  --game-chess: #b0b0b0;
+  --game-tm: #00b75c;
+  --game-lol: #c8aa6e;
+  --game-generic: var(--color-muted);
+
   --font-display: 'Sora', system-ui, sans-serif;
   --font-body: 'Geist', system-ui, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
