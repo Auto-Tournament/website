@@ -46,13 +46,22 @@
   .onboard[hidden] { display: none; }
   .onboard { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: var(--space-md); background: color-mix(in oklab, var(--color-paper) 80%, transparent); }
   .onboard .card { width: min(560px, 100%); padding: var(--space-xl); border-radius: var(--radius-lg); background: var(--color-paper-2); border: 1px solid var(--color-rule); display: grid; gap: var(--space-lg); }
-  .onboard .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: var(--space-sm); }
-  .onboard label { display: flex; gap: var(--space-sm); align-items: center; padding: var(--space-sm) var(--space-md); border: 1px solid var(--color-rule); border-radius: var(--radius-md); cursor: pointer; font-size: var(--text-sm); }
-  .onboard label:hover { background: var(--color-paper-3); }
-  .onboard input { position: absolute; opacity: 0; pointer-events: none; }
-  .onboard label:has(input:checked) { border-color: var(--color-accent); background: var(--color-paper-3); }
-  .onboard label:has(input:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: 2px; }
   .onboard .row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ac { position: relative; display: grid; gap: var(--space-sm); }
+  .ac-input { width: 100%; padding: 0.7rem 1rem; border-radius: var(--radius-pill); border: 1px solid var(--color-rule); background: var(--color-paper); color: var(--color-ink); font: inherit; }
+  .ac-input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  .ac-list { position: absolute; top: calc(2.75rem + 4px); left: 0; right: 0; z-index: 2; list-style: none; margin: 0; padding: var(--space-2xs); background: var(--color-paper-2); border: 1px solid var(--color-rule); border-radius: var(--radius-md); max-height: 260px; overflow-y: auto; }
+  .ac-list li { display: flex; gap: var(--space-sm); align-items: center; padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm); cursor: pointer; font-size: var(--text-sm); }
+  .ac-list li[aria-selected='true'], .ac-list li:hover { background: var(--color-paper-3); }
+  .ac-list .yr { color: var(--color-muted); margin-left: auto; font-size: var(--text-xs); }
+  .ac-suggest { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; font-size: var(--text-sm); }
+  .chips { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+  .chips button { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.7rem 0.25rem 0.3rem; border-radius: var(--radius-pill); border: 1px solid var(--color-rule); background: transparent; color: var(--color-ink); font: inherit; font-size: var(--text-sm); cursor: pointer; white-space: nowrap; }
+  .chips button:hover { background: var(--color-paper-3); }
+  #picked button::after { content: '×'; color: var(--color-muted); margin-left: 0.2rem; }
+  .credit { font-size: var(--text-xs); color: var(--color-muted); }
 </style>
 </head>
 <body>
@@ -138,14 +147,20 @@
 <div class="onboard" hidden role="dialog" aria-modal="true" aria-labelledby="ob-title">
   <form class="card" onsubmit="event.preventDefault(); this.closest('.onboard').hidden = true;">
     <div><h2 id="ob-title">What do you play?</h2><p class="muted" style="margin-top:var(--space-xs)">We'll show tournaments for these games first. You can change this any time.</p></div>
-    <div class="grid">
-      <label><input type="checkbox" checked /><span class="game-mark g-cs2">CS</span>Counter-Strike 2</label>
-      <label><input type="checkbox" /><span class="game-mark g-rl">RL</span>Rocket League</label>
-      <label><input type="checkbox" checked /><span class="game-mark g-chess">♞</span>Chess</label>
-      <label><input type="checkbox" /><span class="game-mark g-tm">TM</span>Trackmania</label>
-      <label><input type="checkbox" /><span class="game-mark g-lol">LoL</span>League of Legends</label>
-      <label><input type="checkbox" /><span class="game-mark">+</span>Other games</label>
+
+    <div class="ac">
+      <label class="sr-only" for="game-search">Search games</label>
+      <input id="game-search" class="ac-input" type="search" placeholder="Search games" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="game-results" aria-autocomplete="list" />
+      <ul id="game-results" class="ac-list" role="listbox" hidden></ul>
+      <div class="ac-suggest"><span class="muted">Popular here:</span><div class="chips" id="suggest"></div></div>
     </div>
+
+    <div>
+      <p class="muted" style="font-size:var(--text-sm);margin-bottom:var(--space-xs)">Your games</p>
+      <div class="chips" id="picked"></div>
+    </div>
+
+    <p class="credit">Game data from IGDB.</p>
     <div class="row"><button class="btn btn-quiet" type="button" onclick="this.closest('.onboard').hidden = true">Skip</button><button class="btn btn-primary" type="submit">Show my tournaments</button></div>
   </form>
 </div>
@@ -156,6 +171,63 @@
   const ob = document.querySelector('.onboard');
   document.querySelector('[data-open-onboard]').onclick = () => (ob.hidden = false);
   try { if (!localStorage.getItem('draft-onboarded')) { ob.hidden = false; localStorage.setItem('draft-onboarded', '1'); } } catch {}
+
+  // Sample of what the IGDB-backed search endpoint would return (the real one is server-side, cached).
+  const GAMES = [
+    ['cs2', 'Counter-Strike 2', 2023, 'CS'], ['rl', 'Rocket League', 2015, 'RL'], ['chess', 'Chess (Lichess)', null, '♞'],
+    ['tm', 'Trackmania', 2020, 'TM'], ['lol', 'League of Legends', 2009, 'LoL'], ['', 'Valorant', 2020, 'VA'],
+    ['', 'Dota 2', 2013, 'D2'], ['', 'Team Fortress 2', 2007, 'TF'], ['', 'Overwatch 2', 2022, 'OW'],
+    ['', 'EA Sports FC 25', 2024, 'FC'], ['', 'Super Smash Bros. Ultimate', 2018, 'SB'], ['', 'osu!', 2007, 'os'],
+    ['', 'Street Fighter 6', 2023, 'SF'], ['', 'Tekken 8', 2024, 'T8'], ['', 'Age of Empires II', 1999, 'AoE'],
+  ];
+  const picked = new Map([['Counter-Strike 2', GAMES[0]], ['Chess (Lichess)', GAMES[2]]]);
+  const mark = (g) => `<span class="game-mark${g[0] ? ' g-' + g[0] : ''}">${g[3]}</span>`;
+  const input = document.getElementById('game-search');
+  const list = document.getElementById('game-results');
+  let active = -1, results = [];
+
+  function renderPicked() {
+    const box = document.getElementById('picked');
+    box.innerHTML = '';
+    for (const g of picked.values()) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.innerHTML = mark(g) + g[1]; b.setAttribute('aria-label', 'Remove ' + g[1]);
+      b.onclick = () => { picked.delete(g[1]); renderPicked(); renderSuggest(); };
+      box.appendChild(b);
+    }
+  }
+  function renderSuggest() {
+    // Games with open tournaments on this site first, then popular ones; 3 max, not already picked.
+    const order = ['Rocket League', 'Trackmania', 'Valorant', 'Dota 2', 'League of Legends'];
+    const box = document.getElementById('suggest');
+    box.innerHTML = '';
+    order.map((n) => GAMES.find((g) => g[1] === n)).filter((g) => !picked.has(g[1])).slice(0, 3).forEach((g) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.innerHTML = mark(g) + g[1]; b.onclick = () => add(g);
+      box.appendChild(b);
+    });
+  }
+  function add(g) { picked.set(g[1], g); input.value = ''; close(); renderPicked(); renderSuggest(); input.focus(); }
+  function close() { list.hidden = true; input.setAttribute('aria-expanded', 'false'); active = -1; }
+  function renderResults() {
+    const q = input.value.trim().toLowerCase();
+    results = q ? GAMES.filter((g) => g[1].toLowerCase().includes(q) && !picked.has(g[1])).slice(0, 6) : [];
+    list.innerHTML = results.map((g, i) => `<li role="option" id="opt-${i}" aria-selected="${i === active}">${mark(g)}${g[1]}<span class="yr">${g[2] ?? ''}</span></li>`).join('')
+      || (q ? '<li aria-disabled="true" class="muted">No games found. It can still be added by an organizer.</li>' : '');
+    list.hidden = !q;
+    input.setAttribute('aria-expanded', String(!!q));
+    input.setAttribute('aria-activedescendant', active >= 0 ? 'opt-' + active : '');
+    list.querySelectorAll('li[role=option]').forEach((li, i) => (li.onmousedown = (e) => { e.preventDefault(); add(results[i]); }));
+  }
+  input.addEventListener('input', () => { active = results.length ? 0 : -1; renderResults(); active = results.length ? 0 : -1; renderResults(); });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); active = Math.min(active + 1, results.length - 1); renderResults(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); active = Math.max(active - 1, 0); renderResults(); }
+    else if (e.key === 'Enter' && active >= 0 && results[active]) { e.preventDefault(); add(results[active]); }
+    else if (e.key === 'Escape') { close(); }
+  });
+  input.addEventListener('blur', close);
+  renderPicked(); renderSuggest();
 </script>
 </body>
 </html>
