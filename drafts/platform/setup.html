@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en" data-theme="ember">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Create tournament (draft)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="app.css" />
+<style>
+  /* Create / edit tournament: steps on the left, one question at a time in the middle,
+     and a live summary on the right that reads like the event page will. */
+  .setup { display: grid; grid-template-columns: 13rem minmax(0, 1fr) 20rem; gap: var(--space-2xl); margin-top: var(--space-lg); align-items: start; }
+  @media (max-width: 1100px) { .setup { grid-template-columns: 12rem minmax(0, 1fr); } .summary { grid-column: 1 / -1; } }
+  @media (max-width: 760px) { .setup { grid-template-columns: minmax(0, 1fr); gap: var(--space-lg); } }
+
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2xs); position: sticky; top: 96px; counter-reset: s; }
+  .steps a { display: grid; grid-template-columns: 1.6rem minmax(0, 1fr); gap: var(--space-sm); align-items: center; padding: 0.5rem 0.6rem; border-radius: var(--radius-sm); color: var(--color-ink-2); font-size: var(--text-sm); white-space: nowrap; }
+  .steps a::before { counter-increment: s; content: counter(s); width: 1.6rem; height: 1.6rem; border-radius: 50%; display: grid; place-items: center; font: 600 var(--text-xs) / 1 var(--font-mono); border: 1px solid var(--color-rule); color: var(--color-muted); }
+  .steps a:hover { background: var(--color-paper-2); color: var(--color-ink); }
+  .steps .done a::before { content: '✓'; background: var(--color-paper-3); color: var(--color-live); border-color: transparent; }
+  .steps a[aria-current='step'] { background: var(--color-paper-2); color: var(--color-ink); }
+  .steps a[aria-current='step']::before { background: var(--color-accent); color: var(--color-accent-ink); border-color: transparent; }
+  @media (max-width: 760px) { .steps { position: static; grid-auto-flow: column; overflow-x: auto; } }
+
+  .q { display: grid; gap: var(--space-xl); }
+  .q h1 { font-size: var(--text-2xl); }
+  .q .lede { color: var(--color-ink-2); margin-top: var(--space-xs); }
+  .field { display: grid; gap: var(--space-sm); }
+  .field > label, .field > .label { font-weight: 600; font-size: var(--text-sm); }
+  .field .help { color: var(--color-muted); font-size: var(--text-sm); }
+
+  /* Format choices: cards with a tiny structural diagram. */
+  .formats { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: var(--space-sm); }
+  .fmt { display: grid; gap: var(--space-xs); padding: var(--space-md); border: 1px solid var(--color-rule); border-radius: var(--radius-md); background: transparent; color: var(--color-ink); text-align: left; font: inherit; cursor: pointer; }
+  .fmt:hover { background: var(--color-paper-2); }
+  .fmt[aria-pressed='true'] { border-color: var(--color-accent); background: var(--color-paper-2); }
+  .fmt b { font-size: var(--text-md); }
+  .fmt span { color: var(--color-muted); font-size: var(--text-sm); }
+  .fmt svg { width: 100%; height: 44px; }
+  .fmt svg * { stroke: var(--color-muted); fill: none; stroke-width: 1.5; }
+  .fmt[aria-pressed='true'] svg * { stroke: var(--color-accent); }
+
+  .seg { display: inline-flex; border: 1px solid var(--color-rule); border-radius: var(--radius-pill); padding: 2px; flex-wrap: wrap; }
+  .seg button { border: 0; background: transparent; color: var(--color-ink-2); font: 500 var(--text-sm) / 1 var(--font-body); padding: 0.5rem 0.9rem; border-radius: var(--radius-pill); cursor: pointer; white-space: nowrap; }
+  .seg button[aria-pressed='true'] { background: var(--color-ink); color: var(--color-paper); }
+  .row2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--space-lg); }
+
+  .stepper { display: inline-flex; align-items: center; border: 1px solid var(--color-rule); border-radius: var(--radius-pill); }
+  .stepper button { width: 2.2rem; height: 2.2rem; border: 0; background: transparent; color: var(--color-ink); font-size: var(--text-lg); cursor: pointer; border-radius: 50%; }
+  .stepper button:hover { background: var(--color-paper-3); }
+  .stepper output { min-width: 3rem; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  .foot { display: flex; justify-content: space-between; gap: var(--space-sm); padding-top: var(--space-lg); border-top: 1px solid var(--color-rule); }
+
+  /* Live summary. */
+  .summary { position: sticky; top: 96px; display: grid; gap: var(--space-md); }
+  .preview { padding: var(--space-lg); display: grid; gap: var(--space-md); }
+  .preview h3 { font-size: var(--text-xl); }
+  .preview dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-2xs) var(--space-md); margin: 0; font-size: var(--text-sm); }
+  .preview dt { color: var(--color-muted); }
+  .preview dd { margin: 0; text-align: right; }
+  .preview .todo { color: var(--color-muted); font-style: normal; }
+  .check { padding: var(--space-md) var(--space-lg); font-size: var(--text-sm); display: grid; gap: var(--space-xs); }
+  .check .ok { color: var(--color-live); }
+  .top-links { display: flex; justify-content: space-between; align-items: center; gap: var(--space-md); flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="index.html"><span data-logo></span>Auto Tournament</a>
+  <nav class="nav-links" aria-label="Main">
+    <a href="admin.html">Admin</a>
+    <a href="manage.html">Manage</a>
+    <a href="browse.html">Browse</a>
+  </nav>
+  <div class="nav-end">
+    <span class="search">Search <kbd>⌘K</kbd></span>
+    <a class="avatar" href="connections.html" aria-label="Your account">S</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="top-links">
+    <p class="muted" style="font-size:var(--text-sm)">New tournament · draft saved 1 min ago</p>
+    <a class="btn btn-quiet btn-sm" href="#">Start from a template</a>
+  </div>
+
+  <div class="setup">
+    <ol class="steps" aria-label="Steps">
+      <li class="done"><a href="#">Game</a></li>
+      <li class="done"><a href="#">Basics</a></li>
+      <li><a href="#" aria-current="step">Format</a></li>
+      <li><a href="#">Teams and sign-up</a></li>
+      <li><a href="#">Maps and veto</a></li>
+      <li><a href="#">Event page</a></li>
+      <li><a href="#">Review</a></li>
+    </ol>
+
+    <form class="q" onsubmit="event.preventDefault()">
+      <div>
+        <h1>How is it played?</h1>
+        <p class="lede">Pick the bracket and how long each series is. You can change this until the tournament starts.</p>
+      </div>
+
+      <div class="field">
+        <span class="label">Format</span>
+        <div class="formats" role="group" aria-label="Format">
+          <button class="fmt" type="button" aria-pressed="false"><svg viewBox="0 0 120 44" aria-hidden="true"><path d="M4 8h20v8H4zM4 28h20v8H4zM24 12h12v20H24M36 22h14M50 18h20v8H50z"/></svg><b>Single elimination</b><span>Lose once and you're out. Fastest.</span></button>
+          <button class="fmt" type="button" aria-pressed="true"><svg viewBox="0 0 120 44" aria-hidden="true"><path d="M4 4h18v7H4zM4 15h18v7H4zM22 7h10v11H22M32 12h12M44 9h18v7H44zM4 29h18v7H4zM22 32h22M44 29h18v7H44zM62 12h10v20H62M72 22h14M86 19h18v7H86z"/></svg><b>Double elimination</b><span>A second chance in the lower bracket.</span></button>
+          <button class="fmt" type="button" aria-pressed="false"><svg viewBox="0 0 120 44" aria-hidden="true"><path d="M4 6h30M4 16h30M4 26h30M4 36h30M44 6h30M44 16h30M44 26h30M44 36h30M84 11h30M84 21h30M84 31h30"/></svg><b>Swiss</b><span>Everyone plays several rounds against similar records.</span></button>
+          <button class="fmt" type="button" aria-pressed="false"><svg viewBox="0 0 120 44" aria-hidden="true"><path d="M20 6h80v32H20zM20 14h80M20 22h80M20 30h80M40 6v32M60 6v32M80 6v32"/></svg><b>Round robin</b><span>Everyone plays everyone. Best for small groups.</span></button>
+          <button class="fmt" type="button" aria-pressed="false"><svg viewBox="0 0 120 44" aria-hidden="true"><path d="M10 10l20 24M30 10L10 34M50 10h20v24H50zM90 10l20 24M110 10L90 34"/></svg><b>Shuffle</b><span>Solo sign-up. New random teams each round.</span></button>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <span class="label">Series length</span>
+          <div class="seg" role="group" aria-label="Series length"><button type="button" aria-pressed="false">Bo1</button><button type="button" aria-pressed="true">Bo3</button><button type="button" aria-pressed="false">Bo5</button></div>
+        </div>
+        <div class="field">
+          <span class="label">Grand final</span>
+          <div class="seg" role="group" aria-label="Grand final"><button type="button" aria-pressed="false">Same</button><button type="button" aria-pressed="false">Bo3</button><button type="button" aria-pressed="true">Bo5</button></div>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <span class="label">Teams</span>
+          <div class="stepper"><button type="button" aria-label="Fewer teams">−</button><output>8</output><button type="button" aria-label="More teams">+</button></div>
+          <span class="help">Any number works. Missing spots become byes.</span>
+        </div>
+        <div class="field">
+          <span class="label">Overtime</span>
+          <div class="seg" role="group" aria-label="Overtime"><button type="button" aria-pressed="true">MR3, unlimited</button><button type="button" aria-pressed="false">Off</button></div>
+          <span class="help">Counter-Strike 2 setting, from the game module.</span>
+        </div>
+      </div>
+
+      <div class="foot">
+        <a class="btn btn-quiet" href="#">Back</a>
+        <button class="btn btn-primary" type="submit">Continue to teams</button>
+      </div>
+    </form>
+
+    <aside class="summary" aria-label="Summary">
+      <section class="panel preview">
+        <span class="game"><span class="game-mark g-cs2">CS</span>Counter-Strike 2</span>
+        <h3>Spring Cup</h3>
+        <dl>
+          <dt>Format</dt><dd>Double elimination</dd>
+          <dt>Series</dt><dd>Bo3 · final Bo5</dd>
+          <dt>Teams</dt><dd>8</dd>
+          <dt>Matches</dt><dd class="num">14</dd>
+          <dt>Sign-up</dt><dd class="todo">Next step</dd>
+          <dt>Maps</dt><dd class="todo">Not set</dd>
+        </dl>
+      </section>
+      <section class="panel check">
+        <b>Before you can start</b>
+        <span class="ok">✓ Game and name</span>
+        <span class="ok">✓ Format</span>
+        <span class="muted">○ At least 2 teams</span>
+        <span class="muted">○ A map pool (7 maps for Bo3 with veto)</span>
+        <span class="muted">○ At least one server online</span>
+      </section>
+    </aside>
+  </div>
+</main>
+<script src="shell.js"></script>
+<script>
+  document.querySelectorAll('.formats, .seg').forEach((g) => g.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) g.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); }));
+  document.querySelectorAll('.stepper').forEach((s) => { const o = s.querySelector('output'); const [minus, plus] = s.querySelectorAll('button'); minus.onclick = () => (o.textContent = Math.max(2, +o.textContent - 1)); plus.onclick = () => (o.textContent = Math.min(128, +o.textContent + 1)); });
+</script>
+</body>
+</html>

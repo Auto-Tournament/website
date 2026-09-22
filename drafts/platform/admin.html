@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en" data-theme="ember">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin · Auto Tournament (draft)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="app.css" />
+<style>
+  /* Admin home: the whole site, not one tournament. Tournaments first (that's the work),
+     then infrastructure and people. A setup checklist only while something is missing. */
+  .head { display: flex; justify-content: space-between; align-items: end; gap: var(--space-md); flex-wrap: wrap; margin-bottom: var(--space-xl); }
+  .head p { color: var(--color-muted); margin-top: var(--space-xs); font-size: var(--text-sm); }
+
+  .setup-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-lg); align-items: center; padding: var(--space-lg) var(--space-xl); border: 1px solid var(--color-accent); border-radius: var(--radius-lg); margin-bottom: var(--space-2xl); }
+  .setup-card ul { list-style: none; margin: var(--space-sm) 0 0; padding: 0; display: flex; gap: var(--space-lg); flex-wrap: wrap; font-size: var(--text-sm); }
+  .setup-card .ok { color: var(--color-live); }
+  @media (max-width: 720px) { .setup-card { grid-template-columns: minmax(0, 1fr); } }
+
+  .grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: var(--space-xl); align-items: start; }
+  @media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .sec + .sec { margin-top: var(--space-xl); }
+  .sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-md); margin-bottom: var(--space-md); }
+  .sec-head a { color: var(--color-muted); font-size: var(--text-sm); white-space: nowrap; }
+
+  .t li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: var(--space-md); align-items: center; padding: var(--space-md) var(--space-lg); }
+  .t small { display: block; color: var(--color-muted); font-size: var(--text-xs); }
+  @media (max-width: 640px) { .t li { grid-template-columns: auto minmax(0, 1fr); } .t li > :nth-child(n + 3) { grid-column: 2; justify-self: start; } }
+
+  .kv { padding: var(--space-lg); display: grid; gap: var(--space-sm); }
+  .kv .line { display: flex; justify-content: space-between; gap: var(--space-md); font-size: var(--text-sm); }
+  .kv .big { font: 700 var(--text-2xl) / 1 var(--font-display); font-variant-numeric: tabular-nums; }
+  .bar { height: 6px; border-radius: var(--radius-pill); background: var(--color-paper-3); overflow: hidden; display: flex; }
+  .bar i { display: block; height: 100%; }
+  .bar .on { background: var(--color-live); } .bar .off { background: var(--color-ban); } .bar .busy { background: var(--color-accent); }
+
+  .links { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: var(--space-xs); }
+  .links a { padding: var(--space-sm) var(--space-md); border: 1px solid var(--color-rule); border-radius: var(--radius-md); font-size: var(--text-sm); }
+  .links a:hover { background: var(--color-paper-2); }
+  .links a small { display: block; color: var(--color-muted); font-size: var(--text-xs); }
+</style>
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="index.html"><span data-logo></span>Auto Tournament</a>
+  <nav class="nav-links" aria-label="Main">
+    <a href="admin.html" aria-current="page">Admin</a>
+    <a href="manage.html">Manage</a>
+    <a href="browse.html">Browse</a>
+  </nav>
+  <div class="nav-end">
+    <span class="search">Search <kbd>⌘K</kbd></span>
+    <a class="avatar" href="connections.html" aria-label="Your account">S</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="head">
+    <div><h1>Edition 35 LAN</h1><p>Your Auto Tournament site · version 3.0 beta</p></div>
+    <a class="btn btn-primary" href="setup.html">Create tournament</a>
+  </div>
+
+  <section class="setup-card" aria-label="Setup">
+    <div>
+      <b>Finish setting up</b>
+      <ul>
+        <li class="ok">✓ Steam sign-in</li>
+        <li class="ok">✓ 4 servers connected</li>
+        <li>○ Discord sign-in (optional)</li>
+        <li>○ Game covers via IGDB (optional)</li>
+      </ul>
+    </div>
+    <a class="btn btn-quiet btn-sm" href="#">Open settings</a>
+  </section>
+
+  <div class="grid">
+    <div>
+      <section class="sec" aria-labelledby="tourn">
+        <div class="sec-head"><h2 id="tourn">Tournaments</h2><a href="browse.html">All</a></div>
+        <ul class="row-list panel t">
+          <li><span class="game-mark lg g-cs2">CS</span><div><b>Spring Cup</b><small>Quarterfinals · 2 live, 1 in veto</small></div><span class="chip live">Live</span><a class="btn btn-primary btn-sm" href="manage.html">Manage</a></li>
+          <li><span class="game-mark lg g-cs2">CS</span><div><b>Autumn 5v5 Open</b><small>13 of 16 teams · sign-up closes Fri 18:00</small></div><span class="chip">Sign-up</span><a class="btn btn-quiet btn-sm" href="manage.html">Manage</a></li>
+          <li><span class="game-mark lg g-chess">♞</span><div><b>Weekend Blitz</b><small>Draft · not published</small></div><span class="chip">Draft</span><a class="btn btn-quiet btn-sm" href="setup.html">Continue setup</a></li>
+          <li><span class="game-mark lg g-cs2">CS</span><div><b>Winter LAN</b><small>Winner: Nordlys · 16 teams</small></div><span class="chip">Finished</span><a class="btn btn-quiet btn-sm" href="tournament.html">View</a></li>
+        </ul>
+      </section>
+
+      <section class="sec" aria-labelledby="quick">
+        <div class="sec-head"><h2 id="quick">Site</h2></div>
+        <div class="links">
+          <a href="#">Servers<small>Connect, update, health</small></a>
+          <a href="#">Maps<small>Pools and images</small></a>
+          <a href="#">Players<small>Everyone who signed in</small></a>
+          <a href="#">Teams<small>Clubs and rosters</small></a>
+          <a href="#">Templates<small>Reusable setups</small></a>
+          <a href="#">Ratings<small>ELO templates</small></a>
+          <a href="#">Settings<small>Sign-in, API keys</small></a>
+          <a href="#">Admin tools<small>Logs and maintenance</small></a>
+        </div>
+      </section>
+    </div>
+
+    <aside>
+      <section class="sec panel kv" aria-labelledby="srv">
+        <div class="sec-head" style="margin:0"><h3 id="srv">Servers</h3><a href="#">Open</a></div>
+        <div class="line"><span class="big">3 / 4</span><span class="muted">online</span></div>
+        <div class="bar" aria-hidden="true"><i class="busy" style="width:50%"></i><i class="on" style="width:25%"></i><i class="off" style="width:25%"></i></div>
+        <div class="line"><span>In a match</span><b class="num">2</b></div>
+        <div class="line"><span>Free</span><b class="num">1</b></div>
+        <div class="line"><span style="color:var(--color-ban)">Offline</span><b class="num">1</b></div>
+        <div class="line"><span>Plugin</span><span class="muted">1.4.33, all up to date</span></div>
+      </section>
+
+      <section class="sec panel kv" aria-labelledby="ppl">
+        <div class="sec-head" style="margin:0"><h3 id="ppl">People</h3><a href="#">Open</a></div>
+        <div class="line"><span>Players</span><b class="num">142</b></div>
+        <div class="line"><span>Signed in this week</span><b class="num">38</b></div>
+        <div class="line"><span>Admins</span><b class="num">2</b></div>
+        <div class="line"><span>Game accounts waiting for approval</span><b class="num">1</b></div>
+      </section>
+    </aside>
+  </div>
+</main>
+<script src="shell.js"></script>
+</body>
+</html>
