@@ -128,8 +128,8 @@ export function Hero() {
             </Box>
           </Typography>
           <Typography sx={{ mt: 3, maxWidth: '46ch', color: color.ink2, fontSize: '1.125rem' }}>
-            Create the tournament and add your servers. Auto Tournament runs the veto, loads every match, tracks the scores and moves the bracket on. Self-hosted
-            and open source, with CS2 built in.
+            Create the tournament and add your servers. Auto Tournament runs the veto, loads every match, tracks the scores and moves the bracket on. Self-hosted,
+            source available, with CS2 built in.
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 4 }}>
             <Button variant="contained" href={links.install}>
@@ -139,7 +139,7 @@ export function Hero() {
               View on GitHub
             </Button>
           </Box>
-          <Typography sx={{ mt: 2, color: color.muted, fontSize: '0.875rem' }}>Free and MIT licensed · Runs on one Docker host</Typography>
+          <Typography sx={{ mt: 2, color: color.muted, fontSize: '0.875rem' }}>Free for non-commercial use · Runs on one Docker host</Typography>
         </div>
         <Box sx={{ borderRadius: `${radius.lg}px` }}>
           <BracketCard />
@@ -399,7 +399,9 @@ export function Footer() {
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
           <ThemePicker />
-          <span>MIT licensed</span>
+          <Box component="a" href={links.github} sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { color: color.ink } }}>
+            Free for non-commercial use
+          </Box>
         </Box>
       </Box>
     </Container>

@@ -20,7 +20,7 @@ const mono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono', preload: 
 const url = 'https://autotournament.gg';
 const title = 'Auto Tournament: the tournament runs, you play';
 const description =
-  'Ditch the spreadsheet. Auto Tournament is a free, self-hosted tournament platform: it builds the bracket, runs the map veto, puts every match on a free server and records the results. Open source, with CS2 built in.';
+  'Ditch the spreadsheet. Auto Tournament is a free, self-hosted tournament platform: it builds the bracket, runs the map veto, puts every match on a free server and records the results. Source available, with CS2 built in.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(url),
@@ -73,9 +73,7 @@ const jsonLd = {
       applicationCategory: 'GameApplication',
       operatingSystem: 'Linux, macOS, Windows (Docker)',
       softwareHelp: 'https://docs.autotournament.gg',
-      license: 'https://opensource.org/licenses/MIT',
-      isAccessibleForFree: true,
-      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      license: 'https://polyformproject.org/licenses/noncommercial/1.0.0',
       publisher: { '@id': `${url}/#org` },
     },
   ],

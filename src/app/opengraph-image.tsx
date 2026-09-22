@@ -56,13 +56,13 @@ export default async function OpengraphImage() {
               </div>
             </div>
             <div style={{ marginTop: 26, fontSize: 27, lineHeight: 1.4, color: color.ink2, maxWidth: 580 }}>
-              Brackets, map veto, servers and results run themselves. Self-hosted and open source, CS2 built in.
+              Brackets, map veto, servers and results run themselves. Self-hosted, source available, CS2 built in.
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 24, color: color.muted }}>
             <div style={{ display: 'flex', padding: '8px 18px', borderRadius: 999, backgroundColor: color.accent, color: color.accentInk, fontWeight: 400 }}>autotournament.gg</div>
-            <span>Free · MIT licensed · Docker</span>
+            <span>Free · Source available · Docker</span>
           </div>
         </div>
       </div>
