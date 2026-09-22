@@ -1,4 +1,33 @@
 [
-  { "date": "2026-09-21", "macrostructure": "Narrative Workflow", "theme": "custom", "theme_axes": "light / display-heavy / warm", "vibe": "matchday poster, chunky, warm, friendly", "enrichment": "E1 centred demo video (placeholder)", "nav": "N7", "footer": "Ft8", "brief": "autotournament.gg landing · draft B" },
-  { "date": "2026-09-21", "macrostructure": "Split Studio", "theme": "custom", "theme_axes": "dark / geometric-sans / warm", "vibe": "LAN at night, stage lights, orange", "enrichment": "E1 centred demo video (placeholder)", "nav": "N5", "footer": "Ft5", "brief": "autotournament.gg landing · draft A" }
+  {
+    "date": "2026-09-22",
+    "macrostructure": "App shell (dashboard)",
+    "theme": "Auto Tournament system (5 themes)",
+    "enrichment": "none",
+    "nav": "N5",
+    "footer": "none",
+    "brief": "3.1 platform drafts \u00b7 home, tournament hub, connections"
+  },
+  {
+    "date": "2026-09-21",
+    "macrostructure": "Narrative Workflow",
+    "theme": "custom",
+    "theme_axes": "light / display-heavy / warm",
+    "vibe": "matchday poster, chunky, warm, friendly",
+    "enrichment": "E1 centred demo video (placeholder)",
+    "nav": "N7",
+    "footer": "Ft8",
+    "brief": "autotournament.gg landing \u00b7 draft B"
+  },
+  {
+    "date": "2026-09-21",
+    "macrostructure": "Split Studio",
+    "theme": "custom",
+    "theme_axes": "dark / geometric-sans / warm",
+    "vibe": "LAN at night, stage lights, orange",
+    "enrichment": "E1 centred demo video (placeholder)",
+    "nav": "N5",
+    "footer": "Ft5",
+    "brief": "autotournament.gg landing \u00b7 draft A"
+  }
 ]

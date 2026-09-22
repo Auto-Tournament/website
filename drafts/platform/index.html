@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en" data-theme="ember">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Auto Tournament · Home (draft)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="app.css" />
+<style>
+  /* Home: "your next match" strip, then tournaments grouped by state, filtered by game. */
+  .next {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-lg); align-items: center;
+    padding: var(--space-lg) var(--space-xl); border-radius: var(--radius-lg);
+    background: var(--color-paper-2); border: 1px solid var(--color-accent);
+  }
+  .next .vs { display: flex; align-items: baseline; gap: var(--space-sm); flex-wrap: wrap; margin-top: var(--space-2xs); }
+  .next .vs strong { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 700; letter-spacing: -0.03em; }
+  .next .actions { display: flex; gap: var(--space-xs); flex-wrap: wrap; justify-content: flex-end; }
+  @media (max-width: 720px) { .next { grid-template-columns: minmax(0, 1fr); } .next .actions { justify-content: flex-start; } }
+
+  .head { display: flex; align-items: end; justify-content: space-between; gap: var(--space-md); flex-wrap: wrap; margin: var(--space-3xl) 0 var(--space-lg); }
+  .filters { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+  .filters button { font: 500 var(--text-sm) / 1 var(--font-body); padding: 0.45rem 0.85rem; border-radius: var(--radius-pill); border: 1px solid var(--color-rule); background: transparent; color: var(--color-ink-2); cursor: pointer; white-space: nowrap; }
+  .filters button:hover { background: var(--color-paper-3); }
+  .filters button[aria-pressed='true'] { background: var(--color-ink); color: var(--color-paper); border-color: var(--color-ink); }
+
+  .group-title { display: flex; align-items: center; gap: var(--space-sm); margin: var(--space-2xl) 0 var(--space-md); font-size: var(--text-sm); color: var(--color-ink-2); }
+  .group-title::after { content: ''; flex: 1; height: 1px; background: var(--color-rule); }
+
+  /* Live tournaments: wide cards with the current round visible. */
+  .live-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: var(--space-md); }
+  .tcard { display: grid; gap: var(--space-md); padding: var(--space-lg); border-radius: var(--radius-lg); background: var(--color-paper-2); border: 1px solid var(--color-rule); transition: border-color var(--dur-fast) var(--ease-out); }
+  .tcard:hover { border-color: var(--color-muted); }
+  .tcard .top { display: flex; justify-content: space-between; gap: var(--space-sm); align-items: center; }
+  .tcard .meta { display: flex; gap: var(--space-md); flex-wrap: wrap; font-size: var(--text-sm); color: var(--color-muted); }
+  .tcard .now { display: grid; gap: var(--space-2xs); padding-top: var(--space-md); border-top: 1px solid var(--color-rule); font-size: var(--text-sm); }
+  .tcard .now div { display: flex; justify-content: space-between; gap: var(--space-sm); }
+
+  /* Registration: a dense list, deadline first. */
+  .reg li { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr) auto; gap: var(--space-lg); align-items: center; padding: var(--space-md) var(--space-lg); }
+  .reg .when { font-variant-numeric: tabular-nums; }
+  .reg .when b { display: block; font-family: var(--font-display); font-size: var(--text-lg); }
+  .reg .need { font-size: var(--text-xs); }
+  @media (max-width: 640px) { .reg li { grid-template-columns: minmax(0, 1fr); gap: var(--space-xs); } }
+
+  .past { display: flex; gap: var(--space-md); overflow-x: auto; padding-bottom: var(--space-xs); scroll-snap-type: x mandatory; }
+  .past a { flex: 0 0 min(260px, 80%); scroll-snap-align: start; padding: var(--space-md) var(--space-lg); border-radius: var(--radius-md); border: 1px solid var(--color-rule); display: grid; gap: var(--space-2xs); }
+  .past a:hover { background: var(--color-paper-2); }
+</style>
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="index.html"><span data-logo></span>Auto Tournament</a>
+  <nav class="nav-links" aria-label="Main">
+    <a href="index.html" aria-current="page">Tournaments</a>
+    <a href="#">Teams</a>
+    <a href="#">Leaderboards</a>
+  </nav>
+  <div class="nav-end">
+    <span class="search">Search tournaments, teams, players <kbd>⌘K</kbd></span>
+    <a class="btn btn-quiet btn-sm" href="#">Create tournament</a>
+    <a class="avatar" href="connections.html" aria-label="Your account">S</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- Signed-in players see their next match first; everyone else starts at the list. -->
+  <section class="next" aria-label="Your next match">
+    <div>
+      <span class="chip live">Ready · server assigned</span>
+      <div class="vs"><strong>Nordlys</strong><span class="muted">vs</span><strong>Baltic Five</strong></div>
+      <p class="ink2">Spring Cup · Quarterfinal · Bo3 · Counter-Strike 2</p>
+    </div>
+    <div class="actions">
+      <a class="btn btn-quiet" href="tournament.html">Open match</a>
+      <a class="btn btn-primary" href="#">Connect to server</a>
+    </div>
+  </section>
+
+  <div class="head">
+    <h1>Tournaments</h1>
+    <div class="filters" role="group" aria-label="Game">
+      <button type="button" aria-pressed="true">All games</button>
+      <button type="button" aria-pressed="false">Counter-Strike 2</button>
+      <button type="button" aria-pressed="false">Rocket League</button>
+      <button type="button" aria-pressed="false">Chess</button>
+      <button type="button" aria-pressed="false">Trackmania</button>
+    </div>
+  </div>
+
+  <h2 class="group-title">Live now</h2>
+  <div class="live-grid">
+    <a class="tcard" href="tournament.html">
+      <div class="top"><span class="chip">Counter-Strike 2</span><span class="chip live">Live</span></div>
+      <h3>Spring Cup</h3>
+      <div class="meta"><span>8 teams</span><span>Double elimination</span><span>Bo3</span></div>
+      <div class="now">
+        <div><span>Nordlys vs Baltic Five</span><span class="num">1 – 0</span></div>
+        <div><span>Fjord vs Polar</span><span class="num">0 – 1</span></div>
+        <div class="muted"><span>Quarterfinals</span><span>2 of 4 live</span></div>
+      </div>
+    </a>
+    <a class="tcard" href="tournament.html">
+      <div class="top"><span class="chip">Rocket League</span><span class="chip live">Live</span></div>
+      <h3>Friday 2v2 Night</h3>
+      <div class="meta"><span>16 teams</span><span>Swiss</span><span>Bo5</span></div>
+      <div class="now">
+        <div><span>Boost Brothers vs Flip Reset</span><span class="num">2 – 2</span></div>
+        <div><span>Kickoff Club vs Aerial Aces</span><span class="num">3 – 1</span></div>
+        <div class="muted"><span>Round 3</span><span>Results reported by captains</span></div>
+      </div>
+    </a>
+  </div>
+
+  <h2 class="group-title">Open for registration</h2>
+  <ul class="row-list panel reg">
+    <li>
+      <div class="when"><span class="mono muted">Closes</span><b>Fri 18:00</b></div>
+      <div><h3>LAN Party Main Event</h3><p class="muted">Counter-Strike 2 · 5v5 · Single elimination · 3 of 16 spots left</p><p class="need ok">✓ Your Steam account is linked</p></div>
+      <a class="btn btn-primary" href="tournament.html">Register team</a>
+    </li>
+    <li>
+      <div class="when"><span class="mono muted">Closes</span><b>Sun 12:00</b></div>
+      <div><h3>Weekend Blitz</h3><p class="muted">Chess · Solo · Swiss, 7 rounds</p><p class="need warn">Needs a Lichess account</p></div>
+      <a class="btn btn-quiet" href="connections.html">Link Lichess</a>
+    </li>
+    <li>
+      <div class="when"><span class="mono muted">Closes</span><b>12 Oct</b></div>
+      <div><h3>Autumn Time Attack</h3><p class="muted">Trackmania · Solo · Round robin groups into playoffs</p><p class="need warn">Needs an Ubisoft account</p></div>
+      <a class="btn btn-quiet" href="connections.html">Link Ubisoft</a>
+    </li>
+  </ul>
+
+  <h2 class="group-title">Finished</h2>
+  <div class="past">
+    <a href="tournament.html"><span class="chip">Counter-Strike 2</span><h3>Winter LAN</h3><span class="muted">Winner: Nordlys</span></a>
+    <a href="tournament.html"><span class="chip">Rocket League</span><h3>Summer 3v3</h3><span class="muted">Winner: Kickoff Club</span></a>
+    <a href="tournament.html"><span class="chip">Chess</span><h3>Office Rapid</h3><span class="muted">Winner: Ingrid H.</span></a>
+  </div>
+</main>
+<script src="shell.js"></script>
+</body>
+</html>

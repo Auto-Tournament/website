@@ -1,0 +1,74 @@
+/* Hallmark · genre: modern-minimal · system: Auto Tournament (locked, 5 themes)
+ * pre-emit critique: P4 H4 E4 S5 R5 V4
+ * Same tokens as autotournament.gg (src/theme/tokens.ts + siteThemes). Ember is the default.
+ */
+:root,
+[data-theme='ember'] {
+  --color-paper: #100908;
+  --color-paper-2: #18110e;
+  --color-paper-3: #211815;
+  --color-ink: #f4edeb;
+  --color-ink-2: #c4bcb9;
+  --color-muted: #938a87;
+  --color-rule: #322926;
+  --color-accent: #ff6a3d;
+  --color-accent-2: #fe8f5b;
+  --color-accent-ink: #140e0c;
+  --color-live: #3fc168;
+  --color-ban: #f2645f;
+  --color-focus: var(--color-accent);
+}
+[data-theme='ultraviolet'] {
+  --color-paper: #0b0917; --color-paper-2: #12101f; --color-paper-3: #1a1827; --color-ink: #eeedf6;
+  --color-ink-2: #bdbcc8; --color-muted: #8b8a98; --color-rule: #2b2939; --color-accent: #9d7bff;
+  --color-accent-2: #c4b1ff; --color-accent-ink: #070512;
+}
+[data-theme='mint'] {
+  --color-paper: #000f0b; --color-paper-2: #001813; --color-paper-3: #04201b; --color-ink: #e6f1ee;
+  --color-ink-2: #b3c1be; --color-muted: #80908c; --color-rule: #16312b; --color-accent: #2dce89;
+  --color-accent-2: #20b2aa; --color-accent-ink: #000a07;
+}
+[data-theme='aurora'] {
+  --color-paper: #0b0915; --color-paper-2: #12111d; --color-paper-3: #1a1926; --color-ink: #eeedf6;
+  --color-ink-2: #bdbcc8; --color-muted: #8b8a98; --color-rule: #2a2937; --color-accent: #5eeab5;
+  --color-accent-2: #9af5d2; --color-accent-ink: #070611;
+}
+[data-theme='coral'] {
+  --color-paper: #0f090d; --color-paper-2: #171014; --color-paper-3: #1f181c; --color-ink: #f5ebf1;
+  --color-ink-2: #c4bac0; --color-muted: #92898f; --color-rule: #30292d; --color-accent: #ff5f7e;
+  --color-accent-2: #ff8fa3; --color-accent-ink: #0b0609;
+}
+
+:root {
+  --font-display: 'Sora', system-ui, sans-serif;
+  --font-body: 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: clamp(1.6rem, 1.2vw + 1.2rem, 2.1rem);
+  --text-3xl: clamp(2rem, 2.4vw + 1.2rem, 3rem);
+
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 5rem;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-pill: 999px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 150ms;
+  --dur-base: 240ms;
+}

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en" data-theme="ember">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Connections · Auto Tournament (draft)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="app.css" />
+<style>
+  /* Account: a settings side-rail, then two lists: game accounts (what tournaments need) and sign-in methods. */
+  .acct { display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: var(--space-2xl); margin-top: var(--space-md); }
+  .side { display: grid; gap: var(--space-2xs); align-content: start; font-size: var(--text-sm); position: sticky; top: 96px; }
+  .side a { padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); color: var(--color-ink-2); white-space: nowrap; }
+  .side a:hover { background: var(--color-paper-2); color: var(--color-ink); }
+  .side a[aria-current='page'] { background: var(--color-paper-2); color: var(--color-ink); }
+  @media (max-width: 760px) { .acct { grid-template-columns: minmax(0, 1fr); gap: var(--space-lg); } .side { position: static; grid-auto-flow: column; overflow-x: auto; } }
+
+  .who { display: flex; gap: var(--space-md); align-items: center; margin-bottom: var(--space-2xl); }
+  .who .avatar { width: 56px; height: 56px; font-size: var(--text-lg); }
+
+  .block + .block { margin-top: var(--space-2xl); }
+  .block > p { margin: var(--space-xs) 0 var(--space-md); color: var(--color-ink-2); max-width: 62ch; }
+
+  .acc { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr) auto; gap: var(--space-md); align-items: center; padding: var(--space-md) var(--space-lg); }
+  .logo-tile { width: 2.5rem; height: 2.5rem; border-radius: var(--radius-sm); background: var(--color-paper-3); display: grid; place-items: center; font: 700 var(--text-sm) / 1 var(--font-display); color: var(--color-ink-2); }
+  .acc .name { display: flex; gap: var(--space-xs); align-items: center; flex-wrap: wrap; }
+  .acc .for { font-size: var(--text-sm); color: var(--color-muted); }
+  .acc .for b { color: var(--color-ink-2); font-weight: 500; }
+  .acc .end { display: flex; gap: var(--space-xs); align-items: center; }
+  @media (max-width: 560px) { .acc { grid-template-columns: 2.5rem minmax(0, 1fr); } .acc .end { grid-column: 2; } }
+
+  .note { display: flex; gap: var(--space-sm); padding: var(--space-md) var(--space-lg); border: 1px dashed var(--color-rule); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--color-ink-2); margin-top: var(--space-md); }
+</style>
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="index.html"><span data-logo></span>Auto Tournament</a>
+  <nav class="nav-links" aria-label="Main">
+    <a href="index.html">Tournaments</a>
+    <a href="#">Teams</a>
+    <a href="#">Leaderboards</a>
+  </nav>
+  <div class="nav-end">
+    <span class="search">Search <kbd>⌘K</kbd></span>
+    <a class="avatar" href="connections.html" aria-label="Your account" aria-current="page">S</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="acct">
+    <nav class="side" aria-label="Account">
+      <a href="#">Profile</a>
+      <a href="connections.html" aria-current="page">Connections</a>
+      <a href="#">Teams</a>
+      <a href="#">Notifications</a>
+      <a href="#">Tournaments I run</a>
+    </nav>
+
+    <div>
+      <div class="who">
+        <span class="avatar">S</span>
+        <div><h1 style="font-size:var(--text-2xl)">Simpert</h1><p class="muted">One account for every tournament on this site.</p></div>
+      </div>
+
+      <section class="block" aria-labelledby="games">
+        <h2 id="games">Game accounts</h2>
+        <p>Each game needs its own account so matches know who you are. Link the ones for the games you play; tournaments tell you when one is missing.</p>
+        <ul class="row-list panel">
+          <li class="acc">
+            <span class="logo-tile">S</span>
+            <div><div class="name"><b>Steam</b><span class="chip ok">Verified</span></div><p class="for">Simpert · used for <b>Counter-Strike 2</b></p></div>
+            <div class="end"><button class="btn btn-quiet btn-sm" type="button">Unlink</button></div>
+          </li>
+          <li class="acc">
+            <span class="logo-tile">E</span>
+            <div><div class="name"><b>Epic Games</b></div><p class="for">Needed for <b>Rocket League</b> tournaments</p></div>
+            <div class="end"><button class="btn btn-primary btn-sm" type="button">Link Epic</button></div>
+          </li>
+          <li class="acc">
+            <span class="logo-tile">R</span>
+            <div><div class="name"><b>Riot Games</b><span class="chip warn">Waiting for organizer</span></div><p class="for">Simpert#EUW, entered by hand · needed for <b>League of Legends</b></p></div>
+            <div class="end"><button class="btn btn-quiet btn-sm" type="button">Edit</button></div>
+          </li>
+          <li class="acc">
+            <span class="logo-tile">L</span>
+            <div><div class="name"><b>Lichess</b></div><p class="for">Needed for <b>Chess</b> tournaments</p></div>
+            <div class="end"><button class="btn btn-quiet btn-sm" type="button">Link Lichess</button></div>
+          </li>
+        </ul>
+        <div class="note"><span aria-hidden="true">i</span><span>Riot accounts can't be verified automatically yet, so an organizer confirms them. Tournaments can choose to accept verified accounts only.</span></div>
+      </section>
+
+      <section class="block" aria-labelledby="signin">
+        <h2 id="signin">Sign-in methods</h2>
+        <p>Any of these signs you in to the same account. Keep at least one.</p>
+        <ul class="row-list panel">
+          <li class="acc">
+            <span class="logo-tile">S</span>
+            <div><div class="name"><b>Steam</b></div><p class="for">Also your CS2 game account</p></div>
+            <div class="end"><span class="mono muted">Last used today</span></div>
+          </li>
+          <li class="acc">
+            <span class="logo-tile">D</span>
+            <div><div class="name"><b>Discord</b></div><p class="for">simpert · match notifications can go here</p></div>
+            <div class="end"><button class="btn btn-quiet btn-sm" type="button">Remove</button></div>
+          </li>
+          <li class="acc">
+            <span class="logo-tile">G</span>
+            <div><div class="name"><b>Google</b></div><p class="for">Not connected</p></div>
+            <div class="end"><button class="btn btn-quiet btn-sm" type="button">Connect</button></div>
+          </li>
+          <li class="acc">
+            <span class="logo-tile">GH</span>
+            <div><div class="name"><b>GitHub</b></div><p class="for">Not connected</p></div>
+            <div class="end"><button class="btn btn-quiet btn-sm" type="button">Connect</button></div>
+          </li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</main>
+<script src="shell.js"></script>
+</body>
+</html>
