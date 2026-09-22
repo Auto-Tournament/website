@@ -24,6 +24,7 @@ export const links = {
   github: 'https://github.com/Auto-Tournament',
   repo: 'https://github.com/Auto-Tournament/auto-tournament',
   discord: 'https://discord.gg/n7gHYau7aW',
+  licensing: 'https://docs.autotournament.gg/reference/licensing',
 };
 
 /** True while the visitor is scrolling down past the top of the page. */
@@ -139,7 +140,12 @@ export function Hero() {
               View on GitHub
             </Button>
           </Box>
-          <Typography sx={{ mt: 2, color: color.muted, fontSize: '0.875rem' }}>Free for non-commercial use · Runs on one Docker host</Typography>
+          <Typography sx={{ mt: 2, color: color.muted, fontSize: '0.875rem' }}>
+            <Box component="a" href={links.licensing} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
+              Free for non-commercial use · Licensing
+            </Box>{' '}
+            · Runs on one Docker host
+          </Typography>
         </div>
         <Box sx={{ borderRadius: `${radius.lg}px` }}>
           <BracketCard />
@@ -399,8 +405,8 @@ export function Footer() {
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
           <ThemePicker />
-          <Box component="a" href={links.github} sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { color: color.ink } }}>
-            Free for non-commercial use
+          <Box component="a" href={links.licensing} sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { color: color.ink } }}>
+            Free for non-commercial use · Licensing
           </Box>
         </Box>
       </Box>
