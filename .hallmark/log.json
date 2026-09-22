@@ -1,6 +1,15 @@
 [
   {
     "date": "2026-09-22",
+    "macrostructure": "App shell (console / club / profile / browse)",
+    "theme": "Auto Tournament system (5 themes)",
+    "enrichment": "none",
+    "nav": "N5 + side rail",
+    "footer": "none",
+    "brief": "3.1 platform drafts \u00b7 organizer console, team, profile, browse"
+  },
+  {
+    "date": "2026-09-22",
     "macrostructure": "App shell (dashboard)",
     "theme": "Auto Tournament system (5 themes)",
     "enrichment": "none",

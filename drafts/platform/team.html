@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en" data-theme="ember">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Nordlys · Auto Tournament (draft)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="app.css" />
+<style>
+  /* Team (club) page: a club plays many games and tournaments. Roster per game, results per tournament. */
+  .club { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-lg); align-items: center; }
+  .crest { width: 5rem; height: 5rem; border-radius: var(--radius-md); background: var(--color-paper-3); border: 1px solid var(--color-rule); display: grid; place-items: center; font: 700 var(--text-2xl) / 1 var(--font-display); color: var(--color-accent); }
+  .club .sub { color: var(--color-muted); margin-top: var(--space-2xs); font-size: var(--text-sm); }
+  .club .games { display: flex; gap: var(--space-xs); flex-wrap: wrap; margin-top: var(--space-sm); }
+  @media (max-width: 640px) { .club { grid-template-columns: auto minmax(0, 1fr); } .club .btn { grid-column: 1 / -1; justify-self: start; } }
+
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-xl); margin-top: var(--space-2xl); align-items: start; }
+  @media (max-width: 860px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+  .sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-md); margin-bottom: var(--space-md); }
+
+  .seg { display: inline-flex; border: 1px solid var(--color-rule); border-radius: var(--radius-pill); padding: 2px; }
+  .seg button { border: 0; background: transparent; color: var(--color-ink-2); font: 500 var(--text-xs) / 1 var(--font-body); padding: 0.4rem 0.7rem; border-radius: var(--radius-pill); cursor: pointer; white-space: nowrap; }
+  .seg button[aria-pressed='true'] { background: var(--color-paper-3); color: var(--color-ink); }
+
+  .member { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-md); align-items: center; padding: var(--space-sm) var(--space-lg); }
+  .member .avatar { width: 36px; height: 36px; }
+  .member small { display: block; color: var(--color-muted); font-size: var(--text-xs); }
+
+  .result { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-md); align-items: center; padding: var(--space-md) var(--space-lg); }
+  .place { font: 700 var(--text-lg) / 1 var(--font-display); font-variant-numeric: tabular-nums; min-width: 2.5rem; }
+  .place.first { color: var(--color-accent); }
+  .result small { display: block; color: var(--color-muted); font-size: var(--text-xs); }
+
+  .invite { margin-top: var(--space-md); padding: var(--space-md) var(--space-lg); border: 1px dashed var(--color-rule); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); flex-wrap: wrap; font-size: var(--text-sm); }
+</style>
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="index.html"><span data-logo></span>Auto Tournament</a>
+  <nav class="nav-links" aria-label="Main">
+    <a href="index.html">Home</a>
+    <a href="browse.html">Browse</a>
+    <a href="team.html" aria-current="page">Teams</a>
+    <a href="#">Leaderboards</a>
+  </nav>
+  <div class="nav-end">
+    <span class="search">Search <kbd>⌘K</kbd></span>
+    <a class="avatar" href="connections.html" aria-label="Your account">S</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="club" aria-label="Team">
+    <span class="crest">N</span>
+    <div>
+      <h1>Nordlys</h1>
+      <p class="sub">Trondheim · since 2024 · captain Simpert</p>
+      <div class="games"><span class="game"><span class="game-mark g-cs2">CS</span>Counter-Strike 2</span><span class="game"><span class="game-mark g-rl">RL</span>Rocket League</span></div>
+    </div>
+    <a class="btn btn-quiet" href="#">Edit team</a>
+  </section>
+
+  <div class="cols">
+    <section aria-labelledby="roster">
+      <div class="sec-head">
+        <h2 id="roster">Roster</h2>
+        <div class="seg" role="group" aria-label="Game"><button type="button" aria-pressed="true">CS2</button><button type="button" aria-pressed="false">Rocket League</button></div>
+      </div>
+      <ul class="row-list panel">
+        <li class="member"><span class="avatar">S</span><div><b>Simpert</b><small>Captain · Steam linked</small></div><span class="chip">Rating 1 482</span></li>
+        <li class="member"><span class="avatar">A</span><div><b>Aurora</b><small>Steam linked</small></div><span class="chip">1 455</span></li>
+        <li class="member"><span class="avatar">K</span><div><b>Kjell</b><small>Steam linked</small></div><span class="chip">1 431</span></li>
+        <li class="member"><span class="avatar">M</span><div><b>Mira</b><small>Steam linked</small></div><span class="chip">1 407</span></li>
+        <li class="member"><span class="avatar">T</span><div><b>Tobbe</b><small>Sub · <span class="warn">Steam not linked</span></small></div><span class="chip">New</span></li>
+      </ul>
+      <div class="invite"><span>Invite players with a link. They join after signing in.</span><button class="btn btn-quiet btn-sm" type="button">Copy invite link</button></div>
+    </section>
+
+    <section aria-labelledby="results">
+      <div class="sec-head"><h2 id="results">Tournaments</h2><a class="muted" href="#">All</a></div>
+      <ul class="row-list panel">
+        <li class="result"><span class="chip live">Live</span><div><b>Spring Cup</b><small>Counter-Strike 2 · Quarterfinals, 1–0 up</small></div><a class="muted" href="tournament.html">Open</a></li>
+        <li class="result"><span class="chip">Sat</span><div><b>LAN Party Main Event</b><small>Counter-Strike 2 · Registered, 5 of 5</small></div><a class="muted" href="#">Open</a></li>
+        <li class="result"><span class="place first">1st</span><div><b>Winter LAN</b><small>Counter-Strike 2 · 16 teams</small></div><a class="muted" href="#">Results</a></li>
+        <li class="result"><span class="place">4th</span><div><b>Summer 3v3</b><small>Rocket League · 12 teams</small></div><a class="muted" href="#">Results</a></li>
+      </ul>
+    </section>
+  </div>
+</main>
+<script src="shell.js"></script>
+<script>
+  document.querySelectorAll('.seg').forEach((g) => g.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) g.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); }));
+</script>
+</body>
+</html>

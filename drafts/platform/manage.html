@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en" data-theme="ember">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Manage · Spring Cup (draft)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="app.css" />
+<style>
+  /* Organizer console: a side rail of areas, and a "needs you" queue first. The organizer's job is
+     answering exceptions, so the queue leads and the healthy state stays quiet. */
+  .console { display: grid; grid-template-columns: 14rem minmax(0, 1fr); gap: var(--space-2xl); margin-top: var(--space-lg); }
+  .rail { display: grid; gap: var(--space-2xs); align-content: start; position: sticky; top: 96px; font-size: var(--text-sm); }
+  .rail a { display: flex; justify-content: space-between; gap: var(--space-sm); padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); color: var(--color-ink-2); white-space: nowrap; }
+  .rail a:hover { background: var(--color-paper-2); color: var(--color-ink); }
+  .rail a[aria-current='page'] { background: var(--color-paper-2); color: var(--color-ink); }
+  .rail .count { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-accent); }
+  .rail hr { border: 0; border-top: 1px solid var(--color-rule); margin: var(--space-sm) 0; }
+  @media (max-width: 820px) { .console { grid-template-columns: minmax(0, 1fr); gap: var(--space-lg); } .rail { position: static; grid-auto-flow: column; overflow-x: auto; } .rail hr { display: none; } }
+
+  .head { display: flex; justify-content: space-between; align-items: end; gap: var(--space-md); flex-wrap: wrap; margin-bottom: var(--space-xl); }
+  .head .actions { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+
+  .status { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); border: 1px solid var(--color-rule); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: var(--space-2xl); }
+  .status div { padding: var(--space-md) var(--space-lg); border-right: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); margin: 0 -1px -1px 0; }
+  .status dt { font: 500 var(--text-xs) / 1.4 var(--font-mono); color: var(--color-muted); }
+  .status dd { margin: var(--space-2xs) 0 0; font-family: var(--font-display); font-size: var(--text-xl); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .queue li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-md); align-items: center; padding: var(--space-md) var(--space-lg); }
+  .queue .kind { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--color-accent); }
+  .queue .kind.ban { background: var(--color-ban); }
+  .queue .kind.info { background: var(--color-muted); }
+  .queue .what b { display: block; }
+  .queue .what span { font-size: var(--text-sm); color: var(--color-muted); }
+  .queue .do { display: flex; gap: var(--space-xs); flex-wrap: wrap; justify-content: flex-end; }
+  @media (max-width: 640px) { .queue li { grid-template-columns: auto minmax(0, 1fr); } .queue .do { grid-column: 2; justify-content: flex-start; } }
+
+  .sec { margin-top: var(--space-2xl); }
+  .sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-md); margin-bottom: var(--space-md); }
+
+  .servers { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: var(--space-sm); }
+  .srv { padding: var(--space-md); border: 1px solid var(--color-rule); border-radius: var(--radius-md); display: grid; gap: var(--space-2xs); font-size: var(--text-sm); }
+  .srv .top { display: flex; justify-content: space-between; gap: var(--space-sm); align-items: center; }
+  .srv.bad { border-color: var(--color-ban); }
+  .quiet { font-size: var(--text-sm); color: var(--color-muted); }
+</style>
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="index.html"><span data-logo></span>Auto Tournament</a>
+  <nav class="nav-links" aria-label="Main">
+    <a href="index.html">Home</a>
+    <a href="browse.html">Browse</a>
+    <a href="team.html">Teams</a>
+    <a href="#">Leaderboards</a>
+  </nav>
+  <div class="nav-end">
+    <span class="search">Search <kbd>⌘K</kbd></span>
+    <a class="avatar" href="connections.html" aria-label="Your account">S</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="console">
+    <nav class="rail" aria-label="Manage">
+      <a href="manage.html" aria-current="page">Needs you <span class="count">3</span></a>
+      <a href="#">Matches</a>
+      <a href="#">Bracket</a>
+      <a href="#">Entries <span class="count">2</span></a>
+      <a href="#">Check-in</a>
+      <a href="#">Servers</a>
+      <hr />
+      <a href="#">Event page</a>
+      <a href="#">Format and maps</a>
+      <a href="#">Staff</a>
+      <a href="#">Announcements</a>
+    </nav>
+
+    <div>
+      <div class="head">
+        <div>
+          <p class="game" style="margin-bottom:var(--space-xs)"><span class="game-mark g-cs2">CS</span>Counter-Strike 2 · <a href="tournament.html" style="text-decoration:underline">Spring Cup</a></p>
+          <h1>Needs you</h1>
+        </div>
+        <div class="actions">
+          <a class="btn btn-quiet" href="#">Announce</a>
+          <a class="btn btn-quiet" href="#">Pause queue</a>
+        </div>
+      </div>
+
+      <dl class="status">
+        <div><dt>LIVE</dt><dd>2</dd></div>
+        <div><dt>IN VETO</dt><dd>1</dd></div>
+        <div><dt>QUEUED</dt><dd>1</dd></div>
+        <div><dt>SERVERS FREE</dt><dd>1 / 4</dd></div>
+        <div><dt>ROUND</dt><dd>QF</dd></div>
+      </dl>
+
+      <ul class="row-list panel queue" aria-label="Things that need a decision">
+        <li>
+          <span class="kind ban" aria-hidden="true"></span>
+          <div class="what"><b>Server 3 stopped responding</b><span>Ironside vs Kvasen was about to load there. 2 minutes ago.</span></div>
+          <div class="do"><button class="btn btn-primary btn-sm" type="button">Move to server 4</button><button class="btn btn-quiet btn-sm" type="button">Restart server</button></div>
+        </li>
+        <li>
+          <span class="kind" aria-hidden="true"></span>
+          <div class="what"><b>Midnight asked for a technical pause</b><span>Map 1 vs Tundra · round 14 · player disconnected</span></div>
+          <div class="do"><button class="btn btn-primary btn-sm" type="button">Pause match</button><button class="btn btn-quiet btn-sm" type="button">Dismiss</button></div>
+        </li>
+        <li>
+          <span class="kind info" aria-hidden="true"></span>
+          <div class="what"><b>Two teams waiting for approval</b><span>Late entries for the lower bracket fill-in</span></div>
+          <div class="do"><button class="btn btn-quiet btn-sm" type="button">Review</button></div>
+        </li>
+      </ul>
+
+      <section class="sec" aria-labelledby="srv">
+        <div class="sec-head"><h2 id="srv">Servers</h2><a class="muted" href="#">All servers</a></div>
+        <div class="servers">
+          <div class="srv"><div class="top"><b>Server 1</b><span class="chip live">In match</span></div><span class="muted">Nordlys vs Baltic Five · Map 2</span></div>
+          <div class="srv"><div class="top"><b>Server 2</b><span class="chip live">In match</span></div><span class="muted">Fjord vs Polar · Map 1</span></div>
+          <div class="srv bad"><div class="top"><b>Server 3</b><span class="chip" style="color:var(--color-ban)">Offline</span></div><span class="muted">Last heartbeat 2 min ago</span></div>
+          <div class="srv"><div class="top"><b>Server 4</b><span class="chip">Free</span></div><span class="muted">Ready for the next match</span></div>
+        </div>
+      </section>
+
+      <section class="sec" aria-labelledby="log">
+        <div class="sec-head"><h2 id="log">Recent</h2><a class="muted" href="#">Full log</a></div>
+        <ul class="row-list panel queue">
+          <li><span class="kind info" aria-hidden="true"></span><div class="what"><b>Polar won map 1 against Fjord, 13–9</b><span>Inferno · 4 min ago</span></div><div></div></li>
+          <li><span class="kind info" aria-hidden="true"></span><div class="what"><b>Veto finished for Nordlys vs Baltic Five</b><span>Mirage, Ancient, decider Nuke · 31 min ago</span></div><div></div></li>
+        </ul>
+        <p class="quiet" style="margin-top:var(--space-sm)">Everything else runs on its own. You'll only see it here when something needs a decision.</p>
+      </section>
+    </div>
+  </div>
+</main>
+<script src="shell.js"></script>
+</body>
+</html>

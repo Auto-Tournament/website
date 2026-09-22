@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en" data-theme="ember">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Simpert · Auto Tournament (draft)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="app.css" />
+<style>
+  /* Public profile: one person across games. Ratings are per game, so the game switch drives the stats. */
+  .who { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-lg); align-items: center; }
+  .who .avatar { width: 5rem; height: 5rem; font-size: var(--text-2xl); }
+  .who .sub { color: var(--color-muted); font-size: var(--text-sm); margin-top: var(--space-2xs); }
+  .who .teams { display: flex; gap: var(--space-xs); flex-wrap: wrap; margin-top: var(--space-sm); }
+  @media (max-width: 640px) { .who { grid-template-columns: auto minmax(0, 1fr); } .who .btn { grid-column: 1 / -1; justify-self: start; } }
+
+  .games-tabs { display: flex; gap: var(--space-xs); flex-wrap: wrap; margin: var(--space-2xl) 0 var(--space-lg); }
+  .games-tabs button { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.3rem 0.8rem 0.3rem 0.35rem; border-radius: var(--radius-pill); border: 1px solid var(--color-rule); background: transparent; color: var(--color-ink-2); font: 500 var(--text-sm) / 1 var(--font-body); cursor: pointer; white-space: nowrap; }
+  .games-tabs button[aria-pressed='true'] { background: var(--color-paper-2); color: var(--color-ink); border-color: var(--color-muted); }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); border: 1px solid var(--color-rule); border-radius: var(--radius-lg); overflow: hidden; }
+  .stats div { padding: var(--space-md) var(--space-lg); border-right: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); margin: 0 -1px -1px 0; }
+  .stats dt { font: 500 var(--text-xs) / 1.4 var(--font-mono); color: var(--color-muted); }
+  .stats dd { margin: var(--space-2xs) 0 0; font: 700 var(--text-xl) / 1.2 var(--font-display); font-variant-numeric: tabular-nums; }
+  .stats dd small { font: 500 var(--text-xs) / 1 var(--font-body); color: var(--color-live); margin-left: 0.3rem; }
+
+  .cols { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--space-xl); margin-top: var(--space-2xl); align-items: start; }
+  @media (max-width: 860px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+  .sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-md); margin-bottom: var(--space-md); }
+
+  .spark { padding: var(--space-lg); }
+  .spark svg { width: 100%; height: 140px; display: block; }
+  .spark .axis { display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-muted); margin-top: var(--space-xs); }
+
+  .match { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) auto; gap: var(--space-md); align-items: center; padding: var(--space-sm) var(--space-lg); font-size: var(--text-sm); }
+  .wl { font: 700 var(--text-xs) / 1 var(--font-mono); width: 2.2rem; height: 1.6rem; border-radius: 6px; display: grid; place-items: center; background: var(--color-paper-3); }
+  .wl.w { color: var(--color-live); } .wl.l { color: var(--color-ban); }
+  .match small { display: block; color: var(--color-muted); font-size: var(--text-xs); }
+</style>
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="index.html"><span data-logo></span>Auto Tournament</a>
+  <nav class="nav-links" aria-label="Main">
+    <a href="index.html">Home</a>
+    <a href="browse.html">Browse</a>
+    <a href="team.html">Teams</a>
+    <a href="#">Leaderboards</a>
+  </nav>
+  <div class="nav-end">
+    <span class="search">Search <kbd>⌘K</kbd></span>
+    <a class="avatar" href="connections.html" aria-label="Your account">S</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="who" aria-label="Player">
+    <span class="avatar">S</span>
+    <div>
+      <h1>Simpert</h1>
+      <p class="sub">Plays Counter-Strike 2 and Chess · joined Feb 2026</p>
+      <div class="teams"><a class="chip" href="team.html">Nordlys · captain</a></div>
+    </div>
+    <a class="btn btn-quiet" href="connections.html">Edit profile</a>
+  </section>
+
+  <div class="games-tabs" role="group" aria-label="Game">
+    <button type="button" aria-pressed="true"><span class="game-mark g-cs2">CS</span>Counter-Strike 2</button>
+    <button type="button" aria-pressed="false"><span class="game-mark g-chess">♞</span>Chess</button>
+  </div>
+
+  <dl class="stats">
+    <div><dt>RATING</dt><dd>1 482<small>+24</small></dd></div>
+    <div><dt>MATCHES</dt><dd>38</dd></div>
+    <div><dt>WIN RATE</dt><dd>61%</dd></div>
+    <div><dt>ADR</dt><dd>84.2</dd></div>
+    <div><dt>K/D</dt><dd>1.18</dd></div>
+    <div><dt>TITLES</dt><dd>1</dd></div>
+  </dl>
+
+  <div class="cols">
+    <section aria-labelledby="rating">
+      <div class="sec-head"><h2 id="rating">Rating</h2><span class="muted" style="font-size:var(--text-sm)">Counter-Strike 2 · last 20 matches</span></div>
+      <div class="panel spark">
+        <svg viewBox="0 0 200 60" preserveAspectRatio="none" aria-label="Rating trend, rising from 1 410 to 1 482">
+          <polyline fill="none" style="stroke:var(--color-accent)" stroke-width="1.5" vector-effect="non-scaling-stroke" points="0,48 10,46 20,50 30,42 40,44 50,40 60,36 70,38 80,33 90,35 100,30 110,27 120,31 130,24 140,22 150,26 160,18 170,20 180,14 190,12 200,10" />
+        </svg>
+        <div class="axis"><span>Jan</span><span>Mar</span></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="recent">
+      <div class="sec-head"><h2 id="recent">Recent matches</h2><a class="muted" href="#">All</a></div>
+      <ul class="row-list panel">
+        <li class="match"><span class="wl w">W</span><div>Nordlys vs Baltic Five<small>Spring Cup · Mirage 13–9</small></div><span class="num">22 / 14</span></li>
+        <li class="match"><span class="wl w">W</span><div>Nordlys vs Tundra<small>Winter LAN final · Bo5 3–1</small></div><span class="num">71 / 58</span></li>
+        <li class="match"><span class="wl l">L</span><div>Nordlys vs Polar<small>Winter LAN · Nuke 11–13</small></div><span class="num">17 / 19</span></li>
+      </ul>
+      <p class="muted" style="font-size:var(--text-xs);margin-top:var(--space-sm)">Kills / deaths. Stats shown depend on what the game module reports.</p>
+    </section>
+  </div>
+</main>
+<script src="shell.js"></script>
+<script>
+  document.querySelectorAll('.games-tabs').forEach((g) => g.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) g.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); }));
+</script>
+</body>
+</html>

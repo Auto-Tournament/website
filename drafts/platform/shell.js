@@ -49,7 +49,7 @@ function mountThemes() {
   }
   document.body.appendChild(bar);
 
-  const pages = [['index.html', 'Home'], ['tournament.html', 'Tournament'], ['connections.html', 'Connections']];
+  const pages = [['index.html', 'Home'], ['browse.html', 'Browse'], ['tournament.html', 'Tournament'], ['manage.html', 'Manage'], ['team.html', 'Team'], ['profile.html', 'Profile'], ['connections.html', 'Settings']];
   const nav = document.createElement('nav');
   nav.className = 'draft-nav';
   nav.setAttribute('aria-label', 'Draft pages');
