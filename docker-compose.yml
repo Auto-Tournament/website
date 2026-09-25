@@ -6,6 +6,13 @@ services:
         # Set by scripts/auto_update.sh at deploy time.
         GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:-dev}
     container_name: autotournament-website
+    # Server-side secrets (STRIPE_SECRET_KEY, STRIPE_COMMUNITY_COUPON, SITE_URL)
+    # live in .env next to this file, read at runtime and never baked into the
+    # image. Optional: without it card checkout is off and the calculator
+    # falls back to the email request. Needs Docker Compose 2.24 or newer.
+    env_file:
+      - path: .env
+        required: false
     restart: unless-stopped
     ports:
       # The astro Cloudflare tunnel routes autotournament.gg to dev.lan:31236.
