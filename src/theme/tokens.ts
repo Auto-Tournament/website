@@ -24,6 +24,8 @@ export const hex = {
   live: '#3fc168', // oklch(72% 0.17 150)
   pick: '#3fc168', // same green as live
   ban: '#f2645f', // oklch(67% 0.17 25)
+  warn: '#e6b33c', // oklch(79% 0.14 84), compatibility: static OK / pending
+  info: '#4f9df2', // oklch(69% 0.15 252), compatibility: checking
   bloom: 'rgba(255, 106, 61, 0.22)',
   bloom2: 'rgba(230, 70, 50, 0.14)',
   logoInk: '#1d1d1f', // the ram's dark shapes

@@ -57,7 +57,7 @@ URL in Dashboard → Settings → Public details first
 (`https://autotournament.gg/terms`); without it, creating a Checkout Session
 fails and the calculator falls back to the email request.
 
-`yarn test` runs the checkout and Stripe price validation tests.
+`yarn test` runs the checkout, Stripe price and CS2 compatibility tests.
 
 ## Prices live in Stripe
 
@@ -110,6 +110,37 @@ price: No"). Under the advanced options, set the lookup key (for example
 `servers_l_event`) and transfer it from the old price. Then archive the old
 price. Update the `PACKS` table to the same amount afterwards, or the next
 script run puts the table's amount back.
+
+## CS2 compatibility
+
+`/compatibility` shows whether Ready Up works on the latest CS2 build: the
+verdict, each plugin's checks, the CS2 patch and build id, and recent runs.
+Ready Up's CI (`cs2-update-watch.yml` in the ready-up repo, contract in its
+`docs/CS2-COMPAT.md`) posts every run update, from `queued` to the verdict,
+to `POST /api/compat/events`. The page follows along live over server-sent
+events (`GET /api/compat/stream`) and polls every minute if the stream fails.
+
+Public JSON: `GET /api/compat/latest`, `GET /api/compat/runs?limit=20` and a
+shields.io badge at `GET /api/compat/badge.json`
+(`https://img.shields.io/endpoint?url=https://autotournament.gg/api/compat/badge.json`).
+
+Set in `.env` next to `docker-compose.yml`:
+
+- `COMPAT_INGEST_TOKEN`: the Bearer token the CI sends, at least 16
+  characters (`openssl rand -hex 32`). Unset means the ingest endpoint
+  answers 404. In the ready-up repo, set the same value as the secret
+  `COMPAT_INGEST_TOKEN`, and the variable `COMPAT_INGEST_URL` to
+  `https://autotournament.gg/api/compat/events`.
+- `COMPAT_DATA_DIR` (optional): where the runs are kept, default
+  `./data/compat` (`/app/data/compat` in the container).
+- `COMPAT_FEED_URL` (optional): until the first push arrives, the site reads
+  Ready Up's published `compat.json` from its `cs2-build` branch (at most every
+  5 minutes, keeping the last good copy). Set a URL to always read that file
+  as well, or `off` to never read one.
+
+The newest 200 runs live in one JSON file, rewritten atomically (temporary
+file, then rename). `docker-compose.yml` keeps it on the `compat-data` volume,
+so it survives rebuilds. Look for `[compat]` in the container log.
 
 ## Still to do
 
