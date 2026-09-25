@@ -118,7 +118,7 @@ export function PackPricing() {
                 <Typography id={`${pack.id}-name`} component="h3" sx={{ fontFamily: fontDisplay, fontWeight: 600, fontSize: '1.125rem' }}>
                   {pack.name}
                 </Typography>
-                {popular && <Chip size="small" color="primary" label="Most popular" />}
+                {popular && <Chip size="small" color="primary" label="Recommended" />}
               </Box>
 
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
