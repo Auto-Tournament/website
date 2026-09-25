@@ -17,6 +17,10 @@ RUN echo "$GIT_COMMIT_SHA" > /app/BUILD_COMMIT
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
+# Ready Up compatibility runs (lib/compat/store.ts). docker-compose.yml mounts
+# a volume here; a new named volume copies this directory's owner, so the
+# node user can write to it.
+RUN mkdir -p /app/data/compat && chown -R node:node /app/data
 EXPOSE 3000
 USER node
 CMD ["node", "server.js"]

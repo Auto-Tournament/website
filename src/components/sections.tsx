@@ -396,6 +396,7 @@ export function Footer() {
         <Box component="nav" aria-label="Footer" sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
           {[
             ['Pricing', links.pricing],
+            ['CS2 compatibility', links.compatibility],
             ['Docs', links.docs],
             ['GitHub', links.github],
             ['Discord', links.discord],

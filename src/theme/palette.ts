@@ -136,6 +136,8 @@ export function deriveTheme(colors: string[], options: DeriveOptions = {}): Them
     live: emberHex.live,
     pick: emberHex.pick,
     ban: emberHex.ban,
+    warn: emberHex.warn,
+    info: emberHex.info,
     bloom: rgba(accent.value, 0.22),
     bloom2: rgba(accent2, 0.14),
     logoInk: neutral(0.2, Math.min(chroma, 0.03)),
