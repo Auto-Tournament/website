@@ -88,9 +88,14 @@ export function Nav() {
             </Box>
           ))}
         </Box>
-        <Button variant="contained" size="small" href={links.install}>
-          Install
-        </Button>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box component="a" href={links.pricing} sx={{ display: { xs: 'inline', md: 'none' }, color: color.ink2, textDecoration: 'none', fontSize: '0.875rem', whiteSpace: 'nowrap', '&:hover': { color: color.ink } }}>
+            Pricing
+          </Box>
+          <Button variant="contained" size="small" href={links.install}>
+            Install
+          </Button>
+        </Box>
       </Box>
     </Box>
   );
