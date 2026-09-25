@@ -58,7 +58,7 @@ const examples: { scenario: string; verdict: string; why: string }[] = [
   {
     scenario: 'A freelancer uses CS2 Server Manager to install and run MatchZy Enhanced on 8 servers (6 + 2 spares) at a paid LAN.',
     verdict: '8 × €3 = €24',
-    why: 'Every server set up is a seat, spares included, at €3 per seat for one event. The license follows CS2 Server Manager, not the plugin it installs.',
+    why: 'Every server set up is a seat, spares included, at €3 per seat for one event. CS2 Server Manager needs a license for commercial use, even though MatchZy Enhanced itself is MIT.',
   },
   {
     scenario: 'A paid-entry LAN runs the full platform on 32 servers plus 2 spares, one 4-day event.',
@@ -112,7 +112,7 @@ const faq: { q: string; a: React.ReactNode }[] = [
   },
   {
     q: 'I only use CS2 Server Manager with MatchZy Enhanced. Do I need a license?',
-    a: 'For commercial use, yes: €3 per seat. The license follows CS2 Server Manager, the tool doing the installing, not MatchZy Enhanced itself. Running MatchZy Enhanced on its own, without CS2 Server Manager, is free. Personal use is free either way.',
+    a: 'For commercial use, yes: €3 per seat. CS2 Server Manager needs a license for commercial use; MatchZy Enhanced itself is MIT. Running MatchZy Enhanced on its own, without CS2 Server Manager, is free. Personal use is free either way.',
   },
   {
     q: 'Do spare servers count?',
@@ -219,7 +219,7 @@ export default function Pricing() {
             {[
               'A seat is every game server you set up for the event, spares included.',
               'Using CS2 Server Manager and Ready Up together on the same seat counts once: €3, not €6.',
-              'The license follows the tool, not the plugin it installs — CS2 Server Manager installing MatchZy Enhanced is €3 per seat for commercial use.',
+              'What counts is what you run: CS2 Server Manager and Ready Up each need a license for commercial use; MatchZy Enhanced never does. CS2 Server Manager with MatchZy Enhanced, Ready Up on its own, or CS2 Server Manager installing Ready Up are all €3 per seat, counted once.',
               'Community events that only cover costs get 50% off; non-profit organizations are free.',
             ].map((item) => (
               <Box key={item} component="li" sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, '&::before': { content: '""', width: 6, height: 6, mt: '0.55em', borderRadius: '50%', bgcolor: color.accent, flex: 'none' } }}>
