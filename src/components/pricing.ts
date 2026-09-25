@@ -10,13 +10,6 @@ export const seatPrices = {
   platform: { event: 5, yearly: 20 },
 } as const;
 
-export type UsageOption = keyof typeof seatPrices;
-
-export const usageLabels: Record<UsageOption, string> = {
-  servers: 'CS2 Server Manager and/or Ready Up',
-  platform: 'Auto Tournament platform',
-};
-
 export type Period = 'event' | 'yearly';
 
 export const periodLabels: Record<Period, string> = {
@@ -25,6 +18,29 @@ export const periodLabels: Record<Period, string> = {
 };
 
 export const communityDiscount = 0.5;
+
+/** Tools someone ticks in "What will you run?". */
+export type ToolOption = 'matchzy' | 'serverManager' | 'readyUp' | 'platform';
+
+export const toolLabels: Record<ToolOption, string> = {
+  matchzy: 'MatchZy Enhanced (MIT CS2 plugin)',
+  serverManager: 'CS2 Server Manager',
+  readyUp: 'Ready Up (native CS2 plugin)',
+  platform: 'Auto Tournament platform',
+};
+
+export const toolOrder: ToolOption[] = ['matchzy', 'serverManager', 'readyUp', 'platform'];
+
+/** Who the license is for. */
+export type UseType = 'commercial' | 'personal' | 'nonprofit';
+
+export const useTypeLabels: Record<UseType, string> = {
+  commercial: 'Commercial (paid events, paid work, business)',
+  personal: 'Personal or non-commercial',
+  nonprofit: 'Non-profit organization (school, charity, public body)',
+};
+
+export const useTypeOrder: UseType[] = ['commercial', 'personal', 'nonprofit'];
 
 export type PricingRow = {
   use: string;
