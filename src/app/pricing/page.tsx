@@ -50,7 +50,7 @@ const tiers: Tier[] = [
     name: 'Free',
     price: '€0',
     note: 'Non-commercial use, and the CS2 plugin for anyone',
-    bullets: ['Friends, clubs, schools and communities', 'Free-entry events', 'Auto Tournament CS2 plugin only (formerly MatchZy Enhanced, MIT), any use'],
+    bullets: ['Friends, clubs, schools and communities', 'Free-entry events', 'MatchZy Enhanced (MIT) only, any use'],
   },
   {
     name: 'Event · Servers',
@@ -96,12 +96,12 @@ const examples: { scenario: string; verdict: string; why: string }[] = [
     why: 'Non-commercial use: nobody pays to take part.',
   },
   {
-    scenario: 'A freelancer is paid a flat fee to run 8 CS2 servers at one LAN, using only the MIT-licensed Auto Tournament CS2 plugin.',
+    scenario: 'A freelancer is paid a flat fee to run 8 CS2 servers at one LAN, using only the MIT-licensed MatchZy Enhanced plugin.',
     verdict: 'No license needed',
-    why: 'Auto Tournament CS2 is MIT and free for any use, including paid work.',
+    why: 'MatchZy Enhanced is MIT and free for any use, including paid work.',
   },
   {
-    scenario: 'The same freelancer instead uses CS2 Server Manager or ReadyUp on those servers: 6 in play plus 2 spares.',
+    scenario: 'The same freelancer instead uses CS2 Server Manager or Ready Up on those servers: 6 in play plus 2 spares.',
     verdict: '8 × €3 = €24',
     why: 'Every server set up is a seat, spares included, at €3 per seat for one event.',
   },
@@ -122,10 +122,38 @@ const examples: { scenario: string; verdict: string; why: string }[] = [
   },
 ];
 
+const licenseGroups: {
+  license: string;
+  mit: boolean;
+  summary: string;
+  items: { name: string; href?: string; note?: string }[];
+}[] = [
+  {
+    license: 'PolyForm Noncommercial 1.0.0',
+    mit: false,
+    summary: 'Free for non-commercial use. Commercial use needs a license.',
+    items: [
+      { name: 'Auto Tournament platform', href: 'https://github.com/Auto-Tournament/auto-tournament', note: '3.0 and later' },
+      { name: 'CS2 Server Manager', href: 'https://github.com/Auto-Tournament/cs2-server-manager' },
+      { name: 'Ready Up', href: 'https://github.com/Auto-Tournament/ready-up', note: 'the new native CS2 plugin' },
+      { name: 'Game packs', href: 'https://github.com/Auto-Tournament/packs', note: 'packs published before 24 September 2026 stay MIT' },
+    ],
+  },
+  {
+    license: 'MIT',
+    mit: true,
+    summary: 'Free for any use, including paid work. No license needed.',
+    items: [
+      { name: 'MatchZy Enhanced', href: 'https://github.com/Auto-Tournament/cs2-plugin', note: 'CS2 plugin, now named Auto Tournament CS2' },
+      { name: 'Auto Tournament platform 2.4.15 and older', note: 'released as MatchZy Auto Tournament' },
+    ],
+  },
+];
+
 const faq: { q: string; a: React.ReactNode }[] = [
   {
-    q: 'Do I need a license for only the plugin?',
-    a: 'No. Auto Tournament CS2 (formerly MatchZy Enhanced) is MIT licensed and free for any use, including paid work.',
+    q: 'Do I need a license if I only run MatchZy Enhanced?',
+    a: 'No. MatchZy Enhanced (now named Auto Tournament CS2) is MIT licensed and free for any use, including paid work. Ready Up is a different plugin: it is under PolyForm Noncommercial, so commercial use of Ready Up needs a license.',
   },
   {
     q: 'Do spare servers count?',
@@ -137,7 +165,7 @@ const faq: { q: string; a: React.ReactNode }[] = [
   },
   {
     q: "I'm on 2.4.x",
-    a: 'Auto Tournament 2.4.x releases are MIT licensed and stay that way. Free for any use.',
+    a: 'The Auto Tournament platform up to 2.4.15 (released as MatchZy Auto Tournament) is MIT licensed and stays that way. Free for any use.',
   },
   {
     q: 'What if I use it without a license?',
@@ -183,26 +211,29 @@ export default function Pricing() {
         <Section
           id="licenses"
           title="What's licensed how"
-          lede="Two licenses cover the project, depending on the piece."
+          lede="Each project has one license. Only the projects under PolyForm Noncommercial need a license for commercial use."
         >
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', md: '1fr 1fr' }, gap: 3 }}>
-            <Box sx={{ bgcolor: color.paper2, border: `1px solid ${color.rule}`, borderRadius: `${radius.lg}px`, p: 3 }}>
-              <Chip size="small" label="PolyForm Noncommercial 1.0.0" sx={{ mb: 2 }} />
-              <Typography sx={{ color: color.ink2 }}>
-                The Auto Tournament platform (3.0+), CS2 Server Manager, the ReadyUp plugin and the game packs. Free for non-commercial use; commercial use needs a
-                license from the copyright holder, Sivert Gullberg Hansen.
-              </Typography>
-            </Box>
-            <Box sx={{ bgcolor: color.paper2, border: `1px solid ${color.rule}`, borderRadius: `${radius.lg}px`, p: 3 }}>
-              <Chip size="small" color="primary" label="MIT" sx={{ mb: 2 }} />
-              <Typography sx={{ color: color.ink2 }}>
-                The CS2 plugin,{' '}
-                <Box component="a" href="https://github.com/Auto-Tournament/cs2-plugin" sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
-                  Auto Tournament CS2
+            {licenseGroups.map((group) => (
+              <Box key={group.license} sx={{ bgcolor: color.paper2, border: `1px solid ${color.rule}`, borderRadius: `${radius.lg}px`, p: 3 }}>
+                <Chip size="small" color={group.mit ? 'primary' : 'default'} label={group.license} sx={{ mb: 1.5 }} />
+                <Typography sx={{ color: color.ink, fontWeight: 600, mb: 1.5 }}>{group.summary}</Typography>
+                <Box component="ul" sx={{ m: 0, pl: 2.5, color: color.ink2, display: 'grid', gap: 1 }}>
+                  {group.items.map((item) => (
+                    <li key={item.name}>
+                      {item.href ? (
+                        <Box component="a" href={item.href} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
+                          {item.name}
+                        </Box>
+                      ) : (
+                        item.name
+                      )}
+                      {item.note ? <Box component="span" sx={{ color: color.muted }}>{` (${item.note})`}</Box> : null}
+                    </li>
+                  ))}
                 </Box>
-                {' '}(formerly MatchZy Enhanced), is MIT and free for any use, including paid work. Auto Tournament 2.4.x releases also stay MIT.
-              </Typography>
-            </Box>
+              </Box>
+            ))}
           </Box>
           <Typography sx={{ mt: 3, color: color.muted, fontSize: '0.875rem' }}>Forks can&apos;t be relicensed.</Typography>
         </Section>
@@ -210,7 +241,7 @@ export default function Pricing() {
         <Section
           id="commercial-use"
           title="What counts as commercial use"
-          lede="Any of the following on the platform, CS2 Server Manager, ReadyUp or a game pack needs a license:"
+          lede="Any of the following on the platform, CS2 Server Manager, Ready Up or a game pack needs a license:"
         >
           <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2 }}>
             {[
