@@ -10,7 +10,6 @@ import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
 import { fontDisplay } from '@/theme/theme';
 import {
-  PACKS,
   formatEuro,
   founderBadge,
   founderUpdateWarning,
@@ -33,12 +32,15 @@ const products: PackProduct[] = ['servers', 'platform'];
  * The top of the pricing page: Servers / Platform toggle, the S / M / L pack
  * cards, the founding supporter strip, and the pack picker. "Buy" on a card
  * preselects that pack in the picker and moves focus there.
+ *
+ * `allPacks` comes from the server (Stripe prices, or the pricing.ts fallback):
+ * plain numbers only.
  */
-export function PackPricing() {
+export function PackPricing({ packs: allPacks }: { packs: readonly Pack[] }) {
   const [product, setProduct] = useState<PackProduct>('servers');
   const [preset, setPreset] = useState<PickerPreset | undefined>(undefined);
 
-  const packs = PACKS.filter((p) => p.product === product);
+  const packs = allPacks.filter((p) => p.product === product);
 
   const pick = useCallback((pack: Pack, period: Period) => {
     setPreset((prev) => ({ product: pack.product, servers: pack.maxServers, period, key: (prev?.key ?? 0) + 1 }));
@@ -160,7 +162,7 @@ export function PackPricing() {
       </Box>
 
       <Typography sx={{ color: color.muted, fontSize: '0.875rem', mt: -1 }}>
-        Spares count toward the servers. More than {maxPackServers} servers? Contact us for a quote. Prices in EUR. {vatNote}.
+        Spares count toward the servers. More than {maxPackServers(allPacks)} servers? Contact us for a quote. Prices in EUR. {vatNote}.
       </Typography>
 
       <Box
@@ -218,7 +220,7 @@ export function PackPricing() {
         </Typography>
       </Box>
 
-      <PriceCalculator preset={preset} />
+      <PriceCalculator packs={allPacks} preset={preset} />
     </Box>
   );
 }

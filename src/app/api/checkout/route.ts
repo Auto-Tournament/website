@@ -5,14 +5,17 @@ import {
   createRateLimiter,
   describeLicense,
   licenseMetadata,
-  lineItem,
   maxBodyBytes,
   validateCheckoutRequest,
 } from '@/lib/checkout';
+import { packIn } from '@/components/pricing';
+import { lookupKey } from '@/lib/stripePacks';
+import { getPacks, invalidatePacks } from '@/lib/stripePrices';
 
 // Starts a Stripe Checkout Session for a commercial license pack. Server only: the
 // secret key comes from STRIPE_SECRET_KEY at runtime and never reaches the
-// client. Without it the route answers 503 and the calculator falls back to
+// client. Without it, or while the prices come from the pricing.ts fallback
+// instead of Stripe, the route answers 503 and the calculator falls back to
 // the email request.
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -117,14 +120,27 @@ export async function POST(request: Request) {
     return reply(400, { error: 'Invalid JSON.' });
   }
 
-  const checked = validateCheckoutRequest(body);
+  // Packs and server limits from Stripe (cached), so the pack derived from the
+  // servers uses Stripe's limits.
+  const prices = await getPacks();
+
+  const checked = validateCheckoutRequest(body, prices.packs);
   if (!checked.ok) return reply(400, { error: checked.error });
   const order = checked.value;
 
   const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
-  if (!secretKey) {
+  if (!secretKey || prices.source !== 'stripe') {
+    // Never charge a price that didn't come from Stripe.
     return reply(503, { error: "Card payment isn't available right now. Request the license by email instead." });
   }
+
+  const priceKey = lookupKey(order.pack, order.period);
+  const priceId = prices.priceIds[priceKey];
+  if (!priceId) {
+    console.error('[checkout] no Stripe price for lookup key', { lookupKey: priceKey });
+    return reply(503, { error: "Card payment isn't available right now. Request the license by email instead." });
+  }
+  const pack = packIn(prices.packs, order.pack);
 
   const base = siteUrl();
   if (!base) {
@@ -134,7 +150,7 @@ export async function POST(request: Request) {
 
   const stripe = stripeFor(secretKey);
 
-  const description = describeLicense(order);
+  const description = describeLicense(pack, order.period);
   // Founder orders carry founder=true. The first-25 / 31 March 2027 limit is not
   // enforced in code: the owner checks it by hand before sending the license.
   const metadata = licenseMetadata(order);
@@ -142,9 +158,9 @@ export async function POST(request: Request) {
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      // Inline price from pricing.ts (PACKS): no products or prices to keep in
-      // sync in Stripe, and the amount never comes from the client.
-      line_items: [lineItem(order)],
+      // The Stripe price found by its lookup key (<pack>_<period>). The amount
+      // is Stripe's and never comes from the client.
+      line_items: [{ price: priceId, quantity: 1 }],
       customer_creation: 'always',
       // Business name, B2B confirmation, event details and the terms checkbox.
       ...checkoutFormParams(base),
@@ -162,6 +178,9 @@ export async function POST(request: Request) {
     return reply(200, { url: session.url });
   } catch (err) {
     logStripeError('creating the session', err);
+    // A cached price may have just been replaced (seed script re-run): read
+    // the prices again on the next attempt.
+    if (err instanceof Stripe.errors.StripeInvalidRequestError) invalidatePacks();
     return reply(502, { error: "Couldn't start checkout. Try again, or request the license by email." });
   }
 }

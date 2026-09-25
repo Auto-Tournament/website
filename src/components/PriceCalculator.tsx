@@ -49,7 +49,7 @@ type Quote =
   | { kind: 'contact'; product: PackProduct; reason: string };
 
 /** Servers: null when the input isn't a whole number of 1 or more. */
-function quoteFor(useType: UseType, tools: Set<ToolOption>, servers: number | null): Quote {
+function quoteFor(packs: readonly Pack[], useType: UseType, tools: Set<ToolOption>, servers: number | null): Quote {
   if (useType === 'noncommercial') {
     return { kind: 'free', reason: 'Free: nobody earns money from it, so it is non-commercial' };
   }
@@ -72,7 +72,7 @@ function quoteFor(useType: UseType, tools: Set<ToolOption>, servers: number | nu
       : `Servers pack: ${[tools.has('serverManager') && 'CS2 Server Manager', tools.has('readyUp') && 'Ready Up'].filter(Boolean).join(' + ')}`;
 
   if (servers === null) return { kind: 'servers-needed', product, reason };
-  const pack = derivePack(checkoutTools, servers);
+  const pack = derivePack(packs, checkoutTools, servers);
   if (!pack) return { kind: 'contact', product, reason };
   return { kind: 'price', product, pack, reason };
 }
@@ -80,7 +80,8 @@ function quoteFor(useType: UseType, tools: Set<ToolOption>, servers: number | nu
 /** A pack chosen elsewhere on the page (a card's Buy). `key` changes on every pick. */
 export type PickerPreset = { product: PackProduct; servers: number; period: Period; key: number };
 
-export function PriceCalculator({ preset }: { preset?: PickerPreset }) {
+/** `packs` come from the server (Stripe prices, or the pricing.ts fallback): plain numbers only. */
+export function PriceCalculator({ packs, preset }: { packs: readonly Pack[]; preset?: PickerPreset }) {
   const [tools, setTools] = useState<Set<ToolOption>>(new Set());
   const [useType, setUseType] = useState<UseType>('commercial');
   const [period, setPeriod] = useState<Period>('event');
@@ -113,7 +114,7 @@ export function PriceCalculator({ preset }: { preset?: PickerPreset }) {
   const servers = Number.parseInt(serversInput, 10);
   const serversValid = Number.isInteger(servers) && servers >= 1 && String(servers) === serversInput.trim();
 
-  const quote = useMemo(() => quoteFor(useType, tools, serversValid ? servers : null), [useType, tools, servers, serversValid]);
+  const quote = useMemo(() => quoteFor(packs, useType, tools, serversValid ? servers : null), [packs, useType, tools, servers, serversValid]);
 
   const price = quote.kind === 'price' ? quote.pack.prices[period] : 0;
 
@@ -398,7 +399,7 @@ export function PriceCalculator({ preset }: { preset?: PickerPreset }) {
               Contact us
             </Typography>
             <Typography sx={{ color: color.ink2 }}>
-              More than {maxPackServers} servers is a custom quote. Email us about your setup and we&apos;ll price it with you.
+              More than {maxPackServers(packs)} servers is a custom quote. Email us about your setup and we&apos;ll price it with you.
             </Typography>
           </>
         )}

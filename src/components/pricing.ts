@@ -1,8 +1,12 @@
 /**
- * Shared pricing facts for the pricing page and the price calculator.
- * Keep this the single source of truth for prices so the table and the
- * calculator can never drift apart. No 'use client' here: the pricing page
- * (a server component) reads it directly.
+ * Shared pricing facts for the pricing page and the price calculator. No
+ * 'use client' here: the pricing page (a server component) reads it directly.
+ *
+ * Stripe is the source of truth for the pack prices and server limits: the
+ * pricing page and /api/checkout read them through src/lib/stripePrices.ts and
+ * pass them around as `Pack[]`. FALLBACK_PACKS below is only shown when Stripe
+ * is unreachable or not configured, and card checkout is off while it is (see
+ * scripts/stripe-seed-packs.mjs to change a price).
  */
 
 /** Which software a pack covers. */
@@ -24,11 +28,24 @@ export type Pack = {
   prices: Record<Period, number>;
 };
 
+export const periods: readonly Period[] = ['event', 'year', 'founder'];
+
+/** The six packs, smallest first within each product. Ids, products and sizes are fixed; the numbers come from Stripe. */
+export const packDefs: readonly Pick<Pack, 'id' | 'product' | 'size' | 'name'>[] = [
+  { id: 'servers-s', product: 'servers', size: 'S', name: 'Servers S' },
+  { id: 'servers-m', product: 'servers', size: 'M', name: 'Servers M' },
+  { id: 'servers-l', product: 'servers', size: 'L', name: 'Servers L' },
+  { id: 'platform-s', product: 'platform', size: 'S', name: 'Platform S' },
+  { id: 'platform-m', product: 'platform', size: 'M', name: 'Platform M' },
+  { id: 'platform-l', product: 'platform', size: 'L', name: 'Platform L' },
+];
+
 /**
- * Pricing v2: fixed packs, not per seat. Ordered smallest first within each
- * product, so the first pack that fits is the cheapest one.
+ * Fallback only, for when Stripe is unreachable or unconfigured: the page
+ * still shows prices, but checkout answers 503. Keep it close to Stripe so
+ * the fallback page doesn't mislead. Same order as packDefs.
  */
-export const PACKS: readonly Pack[] = [
+export const FALLBACK_PACKS: readonly Pack[] = [
   { id: 'servers-s', product: 'servers', size: 'S', name: 'Servers S', maxServers: 5, prices: { event: 1900, year: 4900, founder: 7900 } },
   { id: 'servers-m', product: 'servers', size: 'M', name: 'Servers M', maxServers: 15, prices: { event: 4900, year: 12900, founder: 19900 } },
   { id: 'servers-l', product: 'servers', size: 'L', name: 'Servers L', maxServers: 40, prices: { event: 9900, year: 27900, founder: 39900 } },
@@ -37,20 +54,26 @@ export const PACKS: readonly Pack[] = [
   { id: 'platform-l', product: 'platform', size: 'L', name: 'Platform L', maxServers: 40, prices: { event: 14900, year: 42900, founder: 59900 } },
 ];
 
-export const packIds = PACKS.map((p) => p.id);
+export const packIds: readonly PackId[] = packDefs.map((p) => p.id);
 
-/** The biggest pack. Above this it's a custom quote. */
-export const maxPackServers = Math.max(...PACKS.map((p) => p.maxServers));
+/** The biggest pack's limit. Above this it's a custom quote. */
+export function maxPackServers(packs: readonly Pack[]): number {
+  return Math.max(...packs.map((p) => p.maxServers));
+}
 
-export function packById(id: PackId): Pack {
-  const pack = PACKS.find((p) => p.id === id);
+export function packIn(packs: readonly Pack[], id: PackId): Pack {
+  const pack = packs.find((p) => p.id === id);
   if (!pack) throw new Error(`Unknown pack ${id}`);
   return pack;
 }
 
 /** The smallest pack of this product that allows `servers`; null above the biggest pack. */
-export function packFor(product: PackProduct, servers: number): Pack | null {
-  return PACKS.find((p) => p.product === product && p.maxServers >= servers) ?? null;
+export function packFor(packs: readonly Pack[], product: PackProduct, servers: number): Pack | null {
+  return (
+    packs
+      .filter((p) => p.product === product && p.maxServers >= servers)
+      .reduce<Pack | null>((best, p) => (best === null || p.maxServers < best.maxServers ? p : best), null)
+  );
 }
 
 export const productLabels: Record<PackProduct, string> = {
@@ -96,12 +119,14 @@ export function formatEuro(cents: number): string {
 export const pricingVersion = 'Pricing v2, valid from 25 September 2026';
 
 /** The pack rules. Same words on the pricing page; /terms and the docs say the same. */
-export const packRules: string[] = [
-  'One pack per event, or per 12 months for yearly.',
-  'Packs can\'t be combined or stacked: two S packs don\'t make an M. Servers and Platform can\'t be combined either; Platform already includes the servers.',
-  'Need more servers during the period? Email us to upgrade to the next size and pay the difference.',
-  `More than ${maxPackServers} servers: contact us for a custom quote.`,
-];
+export function packRules(packs: readonly Pack[]): string[] {
+  return [
+    'One pack per event, or per 12 months for yearly.',
+    'Packs can\'t be combined or stacked: two S packs don\'t make an M. Servers and Platform can\'t be combined either; Platform already includes the servers.',
+    'Need more servers during the period? Email us to upgrade to the next size and pay the difference.',
+    `More than ${maxPackServers(packs)} servers: contact us for a custom quote.`,
+  ];
+}
 
 /** Founding supporter: limited, and checked by hand when an order comes in. */
 export const founderLimit = 25;
@@ -109,13 +134,15 @@ export const founderDeadline = '31 March 2027';
 export const founderBadge = `Limited: first ${founderLimit} or until ${founderDeadline}`;
 export const founderUpdateWarning = 'CS2 updates can break older versions; renew updates to stay current';
 
-export const founderTerms: string[] = [
-  `Only for the first ${founderLimit} buyers, or until ${founderDeadline}, whichever comes first.`,
-  'Perpetual commercial use of every version released within 12 months of purchase, including 1 year of updates.',
-  `After that, renewing updates is optional, at the yearly price of the same pack (for example Servers L at ${formatEuro(packById('servers-l').prices.year)} a year), and renewing restores updates.`,
-  'Without renewal you keep using the versions from your first 12 months.',
-  'The server limit stays the pack\'s limit. To move to a bigger founder pack, pay the difference while founder packs are still available.',
-];
+export function founderTerms(packs: readonly Pack[]): string[] {
+  return [
+    `Only for the first ${founderLimit} buyers, or until ${founderDeadline}, whichever comes first.`,
+    'Perpetual commercial use of every version released within 12 months of purchase, including 1 year of updates.',
+    `After that, renewing updates is optional, at the yearly price of the same pack (for example Servers L at ${formatEuro(packIn(packs, 'servers-l').prices.year)} a year), and renewing restores updates.`,
+    'Without renewal you keep using the versions from your first 12 months.',
+    'The server limit stays the pack\'s limit. To move to a bigger founder pack, pay the difference while founder packs are still available.',
+  ];
+}
 
 /**
  * The rule behind every price: if you earn money from it, you pay full price.
