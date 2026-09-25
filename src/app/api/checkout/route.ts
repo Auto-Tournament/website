@@ -21,6 +21,11 @@ export const dynamic = 'force-dynamic';
 const defaultSiteUrl = 'https://autotournament.gg';
 const priceCacheMs = 10 * 60 * 1000;
 
+// Seller details a Norwegian invoice needs (org number), and why no VAT is shown.
+const invoiceFooter =
+  'Gullberg Hansen Consulting (ENK) · Org. nr. 938 566 674 · Fredengvegen 15, 2817 Gjøvik, Norway · sivert@autotournament.gg\n' +
+  'No VAT added (seller not VAT-registered). Licenses are governed by the Commercial License Terms at https://autotournament.gg/terms';
+
 const allow = createRateLimiter({ limit: 10, windowMs: 60_000 });
 
 let stripeClient: { key: string; client: Stripe } | null = null;
@@ -167,7 +172,7 @@ export async function POST(request: Request) {
       ...checkoutFormParams(base),
       metadata,
       payment_intent_data: { description, metadata },
-      invoice_creation: { enabled: true, invoice_data: { description, metadata } },
+      invoice_creation: { enabled: true, invoice_data: { description, metadata, footer: invoiceFooter } },
       allow_promotion_codes: true,
       success_url: `${base}/pricing/thanks?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/pricing#calculator`,
