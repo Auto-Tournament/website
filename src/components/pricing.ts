@@ -5,17 +5,117 @@
  * (a server component) reads it directly.
  */
 
-export const seatPrices = {
-  servers: { event: 3, yearly: 12 },
-  platform: { event: 5, yearly: 20 },
-} as const;
+/** Which software a pack covers. */
+export type PackProduct = 'servers' | 'platform';
+export type PackSize = 'S' | 'M' | 'L';
+/** How long a pack runs. Same ids as /api/checkout takes. */
+export type Period = 'event' | 'year' | 'founder';
+export type PackId = 'servers-s' | 'servers-m' | 'servers-l' | 'platform-s' | 'platform-m' | 'platform-l';
 
-export type Period = 'event' | 'yearly';
+export type Pack = {
+  id: PackId;
+  product: PackProduct;
+  size: PackSize;
+  /** "Servers L", "Platform S". */
+  name: string;
+  /** Most game servers set up at any one time during the period, spares included. */
+  maxServers: number;
+  /** Prices in euro cents. */
+  prices: Record<Period, number>;
+};
+
+/**
+ * Pricing v2: fixed packs, not per seat. Ordered smallest first within each
+ * product, so the first pack that fits is the cheapest one.
+ */
+export const PACKS: readonly Pack[] = [
+  { id: 'servers-s', product: 'servers', size: 'S', name: 'Servers S', maxServers: 5, prices: { event: 1900, year: 4900, founder: 7900 } },
+  { id: 'servers-m', product: 'servers', size: 'M', name: 'Servers M', maxServers: 15, prices: { event: 4900, year: 12900, founder: 19900 } },
+  { id: 'servers-l', product: 'servers', size: 'L', name: 'Servers L', maxServers: 40, prices: { event: 9900, year: 27900, founder: 39900 } },
+  { id: 'platform-s', product: 'platform', size: 'S', name: 'Platform S', maxServers: 5, prices: { event: 3900, year: 9900, founder: 14900 } },
+  { id: 'platform-m', product: 'platform', size: 'M', name: 'Platform M', maxServers: 15, prices: { event: 7900, year: 21900, founder: 32900 } },
+  { id: 'platform-l', product: 'platform', size: 'L', name: 'Platform L', maxServers: 40, prices: { event: 14900, year: 42900, founder: 59900 } },
+];
+
+export const packIds = PACKS.map((p) => p.id);
+
+/** The biggest pack. Above this it's a custom quote. */
+export const maxPackServers = Math.max(...PACKS.map((p) => p.maxServers));
+
+export function packById(id: PackId): Pack {
+  const pack = PACKS.find((p) => p.id === id);
+  if (!pack) throw new Error(`Unknown pack ${id}`);
+  return pack;
+}
+
+/** The smallest pack of this product that allows `servers`; null above the biggest pack. */
+export function packFor(product: PackProduct, servers: number): Pack | null {
+  return PACKS.find((p) => p.product === product && p.maxServers >= servers) ?? null;
+}
+
+export const productLabels: Record<PackProduct, string> = {
+  servers: 'CS2 Server Manager and/or Ready Up',
+  platform: 'The Auto Tournament platform, CS2 Server Manager, Ready Up and the game packs used with it',
+};
+
+/** The Servers / Platform toggle: a short name and one line on what it covers. */
+export const productIntro: Record<PackProduct, { title: string; line: string }> = {
+  servers: { title: 'Servers', line: 'CS2 Server Manager and/or Ready Up, on game servers you run.' },
+  platform: { title: 'Platform', line: 'The full Auto Tournament platform, with CS2 Server Manager, Ready Up and the game packs included.' },
+};
+
+/** What each size fits, on the pack cards. */
+export const packGoodFor: Record<PackSize, string> = {
+  S: 'Local LAN, up to ~200 people',
+  M: 'Regional LAN or a big CS2 tournament',
+  L: 'Large multi-game LAN',
+};
+
+export const popularSize: PackSize = 'M';
 
 export const periodLabels: Record<Period, string> = {
-  event: 'One event (up to 5 days)',
-  yearly: 'Yearly (unlimited events)',
+  event: 'One event (up to 5 days in a row)',
+  year: 'Yearly (12 months, unlimited events)',
+  founder: 'Founding supporter (one-off)',
 };
+
+/** Short period words for prices: "€99 per event". */
+export const periodPriceSuffix: Record<Period, string> = {
+  event: 'per event',
+  year: 'a year',
+  founder: 'one-off',
+};
+
+const euro = new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+
+/** Whole-euro price from cents: 9900 → "€99". */
+export function formatEuro(cents: number): string {
+  return euro.format(cents / 100);
+}
+
+export const pricingVersion = 'Pricing v2, valid from 25 September 2026';
+
+/** The pack rules. Same words on the pricing page; /terms and the docs say the same. */
+export const packRules: string[] = [
+  'One pack per event, or per 12 months for yearly.',
+  'Packs can\'t be combined or stacked: two S packs don\'t make an M. Servers and Platform can\'t be combined either; Platform already includes the servers.',
+  'Need more servers during the period? Email us to upgrade to the next size and pay the difference.',
+  `More than ${maxPackServers} servers: contact us for a custom quote.`,
+];
+
+/** Founding supporter: limited, and checked by hand when an order comes in. */
+export const founderLimit = 25;
+export const founderDeadline = '31 March 2027';
+export const founderBadge = `Limited: first ${founderLimit} or until ${founderDeadline}`;
+export const founderUpdateWarning = 'CS2 updates can break older versions; renew updates to stay current';
+
+export const founderTerms: string[] = [
+  `Only for the first ${founderLimit} buyers, or until ${founderDeadline}, whichever comes first.`,
+  'Perpetual commercial use of every version released within 12 months of purchase, including 1 year of updates.',
+  `After that, renewing updates is optional, at the yearly price of the same pack (for example Servers L at ${formatEuro(packById('servers-l').prices.year)} a year), and renewing restores updates.`,
+  'Without renewal you keep using the versions from your first 12 months.',
+  'The server limit stays the pack\'s limit. To move to a bigger founder pack, pay the difference while founder packs are still available.',
+];
 
 /**
  * The rule behind every price: if you earn money from it, you pay full price.
@@ -52,8 +152,8 @@ export function freeLanMailto(email: string): string {
   return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
-/** What a seat is. Same words in the terms, the docs and the license confirmation. */
-export const seatRule = 'No more than N game servers set up at any one time during the period, spares included.';
+/** What the pack size means. Same words in the terms, the docs and the license confirmation. */
+export const serverLimitRule = 'A pack allows no more than its number of game servers set up at any one time during the period, spares included.';
 
 export const vatNote = 'No VAT added (seller not VAT-registered)';
 
@@ -79,37 +179,3 @@ export const useTypeLabels: Record<UseType, string> = {
 };
 
 export const useTypeOrder: UseType[] = ['commercial', 'noncommercial', 'nonprofit'];
-
-export type PricingRow = {
-  use: string;
-  personal: string;
-  event: string;
-  yearly: string;
-};
-
-export const pricingTable: PricingRow[] = [
-  {
-    use: 'MatchZy Enhanced only (MIT, without CS2 Server Manager)',
-    personal: 'Free',
-    event: 'Free',
-    yearly: 'Free',
-  },
-  {
-    use: 'CS2 Server Manager, Ready Up, or both',
-    personal: 'Free',
-    event: `€${seatPrices.servers.event} per seat`,
-    yearly: `€${seatPrices.servers.yearly} per seat`,
-  },
-  {
-    use: 'Auto Tournament platform, with the game packs used with it (includes the row above)',
-    personal: 'Free',
-    event: `€${seatPrices.platform.event} per seat`,
-    yearly: `€${seatPrices.platform.yearly} per seat`,
-  },
-  {
-    use: 'Selling Auto Tournament as a service',
-    personal: 'n/a',
-    event: 'Custom quote',
-    yearly: 'Custom quote',
-  },
-];

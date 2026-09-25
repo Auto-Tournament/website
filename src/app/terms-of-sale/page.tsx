@@ -40,13 +40,13 @@ export default function TermsOfSale() {
 
       <H2 id="order">3. What you buy</H2>
       <p>
-        A commercial license for the option, number of seats and period you choose, on the <a href={links.terms}>Commercial License Terms</a>. By paying you
-        accept the Commercial License Terms and these Terms of Sale.
+        A commercial license pack (Servers or Platform, size S, M or L) for the period you choose (one event, yearly, or founding supporter), on the{' '}
+        <a href={links.terms}>Commercial License Terms</a>. By paying you accept the Commercial License Terms and these Terms of Sale.
       </p>
 
       <H2 id="prices">4. Prices and VAT</H2>
       <p>
-        Prices are in euro per seat, as shown on <a href={links.pricing}>Licensing &amp; pricing</a> when you order. No VAT added (seller not VAT-registered). Any
+        Each pack has a fixed price in euro, as shown on <a href={links.pricing}>Licensing &amp; pricing</a> when you order. No VAT added (seller not VAT-registered). Any
         tax you owe as the buyer in your own country, such as reverse-charge VAT, is yours to handle.
       </p>
 
