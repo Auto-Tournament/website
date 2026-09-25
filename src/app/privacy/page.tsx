@@ -30,7 +30,7 @@ export default function Privacy() {
         <li>billing address, email and phone number</li>
         <li>organization number or VAT ID</li>
         <li>event details: name, dates, venue or city, and website</li>
-        <li>what you order: option, seats, period and price</li>
+        <li>what you order: pack, number of servers, period and price</li>
         <li>
           payment data from Stripe: whether you paid, the amount, and limited card details such as the brand and last four digits (never the full card
           number)

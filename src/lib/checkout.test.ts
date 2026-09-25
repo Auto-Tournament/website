@@ -1,41 +1,67 @@
 import { describe, expect, it } from 'vitest';
+import { PACKS, packFor, type PackId } from '../components/pricing';
 import {
   businessBuyerField,
   checkoutFormParams,
   clientIp,
   createRateLimiter,
-  deriveOption,
+  derivePack,
+  deriveProduct,
   describeLicense,
   licenseMetadata,
-  pickPrice,
+  lineItem,
+  lineItemName,
   stripeMaxCustomFields,
   stripeMaxLabelLength,
   unitAmountCents,
   validateCheckoutRequest,
-  type PriceLike,
 } from './checkout';
 
 const valid = {
-  option: 'platform',
+  pack: 'platform-l',
   period: 'event',
-  seats: 34,
+  servers: 34,
   tools: ['platform', 'matchzy'],
   use: 'commercial',
 };
 
-describe('deriveOption', () => {
+describe('deriveProduct', () => {
   it('platform wins over everything', () => {
-    expect(deriveOption(['platform'])).toBe('platform');
-    expect(deriveOption(['csm', 'readyup', 'platform', 'matchzy'])).toBe('platform');
+    expect(deriveProduct(['platform'])).toBe('platform');
+    expect(deriveProduct(['csm', 'readyup', 'platform', 'matchzy'])).toBe('platform');
   });
-  it('CS2 Server Manager and/or Ready Up is the servers rate', () => {
-    expect(deriveOption(['csm'])).toBe('servers');
-    expect(deriveOption(['readyup'])).toBe('servers');
-    expect(deriveOption(['csm', 'readyup', 'matchzy'])).toBe('servers');
+  it('CS2 Server Manager and/or Ready Up is a Servers pack', () => {
+    expect(deriveProduct(['csm'])).toBe('servers');
+    expect(deriveProduct(['readyup'])).toBe('servers');
+    expect(deriveProduct(['csm', 'readyup', 'matchzy'])).toBe('servers');
   });
   it('MatchZy Enhanced alone or nothing needs no paid license', () => {
-    expect(deriveOption(['matchzy'])).toBeNull();
-    expect(deriveOption([])).toBeNull();
+    expect(deriveProduct(['matchzy'])).toBeNull();
+    expect(deriveProduct([])).toBeNull();
+  });
+});
+
+describe('derivePack', () => {
+  const cases: [number, string | null][] = [
+    [1, 's'],
+    [5, 's'],
+    [6, 'm'],
+    [15, 'm'],
+    [16, 'l'],
+    [40, 'l'],
+    [41, null],
+  ];
+  it.each(cases)('%i servers → size %s', (servers, size) => {
+    expect(derivePack(['csm'], servers)?.id ?? null).toBe(size ? `servers-${size}` : null);
+    expect(derivePack(['platform', 'readyup'], servers)?.id ?? null).toBe(size ? `platform-${size}` : null);
+  });
+  it('free tools have no pack', () => {
+    expect(derivePack(['matchzy'], 4)).toBeNull();
+  });
+  it('picks the smallest pack that fits', () => {
+    for (const pack of PACKS) {
+      expect(packFor(pack.product, pack.maxServers)?.id).toBe(pack.id);
+    }
   });
 });
 
@@ -45,10 +71,14 @@ describe('validateCheckoutRequest', () => {
     expect(r).toEqual({ ok: true, value: { ...valid, tools: ['matchzy', 'platform'] } });
   });
 
-  it('accepts the seat bounds', () => {
-    expect(validateCheckoutRequest({ ...valid, seats: 1 }).ok).toBe(true);
-    expect(validateCheckoutRequest({ ...valid, seats: 500 }).ok).toBe(true);
-    expect(validateCheckoutRequest({ ...valid, option: 'servers', period: 'year', tools: ['csm'] }).ok).toBe(true);
+  it('accepts every period and the server bounds', () => {
+    for (const period of ['event', 'year', 'founder']) {
+      expect(validateCheckoutRequest({ ...valid, period }).ok).toBe(true);
+    }
+    expect(validateCheckoutRequest({ ...valid, pack: 'platform-s', servers: 1 }).ok).toBe(true);
+    expect(validateCheckoutRequest({ ...valid, pack: 'platform-l', servers: 40 }).ok).toBe(true);
+    expect(validateCheckoutRequest({ ...valid, pack: 'servers-m', period: 'year', servers: 6, tools: ['csm'] }).ok).toBe(true);
+    expect(validateCheckoutRequest({ ...valid, pack: 'servers-l', period: 'founder', servers: 34, tools: ['csm'] }).ok).toBe(true);
   });
 
   const rejects: [string, unknown][] = [
@@ -57,23 +87,30 @@ describe('validateCheckoutRequest', () => {
     ['string', 'x'],
     ['missing field', { ...valid, use: undefined }],
     ['extra field', { ...valid, price: 1 }],
-    ['unknown option', { ...valid, option: 'hosting' }],
-    ['option not matching tools', { ...valid, option: 'servers' }],
-    ['platform option for servers tools', { ...valid, option: 'platform', tools: ['csm'] }],
+    ['old per-seat body', { option: 'platform', period: 'event', seats: 34, tools: ['platform'], use: 'commercial' }],
+    ['unknown pack', { ...valid, pack: 'platform-xl' }],
+    ['pack as upper case', { ...valid, pack: 'Platform-L' }],
+    ['product not matching tools', { ...valid, pack: 'servers-l' }],
+    ['platform pack for servers tools', { ...valid, pack: 'platform-l', tools: ['csm'] }],
+    ['pack too small for servers', { ...valid, pack: 'platform-m', servers: 16 }],
+    ['pack bigger than needed', { ...valid, pack: 'platform-l', servers: 15 }],
+    ['pack S for 6 servers', { ...valid, pack: 'platform-s', servers: 6 }],
     ['period yearly (API takes year)', { ...valid, period: 'yearly' }],
-    ['seats 0', { ...valid, seats: 0 }],
-    ['seats 501', { ...valid, seats: 501 }],
-    ['seats fractional', { ...valid, seats: 2.5 }],
-    ['seats as string', { ...valid, seats: '34' }],
-    ['seats NaN', { ...valid, seats: Number.NaN }],
+    ['unknown period', { ...valid, period: 'lifetime' }],
+    ['servers 0', { ...valid, servers: 0 }],
+    ['servers 41', { ...valid, servers: 41 }],
+    ['servers negative', { ...valid, servers: -1 }],
+    ['servers fractional', { ...valid, servers: 2.5 }],
+    ['servers as string', { ...valid, servers: '34' }],
+    ['servers NaN', { ...valid, servers: Number.NaN }],
+    ['servers Infinity', { ...valid, servers: Number.POSITIVE_INFINITY }],
     ['tools not an array', { ...valid, tools: 'platform' }],
     ['tools empty', { ...valid, tools: [] }],
     ['unknown tool', { ...valid, tools: ['platform', 'serverManager'] }],
     ['duplicate tool', { ...valid, tools: ['platform', 'platform'] }],
-    ['free tools only', { ...valid, option: 'servers', tools: ['matchzy'] }],
+    ['free tools only', { ...valid, pack: 'servers-l', tools: ['matchzy'] }],
     ['personal use', { ...valid, use: 'personal' }],
     ['non-profit use', { ...valid, use: 'nonprofit' }],
-    ['old community flag (no discount anymore)', { ...valid, community: false }],
     ['non-commercial use', { ...valid, use: 'noncommercial' }],
   ];
   it.each(rejects)('rejects %s', (_name, body) => {
@@ -81,61 +118,60 @@ describe('validateCheckoutRequest', () => {
   });
 });
 
+describe('pack prices', () => {
+  const expected: [PackId, number, number, number][] = [
+    ['servers-s', 1900, 4900, 7900],
+    ['servers-m', 4900, 12900, 19900],
+    ['servers-l', 9900, 27900, 39900],
+    ['platform-s', 3900, 9900, 14900],
+    ['platform-m', 7900, 21900, 32900],
+    ['platform-l', 14900, 42900, 59900],
+  ];
+  it.each(expected)('%s: event %i, year %i, founder %i cents', (pack, event, year, founder) => {
+    expect(unitAmountCents(pack, 'event')).toBe(event);
+    expect(unitAmountCents(pack, 'year')).toBe(year);
+    expect(unitAmountCents(pack, 'founder')).toBe(founder);
+  });
+  it('covers every pack', () => {
+    expect(PACKS.map((p) => p.id).sort()).toEqual(expected.map((e) => e[0]).sort());
+  });
+});
+
+describe('lineItem', () => {
+  it('is an inline EUR price, quantity 1, tax exclusive', () => {
+    expect(lineItem({ pack: 'servers-l', period: 'event' })).toEqual({
+      price_data: {
+        currency: 'eur',
+        unit_amount: 9900,
+        tax_behavior: 'exclusive',
+        product_data: {
+          name: 'Servers L license — per event (up to 40 servers)',
+          description: expect.stringContaining('No more than 40 game servers'),
+        },
+      },
+      quantity: 1,
+    });
+  });
+  it('names each period', () => {
+    expect(lineItemName('platform-s', 'year')).toBe('Platform S license — yearly (up to 5 servers)');
+    expect(lineItemName('servers-m', 'founder')).toBe('Servers M license — founding supporter (up to 15 servers)');
+    expect(lineItem({ pack: 'servers-l', period: 'founder' }).price_data.unit_amount).toBe(39900);
+  });
+});
+
 describe('license text', () => {
   it('describes the order', () => {
-    expect(describeLicense({ option: 'platform', period: 'event', seats: 34 })).toBe('Auto Tournament license: platform, per event, 34 seats');
-    expect(describeLicense({ option: 'servers', period: 'year', seats: 1 })).toBe('Auto Tournament license: servers, yearly, 1 seat');
+    expect(describeLicense({ pack: 'platform-l', period: 'event' })).toBe('Auto Tournament Platform L license — per event (up to 40 servers)');
   });
   it('builds string metadata', () => {
     const r = validateCheckoutRequest(valid);
     if (!r.ok) throw new Error(r.error);
-    expect(licenseMetadata(r.value)).toEqual({ option: 'platform', period: 'event', seats: '34', tools: 'matchzy,platform' });
+    expect(licenseMetadata(r.value)).toEqual({ pack: 'platform-l', period: 'event', servers: '34', tools: 'matchzy,platform' });
   });
-});
-
-describe('pickPrice', () => {
-  const price = (over: Partial<PriceLike> = {}, product: Partial<Exclude<PriceLike['product'], string>> = {}): PriceLike => ({
-    id: 'price_ok',
-    active: true,
-    currency: 'eur',
-    type: 'one_time',
-    unit_amount: 500,
-    billing_scheme: 'per_unit',
-    transform_quantity: null,
-    ...over,
-    product: { name: 'Platform license: per event', active: true, ...product },
-  });
-
-  it('matches the pricing.ts amounts', () => {
-    expect(unitAmountCents('servers', 'event')).toBe(300);
-    expect(unitAmountCents('servers', 'year')).toBe(1200);
-    expect(unitAmountCents('platform', 'event')).toBe(500);
-    expect(unitAmountCents('platform', 'year')).toBe(2000);
-  });
-
-  it('picks the matching price', () => {
-    expect(pickPrice([price()], 'platform', 'event')?.id).toBe('price_ok');
-  });
-
-  it.each([
-    ['wrong amount', price({ unit_amount: 400 })],
-    ['wrong currency', price({ currency: 'nok' })],
-    ['recurring', price({ type: 'recurring' })],
-    ['inactive price', price({ active: false })],
-    ['tiered', price({ billing_scheme: 'tiered' })],
-    ['quantity transform', price({ transform_quantity: { divide_by: 2, round: 'up' } })],
-    ['other product name', price({}, { name: 'Platform license: yearly' })],
-    ['name not exact', price({}, { name: 'platform license: per event' })],
-    ['archived product', price({}, { active: false })],
-    ['product not expanded', { ...price(), product: 'prod_123' }],
-  ])('rejects %s', (_name, p) => {
-    expect(pickPrice([p], 'platform', 'event')).toBeNull();
-  });
-
-  it("prefers the product's default price", () => {
-    const a = price({ id: 'price_a' }, { default_price: 'price_b' });
-    const b = price({ id: 'price_b' }, { default_price: 'price_b' });
-    expect(pickPrice([a, b], 'platform', 'event')?.id).toBe('price_b');
+  it('marks founder orders', () => {
+    const r = validateCheckoutRequest({ ...valid, period: 'founder' });
+    if (!r.ok) throw new Error(r.error);
+    expect(licenseMetadata(r.value)).toMatchObject({ pack: 'platform-l', period: 'founder', founder: 'true' });
   });
 });
 

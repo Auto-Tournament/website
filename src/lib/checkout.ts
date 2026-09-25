@@ -1,24 +1,31 @@
 /**
  * Pure checkout logic shared by the calculator (client) and /api/checkout
- * (server): tool → license option, request validation, the Stripe product and
- * price each option must match, and the small abuse limits. No Stripe import
- * and no process.env here, so it runs anywhere and is easy to test.
+ * (server): tools → product, servers → pack, request validation, the Stripe
+ * line item for a pack, and the small abuse limits. No Stripe import and no
+ * process.env here, so it runs anywhere and is easy to test.
  *
  * Relative import on purpose: vitest runs this file without the `@/` alias.
  */
-import { seatPrices, type ToolOption } from '../components/pricing';
+import {
+  maxPackServers,
+  packById,
+  packFor,
+  packIds,
+  type Pack,
+  type PackId,
+  type PackProduct,
+  type Period,
+  type ToolOption,
+} from '../components/pricing';
 
 export const checkoutTools = ['matchzy', 'csm', 'readyup', 'platform'] as const;
 export type CheckoutTool = (typeof checkoutTools)[number];
 
-export const checkoutOptions = ['servers', 'platform'] as const;
-export type CheckoutOption = (typeof checkoutOptions)[number];
+export const checkoutPeriods = ['event', 'year', 'founder'] as const satisfies readonly Period[];
+export type CheckoutPeriod = Period;
 
-export const checkoutPeriods = ['event', 'year'] as const;
-export type CheckoutPeriod = (typeof checkoutPeriods)[number];
-
-export const minSeats = 1;
-export const maxSeats = 500;
+export const minServers = 1;
+export const maxServers = maxPackServers;
 export const maxBodyBytes = 2048;
 
 /** Calculator tool ids → the ids the checkout API takes. */
@@ -30,36 +37,43 @@ export const checkoutToolFor: Record<ToolOption, CheckoutTool> = {
 };
 
 /**
- * Which paid license the ticked tools need. The platform includes CS2 Server
- * Manager and Ready Up, so it wins; either of those alone is the servers rate;
- * MatchZy Enhanced on its own (or nothing) is free, so there is no option.
+ * Which paid product the ticked tools need. The platform includes CS2 Server
+ * Manager and Ready Up, so it wins; either of those alone is a Servers pack;
+ * MatchZy Enhanced on its own (or nothing) is free, so there is no product.
  */
-export function deriveOption(tools: Iterable<CheckoutTool>): CheckoutOption | null {
+export function deriveProduct(tools: Iterable<CheckoutTool>): PackProduct | null {
   const set = new Set(tools);
   if (set.has('platform')) return 'platform';
   if (set.has('csm') || set.has('readyup')) return 'servers';
   return null;
 }
 
+/** The smallest pack for these tools and servers; null when free or above the biggest pack. */
+export function derivePack(tools: Iterable<CheckoutTool>, servers: number): Pack | null {
+  const product = deriveProduct(tools);
+  return product ? packFor(product, servers) : null;
+}
+
 export type CheckoutRequest = {
-  option: CheckoutOption;
+  pack: PackId;
   period: CheckoutPeriod;
-  seats: number;
+  servers: number;
   tools: CheckoutTool[];
   use: 'commercial';
 };
 
 export type Validation = { ok: true; value: CheckoutRequest } | { ok: false; error: string };
 
-const requestKeys = ['option', 'period', 'seats', 'tools', 'use'] as const;
+const requestKeys = ['pack', 'period', 'servers', 'tools', 'use'] as const;
 
 const includes = <T extends string>(list: readonly T[], value: unknown): value is T =>
   typeof value === 'string' && (list as readonly string[]).includes(value);
 
 /**
- * Strict: every key present, no extra keys, exact types and values. The option
- * the client sends must equal the one derived from its tools; the price never
- * comes from the client.
+ * Strict: every key present, no extra keys, exact types and values. The server
+ * derives the product from the tools and the pack size from the servers, and
+ * the pack the client sends must equal that. The price never comes from the
+ * client.
  */
 export function validateCheckoutRequest(body: unknown): Validation {
   const fail = (error: string): Validation => ({ ok: false, error });
@@ -72,50 +86,98 @@ export function validateCheckoutRequest(body: unknown): Validation {
     return fail('Unexpected or missing fields.');
   }
 
-  const { option, period, seats, tools, use } = obj;
+  const { pack, period, servers, tools, use } = obj;
 
-  if (!includes(checkoutOptions, option)) return fail('Invalid option.');
+  if (!includes(packIds, pack)) return fail('Invalid pack.');
   if (!includes(checkoutPeriods, period)) return fail('Invalid period.');
-  if (typeof seats !== 'number' || !Number.isInteger(seats) || seats < minSeats || seats > maxSeats) {
-    return fail(`Seats must be a whole number from ${minSeats} to ${maxSeats}.`);
+  if (typeof servers !== 'number' || !Number.isInteger(servers) || servers < minServers) {
+    return fail(`Servers must be a whole number from ${minServers} to ${maxServers}.`);
   }
+  if (servers > maxServers) return fail(`More than ${maxServers} servers is a custom quote. Email us instead.`);
   if (!Array.isArray(tools) || tools.length === 0 || tools.length > checkoutTools.length) return fail('Invalid tools.');
   if (!tools.every((t) => includes(checkoutTools, t))) return fail('Invalid tools.');
   if (new Set(tools).size !== tools.length) return fail('Invalid tools.');
   if (use !== 'commercial') return fail('Only commercial use is paid; non-commercial use and non-profit organizations are free.');
 
   const typedTools = tools as CheckoutTool[];
-  const derived = deriveOption(typedTools);
-  if (derived === null) return fail('These tools need no paid license.');
-  if (derived !== option) return fail('Option does not match the tools.');
+  if (deriveProduct(typedTools) === null) return fail('These tools need no paid license.');
+  const derived = derivePack(typedTools, servers);
+  if (derived === null) return fail('Invalid servers.');
+  if (derived.id !== pack) return fail('Pack does not match the tools and servers.');
 
   // Canonical order, so metadata reads the same whatever order the client sent.
   const sorted = checkoutTools.filter((t) => typedTools.includes(t));
-  return { ok: true, value: { option: derived, period, seats, tools: sorted, use } };
+  return { ok: true, value: { pack: derived.id, period, servers, tools: sorted, use } };
 }
 
-/** Exact Stripe product names, one active one-time EUR per-unit price each. */
-export const stripeProductNames: Record<CheckoutOption, Record<CheckoutPeriod, string>> = {
-  servers: { event: 'Servers license: per event', year: 'Servers license: yearly' },
-  platform: { event: 'Platform license: per event', year: 'Platform license: yearly' },
+/** The pack price from pricing.ts, in euro cents. */
+export function unitAmountCents(pack: PackId, period: CheckoutPeriod): number {
+  return packById(pack).prices[period];
+}
+
+const periodInName: Record<CheckoutPeriod, string> = {
+  event: 'per event',
+  year: 'yearly',
+  founder: 'founding supporter',
 };
 
-/** The seat price from pricing.ts, in euro cents. */
-export function unitAmountCents(option: CheckoutOption, period: CheckoutPeriod): number {
-  return Math.round(seatPrices[option][period === 'year' ? 'yearly' : 'event'] * 100);
+/** Stripe product name: "Servers L license — per event (up to 40 servers)". */
+export function lineItemName(pack: PackId, period: CheckoutPeriod): string {
+  const p = packById(pack);
+  return `${p.name} license — ${periodInName[period]} (up to ${p.maxServers} servers)`;
 }
 
-export function describeLicense(req: Pick<CheckoutRequest, 'option' | 'period' | 'seats'>): string {
-  const period = req.period === 'year' ? 'yearly' : 'per event';
-  return `Auto Tournament license: ${req.option}, ${period}, ${req.seats} ${req.seats === 1 ? 'seat' : 'seats'}`;
+const coveredSoftware: Record<PackProduct, string> = {
+  servers: 'CS2 Server Manager and Ready Up',
+  platform: 'Auto Tournament platform, CS2 Server Manager, Ready Up and the game packs used with it',
+};
+
+const periodInDescription: Record<CheckoutPeriod, string> = {
+  event: 'One event, up to 5 days in a row',
+  year: '12 months, unlimited events of the licensee',
+  founder: 'Perpetual commercial use of versions released within 12 months of purchase, including 1 year of updates',
+};
+
+export function lineItemDescription(pack: PackId, period: CheckoutPeriod): string {
+  const p = packById(pack);
+  return `${coveredSoftware[p.product]}. No more than ${p.maxServers} game servers set up at any one time, spares included. ${periodInDescription[period]}.`;
 }
 
+/**
+ * Inline price for Stripe Checkout, so no products or prices need to exist in
+ * Stripe. Quantity is always 1: a pack is one fixed price.
+ */
+export function lineItem(req: Pick<CheckoutRequest, 'pack' | 'period'>) {
+  return {
+    price_data: {
+      currency: 'eur' as const,
+      unit_amount: unitAmountCents(req.pack, req.period),
+      tax_behavior: 'exclusive' as const,
+      product_data: {
+        name: lineItemName(req.pack, req.period),
+        description: lineItemDescription(req.pack, req.period),
+      },
+    },
+    quantity: 1,
+  };
+}
+
+export function describeLicense(req: Pick<CheckoutRequest, 'pack' | 'period'>): string {
+  return `Auto Tournament ${lineItemName(req.pack, req.period)}`;
+}
+
+/**
+ * Founder packs are limited to the first 25 buyers or until 31 March 2027. The
+ * limit is not enforced here: the owner counts founder orders (metadata
+ * founder=true) by hand before sending the license and refunds any past it.
+ */
 export function licenseMetadata(req: CheckoutRequest): Record<string, string> {
   return {
-    option: req.option,
+    pack: req.pack,
     period: req.period,
-    seats: String(req.seats),
+    servers: String(req.servers),
     tools: req.tools.join(','),
+    ...(req.period === 'founder' ? { founder: 'true' } : {}),
   };
 }
 
@@ -166,7 +228,7 @@ export function checkoutFormParams(base: string) {
       {
         // Stripe keys must be alphanumeric, so no underscores.
         key: 'eventdates',
-        label: { type: 'custom' as const, custom: 'Event date(s) or yearly start date' },
+        label: { type: 'custom' as const, custom: 'Event date(s), or start date if yearly or founder' },
         type: 'text' as const,
         optional: false,
       },
@@ -179,50 +241,6 @@ export function checkoutFormParams(base: string) {
       },
     ],
   };
-}
-
-/** The fields of a Stripe Price the checkout relies on (structural, so tests need no Stripe). */
-export type PriceLike = {
-  id: string;
-  active: boolean;
-  currency: string;
-  type: string;
-  unit_amount: number | null;
-  billing_scheme?: string;
-  transform_quantity?: unknown;
-  product: string | { name?: unknown; active?: unknown; deleted?: unknown; default_price?: unknown };
-};
-
-/**
- * Picks the Stripe price for an option and period, or null when nothing
- * matches every check: product name exact, product and price active, EUR,
- * one-time, per unit, no quantity transform, and the amount equal to
- * pricing.ts. Prefers the product's default price when several qualify.
- */
-export function pickPrice<P extends PriceLike>(prices: readonly P[], option: CheckoutOption, period: CheckoutPeriod): P | null {
-  const name = stripeProductNames[option][period];
-  const cents = unitAmountCents(option, period);
-  const matches = prices.filter((p) => {
-    const product = p.product;
-    if (typeof product !== 'object' || product === null) return false;
-    return (
-      product.deleted !== true &&
-      product.active === true &&
-      product.name === name &&
-      p.active === true &&
-      p.currency === 'eur' &&
-      p.type === 'one_time' &&
-      p.unit_amount === cents &&
-      (p.billing_scheme === undefined || p.billing_scheme === 'per_unit') &&
-      (p.transform_quantity === undefined || p.transform_quantity === null)
-    );
-  });
-  if (matches.length === 0) return null;
-  const defaultId = (p: P) => {
-    const d = typeof p.product === 'object' ? p.product.default_price : undefined;
-    return typeof d === 'string' ? d : typeof d === 'object' && d !== null && 'id' in d ? (d as { id: unknown }).id : undefined;
-  };
-  return matches.find((p) => defaultId(p) === p.id) ?? matches[0];
 }
 
 /** Client IP behind the Cloudflare tunnel; falls back to the first X-Forwarded-For hop. */

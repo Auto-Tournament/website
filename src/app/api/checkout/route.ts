@@ -5,13 +5,12 @@ import {
   createRateLimiter,
   describeLicense,
   licenseMetadata,
+  lineItem,
   maxBodyBytes,
-  pickPrice,
-  stripeProductNames,
   validateCheckoutRequest,
 } from '@/lib/checkout';
 
-// Starts a Stripe Checkout Session for a commercial license. Server only: the
+// Starts a Stripe Checkout Session for a commercial license pack. Server only: the
 // secret key comes from STRIPE_SECRET_KEY at runtime and never reaches the
 // client. Without it the route answers 503 and the calculator falls back to
 // the email request.
@@ -19,7 +18,6 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const defaultSiteUrl = 'https://autotournament.gg';
-const priceCacheMs = 10 * 60 * 1000;
 
 // Seller details a Norwegian invoice needs (org number), and why no VAT is shown.
 const invoiceFooter =
@@ -29,7 +27,6 @@ const invoiceFooter =
 const allow = createRateLimiter({ limit: 10, windowMs: 60_000 });
 
 let stripeClient: { key: string; client: Stripe } | null = null;
-let priceCache: { at: number; prices: Stripe.Price[] } | null = null;
 
 function reply(status: number, body: Record<string, string>) {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
@@ -40,13 +37,6 @@ function stripeFor(key: string): Stripe {
     stripeClient = { key, client: new Stripe(key, { maxNetworkRetries: 1, timeout: 20_000 }) };
   }
   return stripeClient.client;
-}
-
-async function activePrices(stripe: Stripe): Promise<Stripe.Price[]> {
-  if (priceCache && Date.now() - priceCache.at < priceCacheMs) return priceCache.prices;
-  const prices = await stripe.prices.list({ active: true, expand: ['data.product'], limit: 100 }).autoPagingToArray({ limit: 1000 });
-  priceCache = { at: Date.now(), prices };
-  return prices;
 }
 
 /** Logs what helps find the call in the Stripe dashboard, never the message (it can echo part of the key). */
@@ -144,29 +134,17 @@ export async function POST(request: Request) {
 
   const stripe = stripeFor(secretKey);
 
-  let prices: Stripe.Price[];
-  try {
-    prices = await activePrices(stripe);
-  } catch (err) {
-    logStripeError('listing prices', err);
-    return reply(502, { error: "Couldn't reach the payment provider. Try again, or request the license by email." });
-  }
-
-  const price = pickPrice(prices, order.option, order.period);
-  if (!price) {
-    // Product name only: enough to find it in the dashboard.
-    console.error('[checkout] no matching active price for product', stripeProductNames[order.option][order.period]);
-    priceCache = null;
-    return reply(500, { error: 'Checkout is not set up correctly. Request the license by email instead.' });
-  }
-
   const description = describeLicense(order);
+  // Founder orders carry founder=true. The first-25 / 31 March 2027 limit is not
+  // enforced in code: the owner checks it by hand before sending the license.
   const metadata = licenseMetadata(order);
 
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      line_items: [{ price: price.id, quantity: order.seats }],
+      // Inline price from pricing.ts (PACKS): no products or prices to keep in
+      // sync in Stripe, and the amount never comes from the client.
+      line_items: [lineItem(order)],
       customer_creation: 'always',
       // Business name, B2B confirmation, event details and the terms checkbox.
       ...checkoutFormParams(base),
