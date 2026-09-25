@@ -45,8 +45,6 @@ Session through `POST /api/checkout`. Set these in a `.env` file next to
 - `STRIPE_SECRET_KEY`: a Stripe restricted key with Checkout Sessions write,
   Prices read and Products read. Unset means card checkout is off: the route
   answers 503 and the calculator offers the email request instead.
-- `STRIPE_COMMUNITY_COUPON`: ID of a 50% off coupon for the community
-  discount. Unset means community orders go by email.
 - `SITE_URL`: base URL for Stripe's return links. Defaults to
   `https://autotournament.gg`.
 
@@ -54,6 +52,12 @@ The route checks each Stripe price against `src/components/pricing.ts` before
 using it (product name, active, EUR, one-time, per unit, amount), so change
 prices in both places. After editing `.env`, run `docker compose up -d` to
 restart the container with the new values.
+
+Checkout asks the buyer to accept the Commercial License Terms and Terms of
+Sale (`consent_collection.terms_of_service`). Stripe needs a Terms of service
+URL in Dashboard → Settings → Public details first
+(`https://autotournament.gg/terms`); without it, creating a Checkout Session
+fails and the calculator falls back to the email request.
 
 `yarn test` runs the checkout validation tests.
 

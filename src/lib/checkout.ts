@@ -47,12 +47,11 @@ export type CheckoutRequest = {
   seats: number;
   tools: CheckoutTool[];
   use: 'commercial';
-  community: boolean;
 };
 
 export type Validation = { ok: true; value: CheckoutRequest } | { ok: false; error: string };
 
-const requestKeys = ['option', 'period', 'seats', 'tools', 'use', 'community'] as const;
+const requestKeys = ['option', 'period', 'seats', 'tools', 'use'] as const;
 
 const includes = <T extends string>(list: readonly T[], value: unknown): value is T =>
   typeof value === 'string' && (list as readonly string[]).includes(value);
@@ -73,7 +72,7 @@ export function validateCheckoutRequest(body: unknown): Validation {
     return fail('Unexpected or missing fields.');
   }
 
-  const { option, period, seats, tools, use, community } = obj;
+  const { option, period, seats, tools, use } = obj;
 
   if (!includes(checkoutOptions, option)) return fail('Invalid option.');
   if (!includes(checkoutPeriods, period)) return fail('Invalid period.');
@@ -83,8 +82,7 @@ export function validateCheckoutRequest(body: unknown): Validation {
   if (!Array.isArray(tools) || tools.length === 0 || tools.length > checkoutTools.length) return fail('Invalid tools.');
   if (!tools.every((t) => includes(checkoutTools, t))) return fail('Invalid tools.');
   if (new Set(tools).size !== tools.length) return fail('Invalid tools.');
-  if (use !== 'commercial') return fail('Only commercial use is paid; personal and non-profit use are free.');
-  if (typeof community !== 'boolean') return fail('Invalid community flag.');
+  if (use !== 'commercial') return fail('Only commercial use is paid; non-commercial use and non-profit organizations are free.');
 
   const typedTools = tools as CheckoutTool[];
   const derived = deriveOption(typedTools);
@@ -93,7 +91,7 @@ export function validateCheckoutRequest(body: unknown): Validation {
 
   // Canonical order, so metadata reads the same whatever order the client sent.
   const sorted = checkoutTools.filter((t) => typedTools.includes(t));
-  return { ok: true, value: { option: derived, period, seats, tools: sorted, use, community } };
+  return { ok: true, value: { option: derived, period, seats, tools: sorted, use } };
 }
 
 /** Exact Stripe product names, one active one-time EUR per-unit price each. */
@@ -118,7 +116,68 @@ export function licenseMetadata(req: CheckoutRequest): Record<string, string> {
     period: req.period,
     seats: String(req.seats),
     tools: req.tools.join(','),
-    community: String(req.community),
+  };
+}
+
+/** Stripe Checkout allows at most 3 custom fields, each label at most 50 characters. */
+export const stripeMaxCustomFields = 3;
+export const stripeMaxLabelLength = 50;
+
+/**
+ * The B2B confirmation. Stripe has no checkbox custom field, so it is a
+ * required dropdown with one option: the buyer can't pay without choosing it.
+ */
+export const businessBuyerField = {
+  key: 'buyertype',
+  label: "I'm buying for a business, not as a consumer",
+  optionLabel: 'Yes, for a business or organization',
+  optionValue: 'business',
+} as const;
+
+/**
+ * The parts of the Checkout Session that set up the form: who the buyer is,
+ * the event, and acceptance of the terms. Structural types only (no Stripe
+ * import); the route passes the result straight to Stripe.
+ *
+ * - The business name is Stripe's own field, made required. It isn't a custom
+ *   "Company name" field too, because custom fields are capped at 3.
+ * - Terms acceptance needs the Terms of service URL set in the Stripe
+ *   Dashboard (Settings → Public details), or session creation fails.
+ */
+export function checkoutFormParams(base: string) {
+  return {
+    billing_address_collection: 'required' as const,
+    tax_id_collection: { enabled: true },
+    name_collection: { business: { enabled: true, optional: false } },
+    consent_collection: { terms_of_service: 'required' as const },
+    custom_text: {
+      terms_of_service_acceptance: {
+        message: `I accept the [Commercial License Terms](${base}/terms) and the [Terms of Sale](${base}/terms-of-sale).`,
+      },
+    },
+    custom_fields: [
+      {
+        key: businessBuyerField.key,
+        label: { type: 'custom' as const, custom: businessBuyerField.label },
+        type: 'dropdown' as const,
+        dropdown: { options: [{ label: businessBuyerField.optionLabel, value: businessBuyerField.optionValue }] },
+        optional: false,
+      },
+      {
+        // Stripe keys must be alphanumeric, so no underscores.
+        key: 'eventdates',
+        label: { type: 'custom' as const, custom: 'Event date(s) or yearly start date' },
+        type: 'text' as const,
+        optional: false,
+      },
+      {
+        // Paid operators must name the event or client they work for.
+        key: 'eventname',
+        label: { type: 'custom' as const, custom: 'Event or client name, and website' },
+        type: 'text' as const,
+        optional: false,
+      },
+    ],
   };
 }
 

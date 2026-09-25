@@ -10,4 +10,10 @@ export const links = {
   discord: 'https://discord.gg/n7gHYau7aW',
   licensing: 'https://docs.autotournament.gg/reference/licensing',
   pricing: '/pricing',
+  terms: '/terms',
+  termsOfSale: '/terms-of-sale',
+  privacy: '/privacy',
+  polyform: 'https://polyformproject.org/licenses/noncommercial/1.0.0',
+  datatilsynet: 'https://www.datatilsynet.no',
+  stripePrivacy: 'https://stripe.com/privacy',
 };

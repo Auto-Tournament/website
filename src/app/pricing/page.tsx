@@ -8,8 +8,9 @@ import { tokens } from '@/theme/tokens';
 import { Reveal } from '@/components/ui';
 import { Footer, Nav } from '@/components/sections';
 import { links } from '@/components/links';
-import { communityEventHelp, pricingTable } from '@/components/pricing';
+import { earnMoneyRule, freeOrganizations, freeUseHelp, pricingTable, seatRule, vatNote } from '@/components/pricing';
 import { PriceCalculator } from '@/components/PriceCalculator';
+import { FreeLanConfirmation } from '@/components/FreeLanConfirmation';
 
 const { color, radius } = tokens;
 
@@ -46,9 +47,14 @@ function Section({ id, title: heading, lede, children }: { id?: string; title: s
 
 const examples: { scenario: string; verdict: string; why: string }[] = [
   {
+    scenario: 'A volunteer-run LAN charges entry. All entry fees and sponsor money go back into the event, and nobody is paid or takes profit.',
+    verdict: 'Free',
+    why: 'Nobody earns money from it, so it is non-commercial.',
+  },
+  {
     scenario: 'A school LAN with free entry.',
     verdict: 'Free',
-    why: 'Non-commercial use: nobody pays to take part.',
+    why: 'Schools are on the license’s list of organizations that use it free, even when they charge entry.',
   },
   {
     scenario: 'A freelancer is paid a flat fee to run 8 CS2 servers at one LAN, using only the MIT-licensed MatchZy Enhanced plugin.',
@@ -56,14 +62,19 @@ const examples: { scenario: string; verdict: string; why: string }[] = [
     why: 'MatchZy Enhanced is MIT and free for any use, including paid work.',
   },
   {
-    scenario: 'A freelancer uses CS2 Server Manager to install and run MatchZy Enhanced on 8 servers (6 + 2 spares) at a paid LAN.',
+    scenario: 'A freelancer uses CS2 Server Manager to install and run MatchZy Enhanced on 8 servers (6 + 2 spares) at a LAN run for profit.',
     verdict: '8 × €3 = €24',
-    why: 'Every server set up is a seat, spares included, at €3 per seat for one event. CS2 Server Manager needs a license for commercial use, even though MatchZy Enhanced itself is MIT.',
+    why: 'Every server set up is a seat, spares included, at €3 per seat for one event. CS2 Server Manager needs a license for commercial use, even though MatchZy Enhanced itself is MIT. Either the freelancer or the LAN can buy it: a license covers the named licensee and its contractors, for the named event.',
   },
   {
-    scenario: 'A paid-entry LAN runs the full platform on 32 servers plus 2 spares, one 4-day event.',
+    scenario: 'A freelancer is paid to run 8 CS2 servers with CS2 Server Manager at a volunteer LAN where nobody else earns money.',
+    verdict: '8 × €3 = €24',
+    why: 'The freelancer earns money from it, so the freelancer pays full price, even though the event itself is free.',
+  },
+  {
+    scenario: 'A LAN run for profit uses the full platform on 32 servers plus 2 spares, one 4-day event.',
     verdict: '34 × €5 = €170',
-    why: 'Paid entry is commercial use, and the full platform is €5 per seat for one event.',
+    why: 'The organizer earns money from it, so it is commercial use, and the full platform is €5 per seat for one event.',
   },
   {
     scenario: 'An esports org runs events all year on 10 servers with the platform.',
@@ -91,7 +102,7 @@ const licenseGroups: {
       { name: 'Auto Tournament platform', href: 'https://github.com/Auto-Tournament/auto-tournament', note: '3.0 and later' },
       { name: 'CS2 Server Manager', href: 'https://github.com/Auto-Tournament/cs2-server-manager' },
       { name: 'Ready Up', href: 'https://github.com/Auto-Tournament/ready-up', note: 'the new native CS2 plugin' },
-      { name: 'Game packs', href: 'https://github.com/Auto-Tournament/packs', note: 'packs published before 24 September 2026 stay MIT' },
+      { name: 'Game packs', href: 'https://github.com/Auto-Tournament/packs', note: 'covered by a Platform license; packs published before 24 September 2026 stay MIT' },
     ],
   },
   {
@@ -116,7 +127,19 @@ const faq: { q: string; a: React.ReactNode }[] = [
   },
   {
     q: 'Do spare servers count?',
-    a: 'Yes. Every game server you set up for the event is a seat, even a spare that never gets used.',
+    a: 'Yes. A license with N seats allows no more than N game servers set up at any one time during the period, spares included, even a spare that never gets used.',
+  },
+  {
+    q: 'Do game packs need their own license?',
+    a: 'No. A Platform license covers the game packs used with it. There is no separate price for packs.',
+  },
+  {
+    q: 'Who does the license cover?',
+    a: 'The named licensee and its contractors, for the named event (or, for yearly licenses, the licensee’s own events). A freelancer working on someone else’s event is covered by that organizer’s license, or needs one that names the event.',
+  },
+  {
+    q: 'I’m paid to run servers at a volunteer event. Do I need a license?',
+    a: 'Yes, at the full price. You earn money from it, so your use is commercial, even when the event itself is free.',
   },
   {
     q: 'Do players or teams need a license?',
@@ -127,18 +150,12 @@ const faq: { q: string; a: React.ReactNode }[] = [
     a: 'The Auto Tournament platform up to 2.4.15 (released as MatchZy Auto Tournament) is MIT licensed and stays that way. Free for any use.',
   },
   {
-    q: 'Who counts as a community event?',
-    a: communityEventHelp,
+    q: 'When is an event free?',
+    a: `${freeUseHelp} ${freeOrganizations} ${earnMoneyRule}`,
   },
   {
     q: 'Using Auto Tournament commercially without a license?',
-    a: (
-      <>
-        Get in touch within 30 days of our notice and we&apos;ll sort it out with a back-dated license at the normal price, plus 50%, so paying late always
-        costs more than paying up front. If it isn&apos;t sorted within 32 days, as the PolyForm Noncommercial license allows, the license ends and we may take
-        action for copyright infringement.
-      </>
-    ),
+    a: "If we notify you in writing that your use is commercial and unlicensed, PolyForm gives you 32 days (first notice only) to come into compliance: stop the commercial use or buy a license, and put right past use. To settle past use, we offer a back-dated license at the normal price plus 50%. If you don't come into compliance within 32 days, all your PolyForm licenses end and we may claim compensation under the Norwegian Copyright Act (åndsverkloven § 81).",
   },
 ];
 
@@ -156,8 +173,8 @@ export default function Pricing() {
               </Box>
             </Typography>
             <Typography sx={{ mt: 3, maxWidth: '52ch', color: color.ink2, fontSize: '1.125rem' }}>
-              Auto Tournament is free for non-commercial use: friends, clubs, schools, communities and free-entry events. Running it for money is priced per game
-              server seat. Prices below are in EUR, excluding VAT.
+              Auto Tournament is free when nobody earns money from it: personal and hobby use, events where all the money goes back into the event, and charities,
+              schools and public bodies. If you earn money from it, you pay per game server seat. Prices below are in EUR. {vatNote}.
             </Typography>
             <Typography sx={{ mt: 2, maxWidth: '52ch', color: color.muted, fontSize: '0.9375rem' }}>
               This is a first version. If a price doesn&apos;t fit your case, email us and we&apos;ll work it out.
@@ -176,7 +193,7 @@ export default function Pricing() {
         <Section
           id="pricing-table"
           title="What you pay"
-          lede="A seat is one game server you set up for the event, spares included, even if it's never used. Prices are in EUR, excluding VAT."
+          lede={`A seat is one game server. A license with N seats allows no more than N game servers set up at any one time during the period, spares included. Prices are in EUR. ${vatNote}.`}
         >
           <Box sx={{ overflowX: 'auto', border: `1px solid ${color.rule}`, borderRadius: `${radius.lg}px` }}>
             <Box
@@ -197,7 +214,7 @@ export default function Pricing() {
               <thead>
                 <tr>
                   <th scope="col">You use</th>
-                  <th scope="col">Personal, non-commercial or non-profit organization</th>
+                  <th scope="col">Non-commercial (nobody earns money) or non-profit organization</th>
                   <th scope="col">Commercial, per event (up to 5 days)</th>
                   <th scope="col">Commercial, yearly (unlimited events)</th>
                 </tr>
@@ -217,15 +234,21 @@ export default function Pricing() {
 
           <Box component="ul" sx={{ m: 0, mt: 3, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2, fontSize: '0.9375rem' }}>
             {[
-              'A seat is every game server you set up for the event, spares included.',
+              `${seatRule} N is your number of seats.`,
+              'A Platform license covers the game packs used with it. There is no separate price for packs.',
               'Using CS2 Server Manager and Ready Up together on the same seat counts once: €3, not €6.',
               'What counts is what you run: CS2 Server Manager and Ready Up each need a license for commercial use; MatchZy Enhanced never does. CS2 Server Manager with MatchZy Enhanced, Ready Up on its own, or CS2 Server Manager installing Ready Up are all €3 per seat, counted once.',
-              'Community events that only cover costs get 50% off; non-profit organizations are free.',
+              `${freeUseHelp} ${freeOrganizations}`,
+              earnMoneyRule,
             ].map((item) => (
               <Box key={item} component="li" sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, '&::before': { content: '""', width: 6, height: 6, mt: '0.55em', borderRadius: '50%', bgcolor: color.accent, flex: 'none' } }}>
                 {item}
               </Box>
             ))}
+          </Box>
+
+          <Box sx={{ mt: 3 }}>
+            <FreeLanConfirmation />
           </Box>
 
           <Typography sx={{ mt: 3, color: color.ink2, fontSize: '0.9375rem' }}>
@@ -270,15 +293,15 @@ export default function Pricing() {
         <Section
           id="commercial-use"
           title="What counts as commercial use"
-          lede="Any of the following on the platform, CS2 Server Manager, Ready Up or a game pack needs a license:"
+          lede="If you earn money from it, you pay full price. Any of the following with the platform, CS2 Server Manager, Ready Up or a game pack needs a license. A Platform license covers the game packs used with it."
         >
           <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2 }}>
             {[
               'Paid hosting.',
               'Selling or reselling Auto Tournament.',
-              'Paid-entry events (non-profit organizations are free; community events that only cover costs get 50% off).',
+              'Events where the organizer makes a profit.',
               'Use inside a business.',
-              'Being paid to set up or operate servers or tournaments for someone else, even for a flat fee.',
+              'Being paid to set up or operate servers or tournaments for someone else, even for a flat fee, and even when that event is free.',
             ].map((item) => (
               <Box key={item} component="li" sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, '&::before': { content: '""', width: 6, height: 6, mt: '0.55em', borderRadius: '50%', bgcolor: color.accent, flex: 'none' } }}>
                 {item}
@@ -317,17 +340,16 @@ export default function Pricing() {
         <Section
           id="what-we-need"
           title="What we need from you"
-          lede="A license names who holds it, so we verify every buyer before sending the license confirmation."
+          lede="Licenses are sold to businesses and organizations, including clubs and associations, not to consumers. A license names who holds it, so we verify every buyer before sending the license confirmation."
         >
           <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2 }}>
             {[
-              'Your full name, or the company’s legal name',
-              'Organization number and VAT ID (companies)',
+              'The legal name of the company or organization, and your name',
+              'Organization number, and VAT ID if it has one',
               'Country and billing address',
               'Contact email and phone',
-              'The event: name, date(s), venue or city, and website or social link',
+              'The event: name, date(s), venue or city, and website or social link. Paid operators: the event or client you work for',
               'Number of seats (servers, spares included) and which tools you’ll run',
-              'For the community discount: a short note on how the entry fee is used',
             ].map((item) => (
               <Box key={item} component="li" sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, '&::before': { content: '""', width: 6, height: 6, mt: '0.55em', borderRadius: '50%', bgcolor: color.accent, flex: 'none' } }}>
                 {item}
@@ -354,8 +376,18 @@ export default function Pricing() {
         >
           <Box component="ol" sx={{ m: 0, p: 0, pl: 2.5, color: color.ink2, display: 'grid', gap: 1.5 }}>
             <li>Pay by card with the calculator above, or ask for an invoice by email. Either way you get an invoice.</li>
-            <li>We verify the details you sent us.</li>
-            <li>You get a written license confirmation naming the licensee, tools, seats and period.</li>
+            <li>
+              By paying you accept the{' '}
+              <Box component="a" href={links.terms} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
+                Commercial License Terms
+              </Box>{' '}
+              and{' '}
+              <Box component="a" href={links.termsOfSale} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
+                Terms of Sale
+              </Box>
+              .
+            </li>
+            <li>We verify the details you sent us and confirm your license by email within 2 working days.</li>
           </Box>
           <Typography sx={{ mt: 3, color: color.ink2 }}>
             Buy it before the event. Not sure which option fits? Email and ask, no charge for asking.
