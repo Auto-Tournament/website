@@ -177,7 +177,7 @@ export default function Pricing() {
               schools and public bodies. If you earn money from it, you pay per game server seat. Prices below are in EUR. {vatNote}.
             </Typography>
             <Typography sx={{ mt: 2, maxWidth: '52ch', color: color.muted, fontSize: '0.9375rem' }}>
-              This is a first version. If a price doesn&apos;t fit your case, email us and we&apos;ll work it out.
+              Pricing v1, valid from 25 September 2026. If a price doesn&apos;t fit your case, email us and we&apos;ll work it out.
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 4 }}>
               <Button variant="contained" href={mailHref}>
