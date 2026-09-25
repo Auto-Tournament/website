@@ -26,6 +26,7 @@ import {
   type UseType,
 } from '@/components/pricing';
 import { links } from '@/components/links';
+import { FreeLanConfirmation } from '@/components/FreeLanConfirmation';
 import { checkoutToolFor, deriveOption, maxSeats, type CheckoutOption, type CheckoutRequest } from '@/lib/checkout';
 
 const { color, radius } = tokens;
@@ -419,6 +420,12 @@ export function PriceCalculator() {
 
         {quote.kind === 'free' && (
           <Typography sx={{ fontWeight: 600 }}>No license needed</Typography>
+        )}
+
+        {quote.kind === 'free' && useType === 'noncommercial' && (
+          <Box sx={{ mt: 1.5 }}>
+            <FreeLanConfirmation compact />
+          </Box>
         )}
 
         {quote.kind === 'nonprofit-free' && (

@@ -184,10 +184,11 @@ describe('checkoutFormParams', () => {
     ]);
   });
 
-  it('keeps the event fields: dates required, name optional', () => {
+  it('requires the event dates and the event or client name', () => {
     const byKey = Object.fromEntries(params.custom_fields.map((f) => [f.key, f]));
     expect(byKey.eventdates?.optional).toBe(false);
-    expect(byKey.eventname?.optional).toBe(true);
+    expect(byKey.eventname?.optional).toBe(false);
+    expect(byKey.eventname?.label.custom).toMatch(/client/);
   });
 
   it('stays within Stripe limits: 3 fields, 50-character labels, alphanumeric unique keys', () => {

@@ -171,10 +171,11 @@ export function checkoutFormParams(base: string) {
         optional: false,
       },
       {
+        // Paid operators must name the event or client they work for.
         key: 'eventname',
-        label: { type: 'custom' as const, custom: 'Event name and website' },
+        label: { type: 'custom' as const, custom: 'Event or client name, and website' },
         type: 'text' as const,
-        optional: true,
+        optional: false,
       },
     ],
   };

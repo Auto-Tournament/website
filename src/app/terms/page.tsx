@@ -100,7 +100,12 @@ export default function Terms() {
       </p>
       <p>
         No license is needed when nobody earns money from it: all entry fees and sponsor money go back into the event, and no organizer, volunteer or helper is
-        paid or takes profit. Personal and hobby use is free under PolyForm&apos;s personal-use terms.
+        paid or takes profit. Personal and hobby use is free under PolyForm&apos;s personal-use terms. Organizers of such events can ask us for a free written
+        confirmation; it is optional.
+      </p>
+      <p>
+        Paid operators must name the event or client they work for when buying. We may contact organizers of larger events (for example 20+ servers, ticket
+        sales or sponsors) to ask whether the use is commercial.
       </p>
       <p>
         Charities, schools and universities, public research, public safety or health and environmental protection organizations, and government bodies need no

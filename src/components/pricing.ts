@@ -32,6 +32,26 @@ export const freeOrganizations =
 export const earnMoneyRule =
   'If you earn money from it, you pay full price: an organizer who makes a profit, any business, or a paid operator or contractor, even one hired by a zero-profit event.';
 
+/**
+ * The optional free LAN confirmation. PolyForm already allows non-commercial
+ * use, so this is only for organizers who want it in writing.
+ */
+export function freeLanMailto(email: string): string {
+  const subject = 'Free LAN confirmation: <event>';
+  const body = [
+    "Hi, we're running a zero-profit LAN and would like a free confirmation in writing.",
+    '',
+    'Event name: ',
+    'Date(s): ',
+    'Website or social link: ',
+    'Organizer (name / club): ',
+    'Roughly how many servers: ',
+    'How entry fees and sponsor money are used: ',
+    'Is anyone paid (organizers, volunteers, helpers, operators)? ',
+  ].join('\n');
+  return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
 /** What a seat is. Same words in the terms, the docs and the license confirmation. */
 export const seatRule = 'No more than N game servers set up at any one time during the period, spares included.';
 

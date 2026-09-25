@@ -10,6 +10,7 @@ import { Footer, Nav } from '@/components/sections';
 import { links } from '@/components/links';
 import { earnMoneyRule, freeOrganizations, freeUseHelp, pricingTable, seatRule, vatNote } from '@/components/pricing';
 import { PriceCalculator } from '@/components/PriceCalculator';
+import { FreeLanConfirmation } from '@/components/FreeLanConfirmation';
 
 const { color, radius } = tokens;
 
@@ -246,6 +247,10 @@ export default function Pricing() {
             ))}
           </Box>
 
+          <Box sx={{ mt: 3 }}>
+            <FreeLanConfirmation />
+          </Box>
+
           <Typography sx={{ mt: 3, color: color.ink2, fontSize: '0.9375rem' }}>
             32 servers + 2 spares at one four-day event = 34 seats → €102 with CS2 Server Manager and/or Ready Up, or €170 with the platform.
           </Typography>
@@ -343,7 +348,7 @@ export default function Pricing() {
               'Organization number, and VAT ID if it has one',
               'Country and billing address',
               'Contact email and phone',
-              'The event: name, date(s), venue or city, and website or social link',
+              'The event: name, date(s), venue or city, and website or social link. Paid operators: the event or client you work for',
               'Number of seats (servers, spares included) and which tools you’ll run',
             ].map((item) => (
               <Box key={item} component="li" sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, '&::before': { content: '""', width: 6, height: 6, mt: '0.55em', borderRadius: '50%', bgcolor: color.accent, flex: 'none' } }}>
