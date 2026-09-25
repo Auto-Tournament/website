@@ -17,10 +17,25 @@ export const periodLabels: Record<Period, string> = {
   yearly: 'Yearly (unlimited events)',
 };
 
-export const communityDiscount = 0.5;
+/**
+ * The rule behind every price: if you earn money from it, you pay full price.
+ * Shown in the calculator's "?" next to the free option.
+ */
+export const freeUseHelp =
+  'Free when nobody earns money from it: all entry fees and sponsor money go back into the event, and no organizer, volunteer or helper is paid or takes profit.';
 
-export const communityEventHelp =
-  "For events run by individuals, clubs or informal groups where the entry fee only covers costs (venue, hardware, prizes) and nobody takes a profit. Not for companies, paid organizers, or events that make money. Registered non-profits (schools, charities, public bodies) don't need this: they're free. We may ask for the event's budget or website to confirm.";
+/** The organizations PolyForm Noncommercial 1.0.0 lets use the software free, in plain words. */
+export const freeOrganizations =
+  'Charities, schools and universities, public research, public safety or health and environmental protection organizations, and government bodies are free, even when they charge entry.';
+
+/** Who pays: anyone who earns money from it, at the full price. */
+export const earnMoneyRule =
+  'If you earn money from it, you pay full price: an organizer who makes a profit, any business, or a paid operator or contractor, even one hired by a zero-profit event.';
+
+/** What a seat is. Same words in the terms, the docs and the license confirmation. */
+export const seatRule = 'No more than N game servers set up at any one time during the period, spares included.';
+
+export const vatNote = 'No VAT added (seller not VAT-registered)';
 
 /** Tools someone ticks in "What will you run?". */
 export type ToolOption = 'matchzy' | 'serverManager' | 'readyUp' | 'platform';
@@ -35,15 +50,15 @@ export const toolLabels: Record<ToolOption, string> = {
 export const toolOrder: ToolOption[] = ['matchzy', 'serverManager', 'readyUp', 'platform'];
 
 /** Who the license is for. */
-export type UseType = 'commercial' | 'personal' | 'nonprofit';
+export type UseType = 'commercial' | 'noncommercial' | 'nonprofit';
 
 export const useTypeLabels: Record<UseType, string> = {
-  commercial: 'Commercial (paid events, paid work, business)',
-  personal: 'Personal or non-commercial',
-  nonprofit: 'Non-profit organization (school, charity, public body)',
+  commercial: 'Commercial (someone earns money)',
+  noncommercial: 'Non-commercial: nobody earns money (free)',
+  nonprofit: 'Non-profit organization (free)',
 };
 
-export const useTypeOrder: UseType[] = ['commercial', 'personal', 'nonprofit'];
+export const useTypeOrder: UseType[] = ['commercial', 'noncommercial', 'nonprofit'];
 
 export type PricingRow = {
   use: string;
@@ -66,7 +81,7 @@ export const pricingTable: PricingRow[] = [
     yearly: `€${seatPrices.servers.yearly} per seat`,
   },
   {
-    use: 'Auto Tournament platform (includes the row above)',
+    use: 'Auto Tournament platform, with the game packs used with it (includes the row above)',
     personal: 'Free',
     event: `€${seatPrices.platform.event} per seat`,
     yearly: `€${seatPrices.platform.yearly} per seat`,

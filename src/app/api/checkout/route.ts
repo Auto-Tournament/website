@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import {
+  checkoutFormParams,
   clientIp,
   createRateLimiter,
   describeLicense,
@@ -130,12 +131,6 @@ export async function POST(request: Request) {
     return reply(503, { error: "Card payment isn't available right now. Request the license by email instead." });
   }
 
-  let coupon: string | undefined;
-  if (order.community) {
-    coupon = process.env.STRIPE_COMMUNITY_COUPON?.trim();
-    if (!coupon) return reply(400, { error: 'Community discount needs a quick check first: email us' });
-  }
-
   const base = siteUrl();
   if (!base) {
     console.error('[checkout] SITE_URL is not a valid http(s) URL');
@@ -167,30 +162,13 @@ export async function POST(request: Request) {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [{ price: price.id, quantity: order.seats }],
-      billing_address_collection: 'required',
-      tax_id_collection: { enabled: true },
       customer_creation: 'always',
-      name_collection: { business: { enabled: true, optional: false } },
-      custom_fields: [
-        {
-          // Stripe keys must be alphanumeric, so no underscores.
-          key: 'eventdates',
-          label: { type: 'custom', custom: 'Event date(s) or yearly start date' },
-          type: 'text',
-          optional: false,
-        },
-        {
-          key: 'eventname',
-          label: { type: 'custom', custom: 'Event name and website' },
-          type: 'text',
-          optional: true,
-        },
-      ],
+      // Business name, B2B confirmation, event details and the terms checkbox.
+      ...checkoutFormParams(base),
       metadata,
       payment_intent_data: { description, metadata },
       invoice_creation: { enabled: true, invoice_data: { description, metadata } },
-      // Stripe rejects promotion codes and a preset discount together.
-      ...(coupon ? { discounts: [{ coupon }] } : { allow_promotion_codes: true }),
+      allow_promotion_codes: true,
       success_url: `${base}/pricing/thanks?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/pricing#calculator`,
     });

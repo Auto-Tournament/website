@@ -16,6 +16,7 @@ import { ProfileCard } from './cards/ProfileCard';
 import { AtIcon } from './AtIcon';
 import { ThemePicker } from './ThemePicker';
 import { links } from './links';
+import { seller } from './seller';
 
 const { color, radius } = tokens;
 
@@ -410,6 +411,15 @@ export function Footer() {
             Free for non-commercial use · Licensing
           </Box>
         </Box>
+      </Box>
+      <Box
+        component="p"
+        data-testid="seller"
+        sx={{ m: 0, mt: 3, color: color.muted, fontSize: '0.8125rem', lineHeight: 1.6, '& a': { color: 'inherit', '&:hover': { color: color.ink } } }}
+      >
+        Sold by {seller.name} ({seller.form}), org. nr. {seller.orgNumber}, {seller.address} ·{' '}
+        <a href={`mailto:${seller.email}`}>{seller.email}</a> · {seller.vatNote} · <a href={links.terms}>Terms</a> ·{' '}
+        <a href={links.termsOfSale}>Terms of sale</a> · <a href={links.privacy}>Privacy</a>
       </Box>
     </Container>
   );

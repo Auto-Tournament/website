@@ -13,18 +13,19 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
 import {
-  communityDiscount,
-  communityEventHelp,
+  freeUseHelp,
   periodLabels,
   seatPrices,
   toolLabels,
   toolOrder,
   useTypeLabels,
   useTypeOrder,
+  vatNote,
   type Period,
   type ToolOption,
   type UseType,
 } from '@/components/pricing';
+import { links } from '@/components/links';
 import { checkoutToolFor, deriveOption, maxSeats, type CheckoutOption, type CheckoutRequest } from '@/lib/checkout';
 
 const { color, radius } = tokens;
@@ -40,8 +41,8 @@ type Quote =
   | { kind: 'price'; option: CheckoutOption; pricePerSeat: number; reason: string };
 
 function quoteFor(useType: UseType, tools: Set<ToolOption>, period: Period): Quote {
-  if (useType === 'personal') {
-    return { kind: 'free', reason: 'Free: personal and non-commercial use' };
+  if (useType === 'noncommercial') {
+    return { kind: 'free', reason: 'Free: nobody earns money from it, so it is non-commercial' };
   }
   if (useType === 'nonprofit') {
     return { kind: 'nonprofit-free' };
@@ -85,19 +86,15 @@ export function PriceCalculator() {
   const [useType, setUseType] = useState<UseType>('commercial');
   const [period, setPeriod] = useState<Period>('event');
   const [seatsInput, setSeatsInput] = useState('10');
-  const [community, setCommunity] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  // Card checkout switched off after the server said so: for everything (503,
-  // no Stripe key) or only with the community discount (no coupon set yet).
+  // Card checkout switched off after the server said so (503, no Stripe key).
   const [cardOff, setCardOff] = useState(false);
-  const [communityCardOff, setCommunityCardOff] = useState(false);
 
   const toolsId = useId();
   const useTypeId = useId();
   const periodId = useId();
   const seatsId = useId();
-  const communityId = useId();
   const helpId = useId();
 
   const seats = Number.parseInt(seatsInput, 10);
@@ -105,14 +102,12 @@ export function PriceCalculator() {
 
   const quote = useMemo(() => quoteFor(useType, tools, period), [useType, tools, period]);
 
-  const subtotal = quote.kind === 'price' && seatsValid ? seats * quote.pricePerSeat : 0;
-  const discountAmount = quote.kind === 'price' && community ? subtotal * communityDiscount : 0;
-  const total = subtotal - discountAmount;
+  const total = quote.kind === 'price' && seatsValid ? seats * quote.pricePerSeat : 0;
 
   // A new selection clears the last checkout error.
   useEffect(() => {
     setCheckoutError(null);
-  }, [tools, useType, period, seatsInput, community]);
+  }, [tools, useType, period, seatsInput]);
 
   // Coming back from Stripe with the back button can restore this page from
   // the bfcache with the button still in its loading state.
@@ -125,7 +120,7 @@ export function PriceCalculator() {
   }, []);
 
   const cardAvailable =
-    quote.kind === 'price' && seatsValid && seats <= maxSeats && useType === 'commercial' && !cardOff && !(community && communityCardOff);
+    quote.kind === 'price' && seatsValid && seats <= maxSeats && useType === 'commercial' && !cardOff;
 
   const startCheckout = async () => {
     if (quote.kind !== 'price' || !cardAvailable || checkoutLoading) return;
@@ -135,7 +130,6 @@ export function PriceCalculator() {
       seats,
       tools: toolOrder.filter((t) => tools.has(t)).map((t) => checkoutToolFor[t]),
       use: 'commercial',
-      community,
     };
     setCheckoutLoading(true);
     setCheckoutError(null);
@@ -159,9 +153,6 @@ export function PriceCalculator() {
       if (res.status === 503) {
         setCardOff(true);
         setCheckoutError("Card payment isn't available right now. Request the license by email instead.");
-      } else if (res.status === 400 && community && field('error')?.startsWith('Community discount')) {
-        setCommunityCardOff(true);
-        setCheckoutError('Community discount needs a quick check first: email us with the request below.');
       } else if (res.status === 400 || res.status === 413 || res.status === 429) {
         setCheckoutError(field('error') ?? 'Something went wrong. Request the license by email instead.');
       } else {
@@ -193,8 +184,7 @@ export function PriceCalculator() {
       `Use: ${useLabel}`,
       `Period: ${periodLabel}`,
       `Seats: ${seats}`,
-      `Community discount: ${community ? 'yes (50%)' : 'no'}`,
-      `Total: ${currency.format(total)} excl. VAT`,
+      `Total: ${currency.format(total)}. ${vatNote}`,
       '',
       'Name / company: ',
       'Org number / VAT ID: ',
@@ -204,10 +194,9 @@ export function PriceCalculator() {
       'Event date(s): ',
       'Venue or city: ',
       'Event website or social link: ',
-      ...(community ? ['How the entry fee is used (community discount only): '] : []),
     ];
     return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
-  }, [quote, tools, useType, period, seats, seatsValid, community, total]);
+  }, [quote, tools, useType, period, seats, seatsValid, total]);
 
   // "Need help?" mail: works in every state, pre-filled with what's chosen so far.
   const helpHref = useMemo(() => {
@@ -219,21 +208,20 @@ export function PriceCalculator() {
           ? `${seats} seats`
           : '';
     const subject = detail ? `Help with a license: ${detail}` : 'Help with a license';
-    const useLabel =
-      useType === 'nonprofit' ? 'non-profit' : useType === 'personal' ? 'personal' : community ? 'community event' : 'commercial';
+    const useLabel = useTypeLabels[useType];
     const lines = [
       "Hi, I'd like help working out the right license for my setup.",
       '',
       'Event (name, dates, website): ',
       `Servers, spares included: ${seatsValid ? seats : ''}`,
       `Tools (MatchZy Enhanced, CS2 Server Manager, Ready Up, platform): ${chosenTools.join(', ')}`,
-      `Commercial, community event or non-profit: ${useLabel}`,
+      `Use: ${useLabel}`,
       'Company name: ',
       'Org number / VAT ID: ',
       'Billing address: ',
     ];
     return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
-  }, [quote, tools, useType, period, seats, seatsValid, community]);
+  }, [quote, tools, useType, period, seats, seatsValid]);
 
   return (
     <Box
@@ -288,9 +276,34 @@ export function PriceCalculator() {
             value={useType}
             onChange={(e) => setUseType(e.target.value as UseType)}
           >
-            {useTypeOrder.map((ut) => (
-              <FormControlLabel key={ut} value={ut} control={<Radio />} label={useTypeLabels[ut]} />
-            ))}
+            {useTypeOrder.map((ut) =>
+              ut === 'noncommercial' ? (
+                <Box key={ut} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <FormControlLabel value={ut} control={<Radio />} label={useTypeLabels[ut]} sx={{ mr: 0 }} />
+                  <Tooltip title={freeUseHelp} enterTouchDelay={0} leaveTouchDelay={6000} arrow placement="top">
+                    <IconButton
+                      aria-label="When is it free?"
+                      size="small"
+                      sx={{
+                        width: 20,
+                        height: 20,
+                        p: 0,
+                        flex: 'none',
+                        border: `1px solid ${color.rule}`,
+                        color: color.muted,
+                        fontSize: '0.6875rem',
+                        fontWeight: 700,
+                        lineHeight: 1,
+                      }}
+                    >
+                      ?
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              ) : (
+                <FormControlLabel key={ut} value={ut} control={<Radio />} label={useTypeLabels[ut]} />
+              ),
+            )}
           </RadioGroup>
         </Box>
       </Box>
@@ -317,7 +330,7 @@ export function PriceCalculator() {
             error={!seatsValid}
             helperText={
               seatsValid
-                ? 'Every game server you set up, spares included.'
+                ? 'Game servers set up at any one time, spares included.'
                 : 'Enter a whole number of 1 or more.'
             }
             size="small"
@@ -325,40 +338,6 @@ export function PriceCalculator() {
           />
         </Box>
       </Box>
-
-      {useType === 'commercial' && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                id={communityId}
-                checked={community}
-                onChange={(e) => setCommunity(e.target.checked)}
-              />
-            }
-            label="Community event, entry only covers costs (50% off)"
-            sx={{ mr: 0 }}
-          />
-          <Tooltip title={communityEventHelp} enterTouchDelay={0} leaveTouchDelay={4000} arrow placement="top">
-            <IconButton
-              aria-label="Who counts as a community event?"
-              size="small"
-              sx={{
-                width: 20,
-                height: 20,
-                p: 0,
-                border: `1px solid ${color.rule}`,
-                color: color.muted,
-                fontSize: '0.6875rem',
-                fontWeight: 700,
-                lineHeight: 1,
-              }}
-            >
-              ?
-            </IconButton>
-          </Tooltip>
-        </Box>
-      )}
 
       <Box
         role="status"
@@ -382,7 +361,8 @@ export function PriceCalculator() {
 
         {quote.kind === 'nonprofit-free' && (
           <Typography sx={{ fontWeight: 700, fontSize: '1.125rem' }}>
-            Free: non-profit organizations are covered by the license
+            Free: charities, schools and universities, public research, public safety or health and environmental protection organizations, and government bodies
+            are covered by the license, even when they charge entry
           </Typography>
         )}
 
@@ -392,15 +372,10 @@ export function PriceCalculator() {
             {seatsValid ? (
               <>
                 <Typography sx={{ color: color.ink2 }}>
-                  {seats} seats × {currency.format(quote.pricePerSeat)} = {currency.format(subtotal)}
+                  {seats} seats × {currency.format(quote.pricePerSeat)}
                 </Typography>
-                {community && (
-                  <Typography sx={{ color: color.ink2 }}>
-                    −50% community discount: −{currency.format(discountAmount)}
-                  </Typography>
-                )}
                 <Typography sx={{ fontWeight: 700, fontSize: '1.125rem' }}>
-                  Total: {currency.format(total)} excl. VAT
+                  Total: {currency.format(total)}. {vatNote}
                 </Typography>
               </>
             ) : (
@@ -458,7 +433,16 @@ export function PriceCalculator() {
 
         {quote.kind === 'price' && (
           <Typography sx={{ mt: 1.5, color: color.muted, fontSize: '0.8125rem' }}>
-            Secure checkout by Stripe. You&apos;ll get an invoice. We check every order before sending the license.
+            Secure checkout by Stripe. You&apos;ll get an invoice. We check every order before sending the license. For businesses and organizations only. By
+            paying you accept the{' '}
+            <Box component="a" href={links.terms} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
+              Commercial License Terms
+            </Box>{' '}
+            and{' '}
+            <Box component="a" href={links.termsOfSale} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
+              Terms of Sale
+            </Box>
+            .
           </Typography>
         )}
       </Box>

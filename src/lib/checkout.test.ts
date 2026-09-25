@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  businessBuyerField,
+  checkoutFormParams,
   clientIp,
   createRateLimiter,
   deriveOption,
   describeLicense,
   licenseMetadata,
   pickPrice,
+  stripeMaxCustomFields,
+  stripeMaxLabelLength,
   unitAmountCents,
   validateCheckoutRequest,
   type PriceLike,
@@ -17,7 +21,6 @@ const valid = {
   seats: 34,
   tools: ['platform', 'matchzy'],
   use: 'commercial',
-  community: false,
 };
 
 describe('deriveOption', () => {
@@ -45,14 +48,14 @@ describe('validateCheckoutRequest', () => {
   it('accepts the seat bounds', () => {
     expect(validateCheckoutRequest({ ...valid, seats: 1 }).ok).toBe(true);
     expect(validateCheckoutRequest({ ...valid, seats: 500 }).ok).toBe(true);
-    expect(validateCheckoutRequest({ ...valid, option: 'servers', period: 'year', tools: ['csm'], community: true }).ok).toBe(true);
+    expect(validateCheckoutRequest({ ...valid, option: 'servers', period: 'year', tools: ['csm'] }).ok).toBe(true);
   });
 
   const rejects: [string, unknown][] = [
     ['null', null],
     ['array', [valid]],
     ['string', 'x'],
-    ['missing field', { ...valid, community: undefined }],
+    ['missing field', { ...valid, use: undefined }],
     ['extra field', { ...valid, price: 1 }],
     ['unknown option', { ...valid, option: 'hosting' }],
     ['option not matching tools', { ...valid, option: 'servers' }],
@@ -70,7 +73,8 @@ describe('validateCheckoutRequest', () => {
     ['free tools only', { ...valid, option: 'servers', tools: ['matchzy'] }],
     ['personal use', { ...valid, use: 'personal' }],
     ['non-profit use', { ...valid, use: 'nonprofit' }],
-    ['community as string', { ...valid, community: 'false' }],
+    ['old community flag (no discount anymore)', { ...valid, community: false }],
+    ['non-commercial use', { ...valid, use: 'noncommercial' }],
   ];
   it.each(rejects)('rejects %s', (_name, body) => {
     expect(validateCheckoutRequest(body).ok).toBe(false);
@@ -83,9 +87,9 @@ describe('license text', () => {
     expect(describeLicense({ option: 'servers', period: 'year', seats: 1 })).toBe('Auto Tournament license: servers, yearly, 1 seat');
   });
   it('builds string metadata', () => {
-    const r = validateCheckoutRequest({ ...valid, community: true });
+    const r = validateCheckoutRequest(valid);
     if (!r.ok) throw new Error(r.error);
-    expect(licenseMetadata(r.value)).toEqual({ option: 'platform', period: 'event', seats: '34', tools: 'matchzy,platform', community: 'true' });
+    expect(licenseMetadata(r.value)).toEqual({ option: 'platform', period: 'event', seats: '34', tools: 'matchzy,platform' });
   });
 });
 
@@ -150,5 +154,49 @@ describe('createRateLimiter', () => {
     expect(allow('a', 2000)).toBe(false);
     expect(allow('b', 2000)).toBe(true);
     expect(allow('a', 62_000)).toBe(true);
+  });
+});
+
+describe('checkoutFormParams', () => {
+  const params = checkoutFormParams('https://autotournament.gg');
+
+  it('requires accepting the terms, with links to both documents', () => {
+    expect(params.consent_collection).toEqual({ terms_of_service: 'required' });
+    const message = params.custom_text.terms_of_service_acceptance.message;
+    expect(message).toContain('(https://autotournament.gg/terms)');
+    expect(message).toContain('(https://autotournament.gg/terms-of-sale)');
+  });
+
+  it('requires the business name and a billing address, and keeps tax ID collection', () => {
+    expect(params.name_collection).toEqual({ business: { enabled: true, optional: false } });
+    expect(params.billing_address_collection).toBe('required');
+    expect(params.tax_id_collection).toEqual({ enabled: true });
+  });
+
+  it('requires the B2B confirmation as a one-option dropdown', () => {
+    const field = params.custom_fields.find((f) => f.key === businessBuyerField.key);
+    expect(field).toBeDefined();
+    expect(field?.type).toBe('dropdown');
+    expect(field?.optional).toBe(false);
+    expect(field?.label.custom).toBe("I'm buying for a business, not as a consumer");
+    expect(field && 'dropdown' in field ? field.dropdown?.options : []).toEqual([
+      { label: businessBuyerField.optionLabel, value: businessBuyerField.optionValue },
+    ]);
+  });
+
+  it('keeps the event fields: dates required, name optional', () => {
+    const byKey = Object.fromEntries(params.custom_fields.map((f) => [f.key, f]));
+    expect(byKey.eventdates?.optional).toBe(false);
+    expect(byKey.eventname?.optional).toBe(true);
+  });
+
+  it('stays within Stripe limits: 3 fields, 50-character labels, alphanumeric unique keys', () => {
+    const { custom_fields } = params;
+    expect(custom_fields.length).toBeLessThanOrEqual(stripeMaxCustomFields);
+    for (const f of custom_fields) {
+      expect(f.label.custom.length).toBeLessThanOrEqual(stripeMaxLabelLength);
+      expect(f.key).toMatch(/^[a-z0-9]+$/i);
+    }
+    expect(new Set(custom_fields.map((f) => f.key)).size).toBe(custom_fields.length);
   });
 });
