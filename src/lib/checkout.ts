@@ -1,14 +1,14 @@
 /**
  * Pure checkout logic shared by the calculator (client) and /api/checkout
- * (server): tools → product, servers → pack, request validation, the Stripe
- * line item for a pack, and the small abuse limits. No Stripe import and no
- * process.env here, so it runs anywhere and is easy to test.
+ * (server): tools → product, servers → pack, request validation, the license
+ * text, and the small abuse limits. The packs (prices and server limits) are
+ * passed in: they come from Stripe (src/lib/stripePrices.ts). No Stripe import
+ * and no process.env here, so it runs anywhere and is easy to test.
  *
  * Relative import on purpose: vitest runs this file without the `@/` alias.
  */
 import {
   maxPackServers,
-  packById,
   packFor,
   packIds,
   type Pack,
@@ -25,7 +25,6 @@ export const checkoutPeriods = ['event', 'year', 'founder'] as const satisfies r
 export type CheckoutPeriod = Period;
 
 export const minServers = 1;
-export const maxServers = maxPackServers;
 export const maxBodyBytes = 2048;
 
 /** Calculator tool ids → the ids the checkout API takes. */
@@ -48,10 +47,10 @@ export function deriveProduct(tools: Iterable<CheckoutTool>): PackProduct | null
   return null;
 }
 
-/** The smallest pack for these tools and servers; null when free or above the biggest pack. */
-export function derivePack(tools: Iterable<CheckoutTool>, servers: number): Pack | null {
+/** The smallest of `packs` for these tools and servers; null when free or above the biggest pack. */
+export function derivePack(packs: readonly Pack[], tools: Iterable<CheckoutTool>, servers: number): Pack | null {
   const product = deriveProduct(tools);
-  return product ? packFor(product, servers) : null;
+  return product ? packFor(packs, product, servers) : null;
 }
 
 export type CheckoutRequest = {
@@ -73,9 +72,11 @@ const includes = <T extends string>(list: readonly T[], value: unknown): value i
  * Strict: every key present, no extra keys, exact types and values. The server
  * derives the product from the tools and the pack size from the servers, and
  * the pack the client sends must equal that. The price never comes from the
- * client.
+ * client. `packs` are the server's packs (from Stripe), so the server limits
+ * that pick the pack are Stripe's too.
  */
-export function validateCheckoutRequest(body: unknown): Validation {
+export function validateCheckoutRequest(body: unknown, packs: readonly Pack[]): Validation {
+  const maxServers = maxPackServers(packs);
   const fail = (error: string): Validation => ({ ok: false, error });
 
   if (typeof body !== 'object' || body === null || Array.isArray(body)) return fail('Expected a JSON object.');
@@ -101,7 +102,7 @@ export function validateCheckoutRequest(body: unknown): Validation {
 
   const typedTools = tools as CheckoutTool[];
   if (deriveProduct(typedTools) === null) return fail('These tools need no paid license.');
-  const derived = derivePack(typedTools, servers);
+  const derived = derivePack(packs, typedTools, servers);
   if (derived === null) return fail('Invalid servers.');
   if (derived.id !== pack) return fail('Pack does not match the tools and servers.');
 
@@ -110,60 +111,20 @@ export function validateCheckoutRequest(body: unknown): Validation {
   return { ok: true, value: { pack: derived.id, period, servers, tools: sorted, use } };
 }
 
-/** The pack price from pricing.ts, in euro cents. */
-export function unitAmountCents(pack: PackId, period: CheckoutPeriod): number {
-  return packById(pack).prices[period];
-}
-
 const periodInName: Record<CheckoutPeriod, string> = {
   event: 'per event',
   year: 'yearly',
   founder: 'founding supporter',
 };
 
-/** Stripe product name: "Servers L license — per event (up to 40 servers)". */
-export function lineItemName(pack: PackId, period: CheckoutPeriod): string {
-  const p = packById(pack);
-  return `${p.name} license — ${periodInName[period]} (up to ${p.maxServers} servers)`;
+/** "Servers L license — per event (up to 40 servers)". */
+export function lineItemName(pack: Pack, period: CheckoutPeriod): string {
+  return `${pack.name} license — ${periodInName[period]} (up to ${pack.maxServers} servers)`;
 }
 
-const coveredSoftware: Record<PackProduct, string> = {
-  servers: 'CS2 Server Manager and Ready Up',
-  platform: 'Auto Tournament platform, CS2 Server Manager, Ready Up and the game packs used with it',
-};
-
-const periodInDescription: Record<CheckoutPeriod, string> = {
-  event: 'One event, up to 5 days in a row',
-  year: '12 months, unlimited events of the licensee',
-  founder: 'Perpetual commercial use of versions released within 12 months of purchase, including 1 year of updates',
-};
-
-export function lineItemDescription(pack: PackId, period: CheckoutPeriod): string {
-  const p = packById(pack);
-  return `${coveredSoftware[p.product]}. No more than ${p.maxServers} game servers set up at any one time, spares included. ${periodInDescription[period]}.`;
-}
-
-/**
- * Inline price for Stripe Checkout, so no products or prices need to exist in
- * Stripe. Quantity is always 1: a pack is one fixed price.
- */
-export function lineItem(req: Pick<CheckoutRequest, 'pack' | 'period'>) {
-  return {
-    price_data: {
-      currency: 'eur' as const,
-      unit_amount: unitAmountCents(req.pack, req.period),
-      tax_behavior: 'exclusive' as const,
-      product_data: {
-        name: lineItemName(req.pack, req.period),
-        description: lineItemDescription(req.pack, req.period),
-      },
-    },
-    quantity: 1,
-  };
-}
-
-export function describeLicense(req: Pick<CheckoutRequest, 'pack' | 'period'>): string {
-  return `Auto Tournament ${lineItemName(req.pack, req.period)}`;
+/** Description on the payment and the invoice. */
+export function describeLicense(pack: Pack, period: CheckoutPeriod): string {
+  return `Auto Tournament ${lineItemName(pack, period)}`;
 }
 
 /**

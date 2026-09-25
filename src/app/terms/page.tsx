@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { H2, LegalPage } from '@/components/legal';
 import { links } from '@/components/links';
 import { seller } from '@/components/seller';
-import { PACKS, formatEuro, founderDeadline, founderLimit, founderUpdateWarning, maxPackServers } from '@/components/pricing';
+import { formatEuro, founderDeadline, founderLimit, founderUpdateWarning, maxPackServers, packIn } from '@/components/pricing';
+import { getPacks } from '@/lib/stripePrices';
 
 const title = 'Commercial License Terms';
 const description = 'The terms for a paid commercial license to Auto Tournament, CS2 Server Manager and Ready Up: packs and their server limits, the period, founding supporter packs, who may use it, refunds and liability.';
@@ -15,7 +16,12 @@ export const metadata: Metadata = {
   twitter: { title, description },
 };
 
-export default function Terms() {
+// Section 18 lists the current prices, read from Stripe at request time (cached).
+export const dynamic = 'force-dynamic';
+
+export default async function Terms() {
+  const { packs } = await getPacks();
+  const upTo = (id: Parameters<typeof packIn>[1]) => packIn(packs, id).maxServers;
   return (
     <LegalPage
       title={title}
@@ -56,8 +62,8 @@ export default function Terms() {
 
       <H2 id="packs">4. Packs and server limits</H2>
       <p>
-        Your pack allows no more than its number of game servers set up at any one time during the period, spares included: S up to 5, M up to 15, L up to{' '}
-        {maxPackServers}. The pack and its server limit are in your license confirmation.
+        Your pack allows no more than its number of game servers set up at any one time during the period, spares included: S up to {upTo('servers-s')}, M up to {upTo('servers-m')}, L up to{' '}
+        {upTo('servers-l')}. The pack and its server limit are in your license confirmation.
       </p>
       <ul>
         <li>One pack per event, or per 12 months for a yearly pack.</li>
@@ -65,7 +71,7 @@ export default function Terms() {
           Packs can&apos;t be combined or stacked: two S packs don&apos;t make an M. Servers and Platform packs can&apos;t be combined either; Platform already
           includes the servers.
         </li>
-        <li>More than {maxPackServers} servers needs a separate written agreement.</li>
+        <li>More than {maxPackServers(packs)} servers needs a separate written agreement.</li>
       </ul>
 
       <H2 id="period">5. Period</H2>
@@ -184,7 +190,7 @@ export default function Terms() {
       <H2 id="prices">18. Prices and contact</H2>
       <p>
         Current prices (Pricing v2, valid from 25 September 2026), per event, yearly and founding supporter:{' '}
-        {PACKS.map((p) => `${p.name} (up to ${p.maxServers} servers) ${formatEuro(p.prices.event)}, ${formatEuro(p.prices.year)}, ${formatEuro(p.prices.founder)}`).join('; ')}.
+        {packs.map((p) => `${p.name} (up to ${p.maxServers} servers) ${formatEuro(p.prices.event)}, ${formatEuro(p.prices.year)}, ${formatEuro(p.prices.founder)}`).join('; ')}.
         No VAT added (seller not VAT-registered). See <a href={links.pricing}>Licensing &amp; pricing</a>.
       </p>
       <p>
