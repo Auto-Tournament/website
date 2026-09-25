@@ -28,6 +28,7 @@ import {
 } from '@/components/pricing';
 import { getPacks } from '@/lib/stripePrices';
 import { PackPricing } from '@/components/PackPricing';
+import { PriceCalculator } from '@/components/PriceCalculator';
 import { FreeLanConfirmation } from '@/components/FreeLanConfirmation';
 
 const { color, radius } = tokens;
@@ -216,7 +217,9 @@ function faqFor(packs: readonly Pack[]): { q: string; a: React.ReactNode }[] {
 
 export default async function Pricing() {
   // Plain numbers only go to the client components; the Stripe price ids stay here.
-  const { packs } = await getPacks();
+  const priceSource = await getPacks();
+  const { packs } = priceSource;
+  const pricesAvailable = priceSource.source === 'stripe';
   const examples = examplesFor(packs);
   const faq = faqFor(packs);
   return (
@@ -241,7 +244,7 @@ export default async function Pricing() {
         </Box>
 
         <Container maxWidth="lg" component="section" id="packs" aria-label="Packs" sx={{ pb: { xs: 6, md: 10 } }}>
-          <PackPricing packs={packs} />
+          <PackPricing packs={packs} pricesAvailable={pricesAvailable} />
         </Container>
 
         <Section id="free" title="Free if…" lede="No license, no payment, no registration.">
@@ -261,9 +264,14 @@ export default async function Pricing() {
           <Typography sx={{ mt: 3, color: color.ink2 }}>
             <strong>Who pays:</strong> {earnMoneyRule}
           </Typography>
-          <Box sx={{ mt: 3 }}>
-            <FreeLanConfirmation />
-          </Box>
+        </Section>
+
+        <Section
+          id="calculator-intro"
+          title="Can't decide? Let us recommend a pack"
+          lede="Tell us what you'll run and how many servers, and we'll suggest the right pack."
+        >
+          <PriceCalculator packs={packs} pricesAvailable={pricesAvailable} />
         </Section>
 
         <Section id="rules" title="The rules" lede="Short, so there are no surprises.">
@@ -402,6 +410,9 @@ export default async function Pricing() {
           <Typography sx={{ mt: 3, color: color.ink2 }}>
             We check the details before issuing the license. If something doesn&apos;t match, we&apos;ll ask, and we refund in full if we can&apos;t verify you.
           </Typography>
+          <Box sx={{ mt: 3 }}>
+            <FreeLanConfirmation />
+          </Box>
         </Section>
 
         <Section

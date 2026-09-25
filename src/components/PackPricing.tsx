@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -22,29 +22,59 @@ import {
   type PackProduct,
   type Period,
 } from '@/components/pricing';
-import { PriceCalculator, type PickerPreset } from '@/components/PriceCalculator';
+import { checkoutToolFor, type CheckoutRequest, type CheckoutTool } from '@/lib/checkout';
+import { startCheckout } from '@/lib/startCheckout';
+import { seller } from '@/components/seller';
 
 const { color, radius } = tokens;
 
 const products: PackProduct[] = ['servers', 'platform'];
 
+/** A pack's tools for checkout: Servers packs are 'csm', Platform packs are 'platform'. */
+function toolsFor(product: PackProduct): CheckoutTool[] {
+  return product === 'platform' ? [checkoutToolFor.platform] : [checkoutToolFor.serverManager];
+}
+
+/** Which button is currently loading, so only that one shows the loading label. */
+type LoadingKey = `${string}:${Period}`;
+const loadingKeyFor = (packId: string, period: Period): LoadingKey => `${packId}:${period}`;
+
 /**
  * The top of the pricing page: Servers / Platform toggle, the S / M / L pack
- * cards, the founding supporter strip, and the pack picker. "Buy" on a card
- * preselects that pack in the picker and moves focus there.
+ * cards, and the founding supporter strip. Every Buy button starts Stripe
+ * Checkout directly for that pack and period.
  *
- * `allPacks` comes from the server (Stripe prices, or the pricing.ts fallback):
- * plain numbers only.
+ * `allPacks` comes from the server (Stripe prices, or the pricing.ts
+ * fallback): plain numbers only. `pricesAvailable` is false when those are
+ * the fallback prices: the buy buttons are hidden in favor of "Request by
+ * email", since checkout can't charge a price that didn't come from Stripe.
  */
-export function PackPricing({ packs: allPacks }: { packs: readonly Pack[] }) {
+export function PackPricing({ packs: allPacks, pricesAvailable = true }: { packs: readonly Pack[]; pricesAvailable?: boolean }) {
   const [product, setProduct] = useState<PackProduct>('servers');
-  const [preset, setPreset] = useState<PickerPreset | undefined>(undefined);
+  const [loadingKey, setLoadingKey] = useState<LoadingKey | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const packs = allPacks.filter((p) => p.product === product);
 
-  const pick = useCallback((pack: Pack, period: Period) => {
-    setPreset((prev) => ({ product: pack.product, servers: pack.maxServers, period, key: (prev?.key ?? 0) + 1 }));
-  }, []);
+  const buy = async (pack: Pack, period: Period) => {
+    if (loadingKey) return;
+    const key = loadingKeyFor(pack.id, period);
+    setLoadingKey(key);
+    setErrors((prev) => ({ ...prev, [pack.id]: '' }));
+    const payload: CheckoutRequest = {
+      pack: pack.id,
+      period,
+      servers: pack.maxServers,
+      tools: toolsFor(pack.product),
+      use: 'commercial',
+    };
+    const result = await startCheckout(payload);
+    if (!result.ok) {
+      setLoadingKey(null);
+      setErrors((prev) => ({ ...prev, [pack.id]: "Couldn't open checkout. Try again, or email us." }));
+    }
+    // On success, the browser is navigating away; stay loading.
+  };
 
   return (
     <Box sx={{ display: 'grid', gap: { xs: 3, md: 4 } }}>
@@ -99,6 +129,9 @@ export function PackPricing({ packs: allPacks }: { packs: readonly Pack[] }) {
       >
         {packs.map((pack) => {
           const popular = pack.size === popularSize;
+          const cardError = errors[pack.id];
+          const eventLoading = loadingKey === loadingKeyFor(pack.id, 'event');
+          const yearLoading = loadingKey === loadingKeyFor(pack.id, 'year');
           return (
             <Box
               key={pack.id}
@@ -148,14 +181,71 @@ export function PackPricing({ packs: allPacks }: { packs: readonly Pack[] }) {
                 </Typography>
               </Box>
 
-              <Button
-                variant={popular ? 'contained' : 'outlined'}
-                onClick={() => pick(pack, 'event')}
-                aria-label={`Buy ${pack.name}`}
-                sx={{ whiteSpace: 'nowrap', mt: 0.5 }}
-              >
-                Buy
-              </Button>
+              <Box sx={{ display: 'grid', gap: 1, mt: 0.5 }}>
+                {pricesAvailable ? (
+                  <>
+                    <Button
+                      variant={popular ? 'contained' : 'outlined'}
+                      onClick={() => buy(pack, 'event')}
+                      disabled={loadingKey !== null}
+                      aria-busy={eventLoading}
+                      aria-label={`Buy ${pack.name} for one event, ${formatEuro(pack.prices.event)}`}
+                      data-testid="buy-event"
+                      sx={{ whiteSpace: 'nowrap' }}
+                    >
+                      {eventLoading ? (
+                        'Opening checkout…'
+                      ) : (
+                        <>
+                          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                            Buy for one event · {formatEuro(pack.prices.event)}
+                          </Box>
+                          <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                            One event · {formatEuro(pack.prices.event)}
+                          </Box>
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={() => buy(pack, 'year')}
+                      disabled={loadingKey !== null}
+                      aria-busy={yearLoading}
+                      aria-label={`Buy ${pack.name} yearly, ${formatEuro(pack.prices.year)}`}
+                      data-testid="buy-year"
+                      sx={{ whiteSpace: 'nowrap' }}
+                    >
+                      {yearLoading ? (
+                        'Opening checkout…'
+                      ) : (
+                        <>
+                          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                            Buy yearly · {formatEuro(pack.prices.year)}
+                          </Box>
+                          <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                            Yearly · {formatEuro(pack.prices.year)}
+                          </Box>
+                        </>
+                      )}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant={popular ? 'contained' : 'outlined'}
+                    href={`mailto:${seller.email}`}
+                    aria-label={`Request ${pack.name} by email`}
+                    data-testid="request-by-email"
+                    sx={{ whiteSpace: 'nowrap' }}
+                  >
+                    Request by email
+                  </Button>
+                )}
+                {cardError && (
+                  <Typography role="alert" sx={{ color: color.ban, fontSize: '0.8125rem' }}>
+                    {cardError}
+                  </Typography>
+                )}
+              </Box>
             </Box>
           );
         })}
@@ -189,24 +279,56 @@ export function PackPricing({ packs: allPacks }: { packs: readonly Pack[] }) {
         <Typography sx={{ color: color.ink2, maxWidth: '62ch' }}>
           Pay once. Use every version released in the 12 months after you buy commercially, for good, with 1 year of updates included.
         </Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 1, maxWidth: 480 }}>
-          {packs.map((pack) => (
-            <Button
-              key={pack.id}
-              variant="outlined"
-              onClick={() => pick(pack, 'founder')}
-              aria-label={`Buy ${pack.name} as a founding supporter, ${formatEuro(pack.prices.founder)}`}
-              data-testid="founder-price"
-              sx={{ display: 'grid', justifyItems: 'center', gap: 0.25, py: 1, px: 1, whiteSpace: 'nowrap', minWidth: 0 }}
-            >
-              <Box component="span" sx={{ fontSize: '0.8125rem', color: color.ink2, fontWeight: 500 }}>
-                {pack.size} · {pack.maxServers} servers
-              </Box>
-              <Box component="span" sx={{ fontFamily: fontDisplay, fontWeight: 700, fontSize: '1.25rem', color: color.ink }}>
-                {formatEuro(pack.prices.founder)}
-              </Box>
-            </Button>
-          ))}
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0,1fr))' }, gap: 1, maxWidth: 560 }}>
+          {packs.map((pack) => {
+            const founderLoading = loadingKey === loadingKeyFor(pack.id, 'founder');
+            return pricesAvailable ? (
+              <Button
+                key={pack.id}
+                variant="outlined"
+                onClick={() => buy(pack, 'founder')}
+                disabled={loadingKey !== null}
+                aria-busy={founderLoading}
+                aria-label={`Become a founding supporter with ${pack.name}, ${formatEuro(pack.prices.founder)}`}
+                data-testid="founder-price"
+                sx={{ display: 'grid', justifyItems: 'center', gap: 0.25, py: 1, px: 1, whiteSpace: 'nowrap', minWidth: 0 }}
+              >
+                <Box component="span" sx={{ fontSize: '0.8125rem', color: color.ink2, fontWeight: 500 }}>
+                  {pack.size} · {pack.maxServers} servers
+                </Box>
+                <Box component="span" sx={{ fontFamily: fontDisplay, fontWeight: 700, fontSize: '1rem', color: color.ink }}>
+                  {founderLoading ? (
+                    'Opening checkout…'
+                  ) : (
+                    <>
+                      <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                        Become a founding supporter · {formatEuro(pack.prices.founder)}
+                      </Box>
+                      <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                        Founding supporter · {formatEuro(pack.prices.founder)}
+                      </Box>
+                    </>
+                  )}
+                </Box>
+              </Button>
+            ) : (
+              <Button
+                key={pack.id}
+                variant="outlined"
+                href={`mailto:${seller.email}`}
+                aria-label={`Request ${pack.name} as a founding supporter by email`}
+                data-testid="request-by-email"
+                sx={{ display: 'grid', justifyItems: 'center', gap: 0.25, py: 1, px: 1, whiteSpace: 'nowrap', minWidth: 0 }}
+              >
+                <Box component="span" sx={{ fontSize: '0.8125rem', color: color.ink2, fontWeight: 500 }}>
+                  {pack.size} · {pack.maxServers} servers
+                </Box>
+                <Box component="span" sx={{ fontFamily: fontDisplay, fontWeight: 700, fontSize: '1rem', color: color.ink }}>
+                  Request by email
+                </Box>
+              </Button>
+            );
+          })}
         </Box>
         <Typography sx={{ color: color.ink2, fontSize: '0.9375rem', maxWidth: '62ch' }}>
           After a year, renewing updates is optional, at the yearly price of the same pack (for example {formatEuro(packs[2].prices.year)} a year for{' '}
@@ -219,8 +341,6 @@ export function PackPricing({ packs: allPacks }: { packs: readonly Pack[] }) {
           </Box>
         </Typography>
       </Box>
-
-      <PriceCalculator packs={allPacks} preset={preset} />
     </Box>
   );
 }

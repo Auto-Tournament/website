@@ -3,6 +3,7 @@ import { FALLBACK_PACKS, packFor, type Pack } from '../components/pricing';
 import {
   businessBuyerField,
   checkoutFormParams,
+  checkoutPeriods,
   clientIp,
   createRateLimiter,
   derivePack,
@@ -13,6 +14,7 @@ import {
   stripeMaxCustomFields,
   stripeMaxLabelLength,
   validateCheckoutRequest,
+  type CheckoutTool,
 } from './checkout';
 
 const packs = FALLBACK_PACKS;
@@ -100,6 +102,16 @@ describe('validateCheckoutRequest', () => {
     expect(validateCheckoutRequest({ ...valid, pack: 'platform-l', servers: 40 }, packs).ok).toBe(true);
     expect(validateCheckoutRequest({ ...valid, pack: 'servers-m', period: 'year', servers: 6, tools: ['csm'] }, packs).ok).toBe(true);
     expect(validateCheckoutRequest({ ...valid, pack: 'servers-l', period: 'founder', servers: 34, tools: ['csm'] }, packs).ok).toBe(true);
+  });
+
+  it('accepts a direct buy (servers = the pack maxServers) for every pack and period, as the cards and founder strip send it', () => {
+    for (const pack of packs) {
+      const tools: CheckoutTool[] = pack.product === 'platform' ? ['platform'] : ['csm'];
+      for (const period of checkoutPeriods) {
+        const r = validateCheckoutRequest({ pack: pack.id, period, servers: pack.maxServers, tools, use: 'commercial' }, packs);
+        expect(r).toEqual({ ok: true, value: { pack: pack.id, period, servers: pack.maxServers, tools, use: 'commercial' } });
+      }
+    }
   });
 
   it("uses the server's pack limits, not the fallback ones", () => {

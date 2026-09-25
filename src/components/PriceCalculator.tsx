@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
@@ -35,6 +35,7 @@ import {
 import { links } from '@/components/links';
 import { FreeLanConfirmation } from '@/components/FreeLanConfirmation';
 import { checkoutToolFor, derivePack, deriveProduct, type CheckoutRequest } from '@/lib/checkout';
+import { startCheckout } from '@/lib/startCheckout';
 
 const { color, radius } = tokens;
 
@@ -77,33 +78,22 @@ function quoteFor(packs: readonly Pack[], useType: UseType, tools: Set<ToolOptio
   return { kind: 'price', product, pack, reason };
 }
 
-/** A pack chosen elsewhere on the page (a card's Buy). `key` changes on every pick. */
-export type PickerPreset = { product: PackProduct; servers: number; period: Period; key: number };
-
-/** `packs` come from the server (Stripe prices, or the pricing.ts fallback): plain numbers only. */
-export function PriceCalculator({ packs, preset }: { packs: readonly Pack[]; preset?: PickerPreset }) {
+/**
+ * `packs` come from the server (Stripe prices, or the pricing.ts fallback):
+ * plain numbers only. `pricesAvailable` is false when those are the fallback
+ * prices (no Stripe key, or Stripe unreachable): card checkout is off from
+ * the start rather than only after a 503.
+ */
+export function PriceCalculator({ packs, pricesAvailable = true }: { packs: readonly Pack[]; pricesAvailable?: boolean }) {
   const [tools, setTools] = useState<Set<ToolOption>>(new Set());
   const [useType, setUseType] = useState<UseType>('commercial');
   const [period, setPeriod] = useState<Period>('event');
   const [serversInput, setServersInput] = useState('10');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  // Card checkout switched off after the server said so (503, no Stripe key).
-  const [cardOff, setCardOff] = useState(false);
-
-  const headingRef = useRef<HTMLHeadingElement>(null);
-
-  // A card's Buy: preselect that pack, then bring the picker into view.
-  useEffect(() => {
-    if (!preset) return;
-    setTools(new Set<ToolOption>([preset.product === 'platform' ? 'platform' : 'serverManager']));
-    setUseType('commercial');
-    setServersInput(String(preset.servers));
-    setPeriod(preset.period);
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    document.getElementById('calculator')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
-    headingRef.current?.focus({ preventScroll: true });
-  }, [preset]);
+  // Card checkout switched off when prices are the fallback, or after the
+  // server says so (503) mid-session.
+  const [cardOff, setCardOff] = useState(!pricesAvailable);
 
   const toolsId = useId();
   const useTypeId = useId();
@@ -135,7 +125,7 @@ export function PriceCalculator({ packs, preset }: { packs: readonly Pack[]; pre
 
   const cardAvailable = quote.kind === 'price' && useType === 'commercial' && !cardOff;
 
-  const startCheckout = async () => {
+  const runCheckout = async () => {
     if (quote.kind !== 'price' || !cardAvailable || checkoutLoading) return;
     const payload: CheckoutRequest = {
       pack: quote.pack.id,
@@ -146,35 +136,13 @@ export function PriceCalculator({ packs, preset }: { packs: readonly Pack[]; pre
     };
     setCheckoutLoading(true);
     setCheckoutError(null);
-    try {
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data: unknown = await res.json().catch(() => null);
-      const field = (key: string) =>
-        typeof data === 'object' && data !== null && typeof (data as Record<string, unknown>)[key] === 'string'
-          ? ((data as Record<string, unknown>)[key] as string)
-          : undefined;
-      const url = field('url');
-      if (res.ok && url && url.startsWith('https://')) {
-        // Leave the button in its loading state while the browser navigates.
-        window.location.assign(url);
-        return;
-      }
-      if (res.status === 503) {
-        setCardOff(true);
-        setCheckoutError("Card payment isn't available right now. Request the license by email instead.");
-      } else if (res.status === 400 || res.status === 413 || res.status === 429) {
-        setCheckoutError(field('error') ?? 'Something went wrong. Request the license by email instead.');
-      } else {
-        setCheckoutError("Couldn't start checkout. Try again, or request the license by email.");
-      }
-    } catch {
-      setCheckoutError("Couldn't reach checkout. Try again, or request the license by email.");
+    const result = await startCheckout(payload);
+    if (!result.ok) {
+      if (result.cardOff) setCardOff(true);
+      setCheckoutError(result.error);
+      setCheckoutLoading(false);
     }
-    setCheckoutLoading(false);
+    // On success, window.location.assign has navigated away; stay loading.
   };
 
   const toggleTool = (tool: ToolOption) => {
@@ -252,7 +220,7 @@ export function PriceCalculator({ packs, preset }: { packs: readonly Pack[]; pre
         gap: 3,
       }}
     >
-      <Typography ref={headingRef} tabIndex={-1} variant="h3" sx={{ fontSize: '1.375rem' }}>
+      <Typography variant="h3" sx={{ fontSize: '1.375rem' }}>
         Find your pack
       </Typography>
 
@@ -433,7 +401,7 @@ export function PriceCalculator({ packs, preset }: { packs: readonly Pack[]; pre
             {cardAvailable && (
               <Button
                 variant="contained"
-                onClick={startCheckout}
+                onClick={runCheckout}
                 disabled={checkoutLoading}
                 aria-busy={checkoutLoading}
                 data-testid="buy-with-card"
