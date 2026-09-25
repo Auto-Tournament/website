@@ -15,18 +15,11 @@ import { ServersCard } from './cards/ServersCard';
 import { ProfileCard } from './cards/ProfileCard';
 import { AtIcon } from './AtIcon';
 import { ThemePicker } from './ThemePicker';
+import { links } from './links';
 
 const { color, radius } = tokens;
 
-export const links = {
-  install: 'https://docs.autotournament.gg/getting-started/install',
-  docs: 'https://docs.autotournament.gg',
-  github: 'https://github.com/Auto-Tournament',
-  repo: 'https://github.com/Auto-Tournament/auto-tournament',
-  discord: 'https://discord.gg/n7gHYau7aW',
-  licensing: 'https://docs.autotournament.gg/reference/licensing',
-  pricing: '/pricing',
-};
+export { links } from './links';
 
 /** True while the visitor is scrolling down past the top of the page. */
 function useScrollingDown(threshold = 80) {
