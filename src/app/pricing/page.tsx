@@ -50,7 +50,7 @@ const tiers: Tier[] = [
     name: 'Free',
     price: '€0',
     note: 'Non-commercial use, and the CS2 plugin for anyone',
-    bullets: ['Friends, clubs, schools and communities', 'Free-entry events', 'Auto Tournament CS2 plugin only (MIT), any use'],
+    bullets: ['Friends, clubs, schools and communities', 'Free-entry events', 'Auto Tournament CS2 plugin only (formerly MatchZy Enhanced, MIT), any use'],
   },
   {
     name: 'Event · Servers',
@@ -125,7 +125,7 @@ const examples: { scenario: string; verdict: string; why: string }[] = [
 const faq: { q: string; a: React.ReactNode }[] = [
   {
     q: 'Do I need a license for only the plugin?',
-    a: 'No. Auto Tournament CS2 is MIT licensed and free for any use, including paid work.',
+    a: 'No. Auto Tournament CS2 (formerly MatchZy Enhanced) is MIT licensed and free for any use, including paid work.',
   },
   {
     q: 'Do spare servers count?',
@@ -200,7 +200,7 @@ export default function Pricing() {
                 <Box component="a" href="https://github.com/Auto-Tournament/cs2-plugin" sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
                   Auto Tournament CS2
                 </Box>
-                , is MIT and free for any use, including paid work. Auto Tournament 2.4.x releases also stay MIT.
+                {' '}(formerly MatchZy Enhanced), is MIT and free for any use, including paid work. Auto Tournament 2.4.x releases also stay MIT.
               </Typography>
             </Box>
           </Box>
