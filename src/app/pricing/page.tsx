@@ -5,10 +5,11 @@ import Chip from '@mui/material/Chip';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
-import { fontDisplay } from '@/theme/theme';
 import { Reveal } from '@/components/ui';
 import { Footer, Nav } from '@/components/sections';
 import { links } from '@/components/links';
+import { pricingTable } from '@/components/pricing';
+import { PriceCalculator } from '@/components/PriceCalculator';
 
 const { color, radius } = tokens;
 
@@ -43,52 +44,6 @@ function Section({ id, title: heading, lede, children }: { id?: string; title: s
   );
 }
 
-type Tier = { name: string; price: string; period?: string; note: string; bullets: string[]; highlight?: boolean };
-
-const tiers: Tier[] = [
-  {
-    name: 'Free',
-    price: '€0',
-    note: 'Non-commercial use, and the CS2 plugin for anyone',
-    bullets: ['Friends, clubs, schools and communities', 'Free-entry events', 'MatchZy Enhanced (MIT) only, any use'],
-  },
-  {
-    name: 'Event · Servers',
-    price: '€3',
-    period: '/ seat',
-    note: 'One event, up to 5 consecutive days · CS2 Server Manager and/or Ready Up',
-    bullets: ['Every server you set up is a seat, spares included'],
-  },
-  {
-    name: 'Event · Platform + servers',
-    price: '€5',
-    period: '/ seat',
-    note: 'One event, up to 5 consecutive days · the full Auto Tournament setup',
-    bullets: ['Every server you set up is a seat, spares included'],
-    highlight: true,
-  },
-  {
-    name: 'Yearly · Servers',
-    price: '€12',
-    period: '/ seat / yr',
-    note: 'Unlimited events for that many seats · CS2 Server Manager and/or Ready Up',
-    bullets: ['4× the per-event seat price'],
-  },
-  {
-    name: 'Yearly · Platform + servers',
-    price: '€20',
-    period: '/ seat / yr',
-    note: 'Unlimited events for that many seats · the full Auto Tournament setup',
-    bullets: ['4× the per-event seat price'],
-  },
-  {
-    name: 'Hosting / resale',
-    price: 'Custom quote',
-    note: 'Selling Auto Tournament as a service',
-    bullets: ['Managed hosting for other people or organizations', 'Contact us for a quote'],
-  },
-];
-
 const examples: { scenario: string; verdict: string; why: string }[] = [
   {
     scenario: 'A school LAN with free entry.',
@@ -101,9 +56,9 @@ const examples: { scenario: string; verdict: string; why: string }[] = [
     why: 'MatchZy Enhanced is MIT and free for any use, including paid work.',
   },
   {
-    scenario: 'The same freelancer instead uses CS2 Server Manager or Ready Up on those servers: 6 in play plus 2 spares.',
+    scenario: 'A freelancer uses CS2 Server Manager to install and run MatchZy Enhanced on 8 servers (6 + 2 spares) at a paid LAN.',
     verdict: '8 × €3 = €24',
-    why: 'Every server set up is a seat, spares included, at €3 per seat for one event.',
+    why: 'Every server set up is a seat, spares included, at €3 per seat for one event. The license follows CS2 Server Manager, not the plugin it installs.',
   },
   {
     scenario: 'A paid-entry LAN runs the full platform on 32 servers plus 2 spares, one 4-day event.',
@@ -156,6 +111,10 @@ const faq: { q: string; a: React.ReactNode }[] = [
     a: 'No. MatchZy Enhanced (now named Auto Tournament CS2) is MIT licensed and free for any use, including paid work. Ready Up is a different plugin: it is under PolyForm Noncommercial, so commercial use of Ready Up needs a license.',
   },
   {
+    q: 'I only use CS2 Server Manager with MatchZy Enhanced. Do I need a license?',
+    a: 'For commercial use, yes: €3 per seat. The license follows CS2 Server Manager, the tool doing the installing, not MatchZy Enhanced itself. Running MatchZy Enhanced on its own, without CS2 Server Manager, is free. Personal use is free either way.',
+  },
+  {
     q: 'Do spare servers count?',
     a: 'Yes. Every game server you set up for the event is a seat, even a spare that never gets used.',
   },
@@ -168,10 +127,12 @@ const faq: { q: string; a: React.ReactNode }[] = [
     a: 'The Auto Tournament platform up to 2.4.15 (released as MatchZy Auto Tournament) is MIT licensed and stays that way. Free for any use.',
   },
   {
-    q: 'What if I use it without a license?',
+    q: 'Using Auto Tournament commercially without a license?',
     a: (
       <>
-        Contact us and we&apos;ll sort it out. The license terms apply either way.
+        Get in touch within 30 days of our notice and we&apos;ll sort it out with a back-dated license at the normal price, plus 50%, so paying late always
+        costs more than paying up front. If it isn&apos;t sorted within 32 days, as the PolyForm Noncommercial license allows, the license ends and we may take
+        action for copyright infringement.
       </>
     ),
   },
@@ -207,6 +168,70 @@ export default function Pricing() {
             </Box>
           </Container>
         </Box>
+
+        <Section
+          id="pricing-table"
+          title="What you pay"
+          lede="A seat is one game server you set up for the event, spares included, even if it's never used. Prices are in EUR, excluding VAT."
+        >
+          <Box sx={{ overflowX: 'auto', border: `1px solid ${color.rule}`, borderRadius: `${radius.lg}px` }}>
+            <Box
+              component="table"
+              sx={{
+                width: '100%',
+                minWidth: '40rem',
+                borderCollapse: 'collapse',
+                bgcolor: color.paper2,
+                '& caption': { captionSide: 'top', textAlign: 'left', p: 2, color: color.ink2, fontSize: '0.875rem' },
+                '& th, & td': { textAlign: 'left', p: 2, borderBottom: `1px solid ${color.rule}`, fontSize: '0.9375rem' },
+                '& thead th': { color: color.muted, fontWeight: 600, fontSize: '0.8125rem', textTransform: 'uppercase', letterSpacing: '0.02em' },
+                '& tbody tr:last-of-type th, & tbody tr:last-of-type td': { borderBottom: 'none' },
+                '& tbody th': { color: color.ink, fontWeight: 500 },
+              }}
+            >
+              <caption>What you pay, by how you use Auto Tournament and who you are.</caption>
+              <thead>
+                <tr>
+                  <th scope="col">You use</th>
+                  <th scope="col">Personal, non-commercial or non-profit organization</th>
+                  <th scope="col">Commercial, per event (up to 5 days)</th>
+                  <th scope="col">Commercial, yearly (unlimited events)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pricingTable.map((row) => (
+                  <tr key={row.use}>
+                    <th scope="row">{row.use}</th>
+                    <td>{row.personal}</td>
+                    <td>{row.event}</td>
+                    <td>{row.yearly}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </Box>
+          </Box>
+
+          <Box component="ul" sx={{ m: 0, mt: 3, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2, fontSize: '0.9375rem' }}>
+            {[
+              'A seat is every game server you set up for the event, spares included.',
+              'Using CS2 Server Manager and Ready Up together on the same seat counts once: €3, not €6.',
+              'The license follows the tool, not the plugin it installs — CS2 Server Manager installing MatchZy Enhanced is €3 per seat for commercial use.',
+              'Community events that only cover costs get 50% off; non-profit organizations are free.',
+            ].map((item) => (
+              <Box key={item} component="li" sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, '&::before': { content: '""', width: 6, height: 6, mt: '0.55em', borderRadius: '50%', bgcolor: color.accent, flex: 'none' } }}>
+                {item}
+              </Box>
+            ))}
+          </Box>
+
+          <Typography sx={{ mt: 3, color: color.ink2, fontSize: '0.9375rem' }}>
+            32 servers + 2 spares at one four-day event = 34 seats → €102 with CS2 Server Manager and/or Ready Up, or €170 with the platform.
+          </Typography>
+
+          <Box sx={{ mt: { xs: 4, md: 5 } }}>
+            <PriceCalculator />
+          </Box>
+        </Section>
 
         <Section
           id="licenses"
@@ -247,7 +272,7 @@ export default function Pricing() {
             {[
               'Paid hosting.',
               'Selling or reselling Auto Tournament.',
-              'Paid-entry events (non-profit and community events that only cover costs get 50% off).',
+              'Paid-entry events (non-profit organizations are free; community events that only cover costs get 50% off).',
               'Use inside a business.',
               'Being paid to set up or operate servers or tournaments for someone else, even for a flat fee.',
             ].map((item) => (
@@ -256,57 +281,6 @@ export default function Pricing() {
               </Box>
             ))}
           </Box>
-        </Section>
-
-        <Section
-          id="tiers"
-          title="Tiers"
-          lede={
-            <>
-              A seat is one game server you set up for the event, spares included, even if it&apos;s never used. Prices are in EUR, excluding VAT. Yearly is 4× the
-              per-event seat price, for unlimited events on that many seats.
-            </>
-          }
-        >
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 16rem), 1fr))', gap: 2 }}>
-            {tiers.map((tier) => (
-              <Box
-                component="article"
-                key={tier.name}
-                sx={{
-                  bgcolor: color.paper2,
-                  border: `1px solid ${tier.highlight ? color.accent : color.rule}`,
-                  borderRadius: `${radius.lg}px`,
-                  p: 3,
-                  display: 'grid',
-                  gap: 1.5,
-                  alignContent: 'start',
-                }}
-              >
-                <Typography variant="h3">{tier.name}</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75 }}>
-                  <Typography sx={{ fontFamily: fontDisplay, fontWeight: 700, fontSize: '1.75rem' }}>{tier.price}</Typography>
-                  {tier.period && (
-                    <Typography sx={{ color: color.muted, fontSize: '0.875rem' }}>{tier.period}</Typography>
-                  )}
-                </Box>
-                <Typography sx={{ color: color.ink2, fontSize: '0.875rem' }}>{tier.note}</Typography>
-                <Box component="ul" sx={{ m: 0, mt: 1, p: 0, listStyle: 'none', display: 'grid', gap: 0.75, color: color.muted, fontSize: '0.8125rem' }}>
-                  {tier.bullets.map((b) => (
-                    <Box key={b} component="li" sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, '&::before': { content: '""', width: 5, height: 5, mt: '0.5em', borderRadius: '50%', bgcolor: color.rule, flex: 'none' } }}>
-                      {b}
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
-            ))}
-          </Box>
-          <Typography sx={{ mt: 3, color: color.ink2, fontSize: '0.9375rem' }}>
-            Work out your price: seats × price per seat. Example: 34 seats (32 + 2 spares) for one event = €102 servers only, or €170 with the platform.
-          </Typography>
-          <Typography sx={{ mt: 1, color: color.muted, fontSize: '0.875rem' }}>
-            Non-profit or community events where entry only covers costs get 50% off any price above.
-          </Typography>
         </Section>
 
         <Section id="examples" title="Examples">
