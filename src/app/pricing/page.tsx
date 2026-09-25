@@ -8,7 +8,7 @@ import { tokens } from '@/theme/tokens';
 import { Reveal } from '@/components/ui';
 import { Footer, Nav } from '@/components/sections';
 import { links } from '@/components/links';
-import { pricingTable } from '@/components/pricing';
+import { communityEventHelp, pricingTable } from '@/components/pricing';
 import { PriceCalculator } from '@/components/PriceCalculator';
 
 const { color, radius } = tokens;
@@ -125,6 +125,10 @@ const faq: { q: string; a: React.ReactNode }[] = [
   {
     q: "I'm on 2.4.x",
     a: 'The Auto Tournament platform up to 2.4.15 (released as MatchZy Auto Tournament) is MIT licensed and stays that way. Free for any use.',
+  },
+  {
+    q: 'Who counts as a community event?',
+    a: communityEventHelp,
   },
   {
     q: 'Using Auto Tournament commercially without a license?',
@@ -311,6 +315,31 @@ export default function Pricing() {
         </Section>
 
         <Section
+          id="what-we-need"
+          title="What we need from you"
+          lede="A license names who holds it, so we verify every buyer before sending the license confirmation."
+        >
+          <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2 }}>
+            {[
+              'Your full name, or the company’s legal name',
+              'Organization number and VAT ID (companies)',
+              'Country and billing address',
+              'Contact email and phone',
+              'The event: name, date(s), venue or city, and website or social link',
+              'Number of seats (servers, spares included) and which tools you’ll run',
+              'For the community discount: a short note on how the entry fee is used',
+            ].map((item) => (
+              <Box key={item} component="li" sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, '&::before': { content: '""', width: 6, height: 6, mt: '0.55em', borderRadius: '50%', bgcolor: color.accent, flex: 'none' } }}>
+                {item}
+              </Box>
+            ))}
+          </Box>
+          <Typography sx={{ mt: 3, color: color.ink2 }}>
+            We check the details before issuing the license. If something doesn&apos;t match, we&apos;ll ask, and we refund in full if we can&apos;t verify you.
+          </Typography>
+        </Section>
+
+        <Section
           id="get-a-license"
           title="Getting a license"
           lede={
@@ -319,27 +348,17 @@ export default function Pricing() {
               <Box component="a" href={mailHref} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
                 {email}
               </Box>{' '}
-              with:
+              or use the calculator above, then:
             </>
           }
         >
-          <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2 }}>
-            {[
-              'Who you are: name or company, country, and VAT ID if you have one.',
-              'Event date(s), or a start date for a yearly license.',
-              'The number of seats, and which option: servers only, or platform + servers.',
-            ].map((item) => (
-              <Box key={item} component="li" sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, '&::before': { content: '""', width: 6, height: 6, mt: '0.55em', borderRadius: '50%', bgcolor: color.accent, flex: 'none' } }}>
-                {item}
-              </Box>
-            ))}
+          <Box component="ol" sx={{ m: 0, p: 0, pl: 2.5, color: color.ink2, display: 'grid', gap: 1.5 }}>
+            <li>Pay: card payment is coming soon, so for now you get an invoice by email.</li>
+            <li>We verify the details you sent us.</li>
+            <li>You get a written license confirmation naming the licensee, tools, seats and period.</li>
           </Box>
           <Typography sx={{ mt: 3, color: color.ink2 }}>
-            You get an invoice, and the license is valid once paid. The written license confirmation names the licensee, option, seats and period. Buy it before
-            the event.
-          </Typography>
-          <Typography sx={{ mt: 2, color: color.ink2 }}>
-            Not sure which option fits? Email and ask, no charge for asking.
+            Buy it before the event. Not sure which option fits? Email and ask, no charge for asking.
           </Typography>
           <Button variant="contained" href={mailHref} sx={{ mt: 3 }}>
             Email {email}
