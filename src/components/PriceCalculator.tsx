@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
@@ -25,6 +25,7 @@ import {
   type ToolOption,
   type UseType,
 } from '@/components/pricing';
+import { checkoutToolFor, deriveOption, maxSeats, type CheckoutOption, type CheckoutRequest } from '@/lib/checkout';
 
 const { color, radius } = tokens;
 
@@ -36,7 +37,7 @@ type Quote =
   | { kind: 'prompt' }
   | { kind: 'free'; reason: string }
   | { kind: 'nonprofit-free' }
-  | { kind: 'price'; pricePerSeat: number; reason: string };
+  | { kind: 'price'; option: CheckoutOption; pricePerSeat: number; reason: string };
 
 function quoteFor(useType: UseType, tools: Set<ToolOption>, period: Period): Quote {
   if (useType === 'personal') {
@@ -46,24 +47,27 @@ function quoteFor(useType: UseType, tools: Set<ToolOption>, period: Period): Quo
     return { kind: 'nonprofit-free' };
   }
 
-  const hasPlatform = tools.has('platform');
   const hasServerManager = tools.has('serverManager');
   const hasReadyUp = tools.has('readyUp');
   const hasMatchzy = tools.has('matchzy');
+  // Same derivation as /api/checkout, so the calculator and the server agree.
+  const option = deriveOption([...tools].map((t) => checkoutToolFor[t]));
 
-  if (hasPlatform) {
+  if (option === 'platform') {
     return {
       kind: 'price',
+      option,
       pricePerSeat: seatPrices.platform[period],
       reason: 'Platform rate: the platform includes CS2 Server Manager and Ready Up',
     };
   }
 
-  if (hasServerManager || hasReadyUp) {
+  if (option === 'servers') {
     const names = [hasServerManager && 'CS2 Server Manager', hasReadyUp && 'Ready Up'].filter(Boolean);
     const verb = names.length > 1 ? 'count once per seat' : 'counts per seat';
     return {
       kind: 'price',
+      option,
       pricePerSeat: seatPrices.servers[period],
       reason: `Servers rate: ${names.join(' + ')} ${verb}`,
     };
@@ -82,12 +86,19 @@ export function PriceCalculator() {
   const [period, setPeriod] = useState<Period>('event');
   const [seatsInput, setSeatsInput] = useState('10');
   const [community, setCommunity] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  // Card checkout switched off after the server said so: for everything (503,
+  // no Stripe key) or only with the community discount (no coupon set yet).
+  const [cardOff, setCardOff] = useState(false);
+  const [communityCardOff, setCommunityCardOff] = useState(false);
 
   const toolsId = useId();
   const useTypeId = useId();
   const periodId = useId();
   const seatsId = useId();
   const communityId = useId();
+  const helpId = useId();
 
   const seats = Number.parseInt(seatsInput, 10);
   const seatsValid = Number.isInteger(seats) && seats >= 1 && String(seats) === seatsInput.trim();
@@ -97,6 +108,70 @@ export function PriceCalculator() {
   const subtotal = quote.kind === 'price' && seatsValid ? seats * quote.pricePerSeat : 0;
   const discountAmount = quote.kind === 'price' && community ? subtotal * communityDiscount : 0;
   const total = subtotal - discountAmount;
+
+  // A new selection clears the last checkout error.
+  useEffect(() => {
+    setCheckoutError(null);
+  }, [tools, useType, period, seatsInput, community]);
+
+  // Coming back from Stripe with the back button can restore this page from
+  // the bfcache with the button still in its loading state.
+  useEffect(() => {
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) setCheckoutLoading(false);
+    };
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, []);
+
+  const cardAvailable =
+    quote.kind === 'price' && seatsValid && seats <= maxSeats && useType === 'commercial' && !cardOff && !(community && communityCardOff);
+
+  const startCheckout = async () => {
+    if (quote.kind !== 'price' || !cardAvailable || checkoutLoading) return;
+    const payload: CheckoutRequest = {
+      option: quote.option,
+      period: period === 'yearly' ? 'year' : 'event',
+      seats,
+      tools: toolOrder.filter((t) => tools.has(t)).map((t) => checkoutToolFor[t]),
+      use: 'commercial',
+      community,
+    };
+    setCheckoutLoading(true);
+    setCheckoutError(null);
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data: unknown = await res.json().catch(() => null);
+      const field = (key: string) =>
+        typeof data === 'object' && data !== null && typeof (data as Record<string, unknown>)[key] === 'string'
+          ? ((data as Record<string, unknown>)[key] as string)
+          : undefined;
+      const url = field('url');
+      if (res.ok && url && url.startsWith('https://')) {
+        // Leave the button in its loading state while the browser navigates.
+        window.location.assign(url);
+        return;
+      }
+      if (res.status === 503) {
+        setCardOff(true);
+        setCheckoutError("Card payment isn't available right now. Request the license by email instead.");
+      } else if (res.status === 400 && community && field('error')?.startsWith('Community discount')) {
+        setCommunityCardOff(true);
+        setCheckoutError('Community discount needs a quick check first: email us with the request below.');
+      } else if (res.status === 400 || res.status === 413 || res.status === 429) {
+        setCheckoutError(field('error') ?? 'Something went wrong. Request the license by email instead.');
+      } else {
+        setCheckoutError("Couldn't start checkout. Try again, or request the license by email.");
+      }
+    } catch {
+      setCheckoutError("Couldn't reach checkout. Try again, or request the license by email.");
+    }
+    setCheckoutLoading(false);
+  };
 
   const toggleTool = (tool: ToolOption) => {
     setTools((prev) => {
@@ -133,6 +208,32 @@ export function PriceCalculator() {
     ];
     return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
   }, [quote, tools, useType, period, seats, seatsValid, community, total]);
+
+  // "Need help?" mail: works in every state, pre-filled with what's chosen so far.
+  const helpHref = useMemo(() => {
+    const chosenTools = toolOrder.filter((t) => tools.has(t)).map((t) => toolLabels[t]);
+    const detail =
+      quote.kind === 'price'
+        ? `${quote.option === 'platform' ? 'Platform' : 'Servers'} license, ${periodLabels[period]}${seatsValid ? `, ${seats} seats` : ''}`
+        : seatsValid && chosenTools.length > 0
+          ? `${seats} seats`
+          : '';
+    const subject = detail ? `Help with a license: ${detail}` : 'Help with a license';
+    const useLabel =
+      useType === 'nonprofit' ? 'non-profit' : useType === 'personal' ? 'personal' : community ? 'community event' : 'commercial';
+    const lines = [
+      "Hi, I'd like help working out the right license for my setup.",
+      '',
+      'Event (name, dates, website): ',
+      `Servers, spares included: ${seatsValid ? seats : ''}`,
+      `Tools (MatchZy Enhanced, CS2 Server Manager, Ready Up, platform): ${chosenTools.join(', ')}`,
+      `Commercial, community event or non-profit: ${useLabel}`,
+      'Company name: ',
+      'Org number / VAT ID: ',
+      'Billing address: ',
+    ];
+    return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
+  }, [quote, tools, useType, period, seats, seatsValid, community]);
 
   return (
     <Box
@@ -311,9 +412,34 @@ export function PriceCalculator() {
 
       <Box>
         {quote.kind === 'price' && mailHref && (
-          <Button variant="contained" href={mailHref}>
-            Request this license
-          </Button>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'center' }}>
+            {cardAvailable && (
+              <Button
+                variant="contained"
+                onClick={startCheckout}
+                disabled={checkoutLoading}
+                aria-busy={checkoutLoading}
+                data-testid="buy-with-card"
+              >
+                {checkoutLoading ? 'Opening checkout…' : 'Buy with card'}
+              </Button>
+            )}
+            <Button variant={cardAvailable ? 'outlined' : 'contained'} href={mailHref} data-testid="request-by-email">
+              Request by email
+            </Button>
+          </Box>
+        )}
+
+        {quote.kind === 'price' && checkoutError && (
+          <Typography role="alert" sx={{ mt: 1.5, color: color.ban, fontSize: '0.875rem' }}>
+            {checkoutError}
+          </Typography>
+        )}
+
+        {quote.kind === 'price' && seatsValid && seats > maxSeats && (
+          <Typography sx={{ mt: 1.5, color: color.ink2, fontSize: '0.875rem' }}>
+            Card checkout covers up to {maxSeats} seats. For more, request the license by email.
+          </Typography>
         )}
 
         {quote.kind === 'free' && (
@@ -330,9 +456,29 @@ export function PriceCalculator() {
           </Typography>
         )}
 
-        <Typography sx={{ mt: 1.5, color: color.muted, fontSize: '0.8125rem' }}>
-          You&apos;ll get an invoice by email. Card payment is coming soon.
+        {quote.kind === 'price' && (
+          <Typography sx={{ mt: 1.5, color: color.muted, fontSize: '0.8125rem' }}>
+            Secure checkout by Stripe. You&apos;ll get an invoice. We check every order before sending the license.
+          </Typography>
+        )}
+      </Box>
+
+      <Box
+        component="section"
+        aria-labelledby={helpId}
+        data-testid="need-help"
+        sx={{ borderTop: `1px solid ${color.rule}`, pt: 2.5, display: 'grid', gap: 1, justifyItems: 'start' }}
+      >
+        <Typography id={helpId} component="h4" sx={{ fontWeight: 600 }}>
+          Need help or prefer an invoice?
         </Typography>
+        <Typography sx={{ color: color.ink2, fontSize: '0.9375rem', maxWidth: '60ch' }}>
+          Tell us about your setup (the event, how many servers, which tools) and we&apos;ll work out the price with you and send you an invoice instead of
+          card payment.
+        </Typography>
+        <Button variant="outlined" href={helpHref} sx={{ mt: 0.5 }}>
+          Email us about your setup
+        </Button>
       </Box>
     </Box>
   );

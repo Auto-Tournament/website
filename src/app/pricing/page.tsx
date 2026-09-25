@@ -353,7 +353,7 @@ export default function Pricing() {
           }
         >
           <Box component="ol" sx={{ m: 0, p: 0, pl: 2.5, color: color.ink2, display: 'grid', gap: 1.5 }}>
-            <li>Pay: card payment is coming soon, so for now you get an invoice by email.</li>
+            <li>Pay by card with the calculator above, or ask for an invoice by email. Either way you get an invoice.</li>
             <li>We verify the details you sent us.</li>
             <li>You get a written license confirmation naming the licensee, tools, seats and period.</li>
           </Box>
