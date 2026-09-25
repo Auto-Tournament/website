@@ -5,13 +5,16 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import IconButton from '@mui/material/IconButton';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import TextField from '@mui/material/TextField';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
 import {
   communityDiscount,
+  communityEventHelp,
   periodLabels,
   seatPrices,
   toolLabels,
@@ -119,9 +122,14 @@ export function PriceCalculator() {
       `Total: ${currency.format(total)} excl. VAT`,
       '',
       'Name / company: ',
-      'Country: ',
-      'VAT ID: ',
-      'Event date(s) or yearly start date: ',
+      'Org number / VAT ID: ',
+      'Country and billing address: ',
+      'Contact phone: ',
+      'Event name: ',
+      'Event date(s): ',
+      'Venue or city: ',
+      'Event website or social link: ',
+      ...(community ? ['How the entry fee is used (community discount only): '] : []),
     ];
     return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
   }, [quote, tools, useType, period, seats, seatsValid, community, total]);
@@ -218,16 +226,37 @@ export function PriceCalculator() {
       </Box>
 
       {useType === 'commercial' && (
-        <FormControlLabel
-          control={
-            <Checkbox
-              id={communityId}
-              checked={community}
-              onChange={(e) => setCommunity(e.target.checked)}
-            />
-          }
-          label="Community event, entry only covers costs (50% off)"
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                id={communityId}
+                checked={community}
+                onChange={(e) => setCommunity(e.target.checked)}
+              />
+            }
+            label="Community event, entry only covers costs (50% off)"
+            sx={{ mr: 0 }}
+          />
+          <Tooltip title={communityEventHelp} enterTouchDelay={0} leaveTouchDelay={4000} arrow placement="top">
+            <IconButton
+              aria-label="Who counts as a community event?"
+              size="small"
+              sx={{
+                width: 20,
+                height: 20,
+                p: 0,
+                border: `1px solid ${color.rule}`,
+                color: color.muted,
+                fontSize: '0.6875rem',
+                fontWeight: 700,
+                lineHeight: 1,
+              }}
+            >
+              ?
+            </IconButton>
+          </Tooltip>
+        </Box>
       )}
 
       <Box

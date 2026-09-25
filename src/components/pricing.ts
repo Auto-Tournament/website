@@ -19,6 +19,9 @@ export const periodLabels: Record<Period, string> = {
 
 export const communityDiscount = 0.5;
 
+export const communityEventHelp =
+  "For events run by individuals, clubs or informal groups where the entry fee only covers costs (venue, hardware, prizes) and nobody takes a profit. Not for companies, paid organizers, or events that make money. Registered non-profits (schools, charities, public bodies) don't need this: they're free. We may ask for the event's budget or website to confirm.";
+
 /** Tools someone ticks in "What will you run?". */
 export type ToolOption = 'matchzy' | 'serverManager' | 'readyUp' | 'platform';
 
