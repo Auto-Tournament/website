@@ -7,7 +7,8 @@ import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
 import { fontDisplay } from '@/theme/theme';
 import { Reveal } from '@/components/ui';
-import { Footer, Nav, links } from '@/components/sections';
+import { Footer, Nav } from '@/components/sections';
+import { links } from '@/components/links';
 
 const { color, radius } = tokens;
 
@@ -157,7 +158,7 @@ export default function Pricing() {
               <Button variant="contained" href={mailHref}>
                 Email {email}
               </Button>
-              <Button variant="outlined" href={links.licensing}>
+              <Button variant="outlined" href={links.licensing} target="_blank" rel="noopener noreferrer">
                 Read the license reference
               </Button>
             </Box>
