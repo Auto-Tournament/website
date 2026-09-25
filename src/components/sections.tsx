@@ -25,6 +25,7 @@ export const links = {
   repo: 'https://github.com/Auto-Tournament/auto-tournament',
   discord: 'https://discord.gg/n7gHYau7aW',
   licensing: 'https://docs.autotournament.gg/reference/licensing',
+  pricing: '/pricing',
 };
 
 /** True while the visitor is scrolling down past the top of the page. */
@@ -85,6 +86,7 @@ export function Nav() {
           {[
             ['Features', '#features'],
             ['Games', '#games'],
+            ['Pricing', links.pricing],
             ['Docs', links.docs],
             ['GitHub', links.github],
           ].map(([label, href]) => (
@@ -394,6 +396,7 @@ export function Footer() {
       <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 2, mt: 6, color: color.muted, fontSize: '0.875rem' }}>
         <Box component="nav" aria-label="Footer" sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
           {[
+            ['Pricing', links.pricing],
             ['Docs', links.docs],
             ['GitHub', links.github],
             ['Discord', links.discord],
