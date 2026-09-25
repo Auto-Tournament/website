@@ -71,14 +71,14 @@ export function Nav() {
           borderRadius: `${radius.pill}px`,
         }}
       >
-        <Box component="a" href="#top" aria-label="Auto Tournament, back to top" sx={{ display: 'flex', alignItems: 'center', gap: 1, textDecoration: 'none', color: 'inherit', fontFamily: fontDisplay, fontWeight: 600, whiteSpace: 'nowrap' }}>
+        <Box component="a" href="/" aria-label="Auto Tournament, home" sx={{ display: 'flex', alignItems: 'center', gap: 1, textDecoration: 'none', color: 'inherit', fontFamily: fontDisplay, fontWeight: 600, whiteSpace: 'nowrap' }}>
           <AtIcon size={26} radius="7px" />
           Auto Tournament
         </Box>
         <Box component="nav" aria-label="Main" sx={{ display: { xs: 'none', md: 'flex' }, gap: 3, fontSize: '0.875rem' }}>
           {[
-            ['Features', '#features'],
-            ['Games', '#games'],
+            ['Features', '/#features'],
+            ['Games', '/#games'],
             ['Pricing', links.pricing],
             ['Docs', links.docs],
             ['GitHub', links.github],
