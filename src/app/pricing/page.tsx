@@ -14,7 +14,7 @@ const { color, radius } = tokens;
 
 const title = 'Licensing & pricing';
 const description =
-  'Auto Tournament is free for non-commercial use under PolyForm Noncommercial 1.0.0. See what needs a commercial license, what the tiers cost, and how to buy one.';
+  'Auto Tournament is free for non-commercial use under PolyForm Noncommercial 1.0.0. Commercial use is priced per server seat — see what a seat costs and how to buy a license.';
 
 export const metadata: Metadata = {
   title,
@@ -49,34 +49,37 @@ const tiers: Tier[] = [
   {
     name: 'Free',
     price: '€0',
-    note: 'Non-commercial use',
-    bullets: ['Friends, clubs, schools and communities', 'Non-profits', 'Free-entry events'],
+    note: 'Non-commercial use, and the CS2 plugin for anyone',
+    bullets: ['Friends, clubs, schools and communities', 'Free-entry events', 'Auto Tournament CS2 plugin only (MIT), any use'],
   },
   {
-    name: 'Event · Small',
-    price: '€49',
-    note: 'One event, up to 3 consecutive days · up to 5 game servers',
-    bullets: ['One-off LANs and cups', 'Covers the whole event, not per day'],
+    name: 'Event · Servers',
+    price: '€3',
+    period: '/ seat',
+    note: 'One event, up to 5 consecutive days · CS2 Server Manager and/or Ready Up',
+    bullets: ['Every server you set up is a seat, spares included'],
   },
   {
-    name: 'Event · Medium',
-    price: '€99',
-    note: 'One event, up to 3 consecutive days · 6–20 game servers',
-    bullets: ['Bigger LANs and qualifiers'],
+    name: 'Event · Platform + servers',
+    price: '€5',
+    period: '/ seat',
+    note: 'One event, up to 5 consecutive days · the full Auto Tournament setup',
+    bullets: ['Every server you set up is a seat, spares included'],
     highlight: true,
   },
   {
-    name: 'Event · Large',
-    price: '€199',
-    note: 'One event, up to 3 consecutive days · 21+ game servers',
-    bullets: ['Large LANs and finals'],
+    name: 'Yearly · Servers',
+    price: '€12',
+    period: '/ seat / yr',
+    note: 'Unlimited events for that many seats · CS2 Server Manager and/or Ready Up',
+    bullets: ['4× the per-event seat price'],
   },
   {
-    name: 'Operator',
-    price: '€499',
-    period: '/ year',
-    note: 'Unlimited events, up to 20 game servers running at the same time',
-    bullets: ['Running events all year round', 'More than 20 concurrent servers? Contact us'],
+    name: 'Yearly · Platform + servers',
+    price: '€20',
+    period: '/ seat / yr',
+    note: 'Unlimited events for that many seats · the full Auto Tournament setup',
+    bullets: ['4× the per-event seat price'],
   },
   {
     name: 'Hosting / resale',
@@ -93,19 +96,24 @@ const examples: { scenario: string; verdict: string; why: string }[] = [
     why: 'Non-commercial use: nobody pays to take part.',
   },
   {
-    scenario: 'A freelancer is paid a flat €1,000 to run 8 CS2 servers at one LAN, using only the MIT-licensed Auto Tournament CS2 plugin.',
+    scenario: 'A freelancer is paid a flat fee to run 8 CS2 servers at one LAN, using only the MIT-licensed Auto Tournament CS2 plugin.',
     verdict: 'No license needed',
     why: 'Auto Tournament CS2 is MIT and free for any use, including paid work.',
   },
   {
-    scenario: 'The same freelancer instead uses the platform, CS2 Server Manager or ReadyUp for those 8 servers.',
-    verdict: 'Event · Medium (€99)',
-    why: 'Being paid to operate servers for someone else is commercial use, and 8 servers falls in the 6–20 range for one event.',
+    scenario: 'The same freelancer instead uses CS2 Server Manager or ReadyUp on those servers: 6 in play plus 2 spares.',
+    verdict: '8 × €3 = €24',
+    why: 'Every server set up is a seat, spares included, at €3 per seat for one event.',
   },
   {
-    scenario: 'An esports org runs a paid-entry weekly cup all year on 10 servers.',
-    verdict: 'Operator (€499/yr)',
-    why: 'Paid entry is commercial use, and running events all year fits the yearly tier rather than a per-event one.',
+    scenario: 'A paid-entry LAN runs the full platform on 32 servers plus 2 spares, one 4-day event.',
+    verdict: '34 × €5 = €170',
+    why: 'Paid entry is commercial use, and the full platform is €5 per seat for one event.',
+  },
+  {
+    scenario: 'An esports org runs events all year on 10 servers with the platform.',
+    verdict: '10 × €20 = €200 / yr',
+    why: 'Running events all year round fits the yearly seat price rather than paying per event.',
   },
   {
     scenario: 'A company sells hosted tournaments to customers.',
@@ -116,12 +124,16 @@ const examples: { scenario: string; verdict: string; why: string }[] = [
 
 const faq: { q: string; a: React.ReactNode }[] = [
   {
-    q: 'Is the CS2 plugin free?',
-    a: 'Yes. Auto Tournament CS2 is MIT licensed and free for any use, including paid work.',
+    q: 'Do I need a license for only the plugin?',
+    a: 'No. Auto Tournament CS2 is MIT licensed and free for any use, including paid work.',
+  },
+  {
+    q: 'Do spare servers count?',
+    a: 'Yes. Every game server you set up for the event is a seat, even a spare that never gets used.',
   },
   {
     q: 'Do players or teams need a license?',
-    a: "No. Only whoever operates the platform, CS2 Server Manager, ReadyUp or a game pack needs one, if their use counts as commercial.",
+    a: 'No. Only whoever sets up the game servers or the platform needs one, priced per seat, if their use counts as commercial.',
   },
   {
     q: "I'm on 2.4.x",
@@ -151,8 +163,11 @@ export default function Pricing() {
               </Box>
             </Typography>
             <Typography sx={{ mt: 3, maxWidth: '52ch', color: color.ink2, fontSize: '1.125rem' }}>
-              Auto Tournament is free for non-commercial use: friends, clubs, schools, communities, non-profits and free-entry events. Running it for money needs a
-              commercial license. Prices below are in EUR, excluding VAT.
+              Auto Tournament is free for non-commercial use: friends, clubs, schools, communities and free-entry events. Running it for money is priced per game
+              server seat. Prices below are in EUR, excluding VAT.
+            </Typography>
+            <Typography sx={{ mt: 2, maxWidth: '52ch', color: color.muted, fontSize: '0.9375rem' }}>
+              This is a first version. If a price doesn&apos;t fit your case, email us and we&apos;ll work it out.
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 4 }}>
               <Button variant="contained" href={mailHref}>
@@ -201,7 +216,7 @@ export default function Pricing() {
             {[
               'Paid hosting.',
               'Selling or reselling Auto Tournament.',
-              'Paid-entry events, unless run by a non-profit.',
+              'Paid-entry events (non-profit and community events that only cover costs get 50% off).',
               'Use inside a business.',
               'Being paid to set up or operate servers or tournaments for someone else, even for a flat fee.',
             ].map((item) => (
@@ -217,8 +232,8 @@ export default function Pricing() {
           title="Tiers"
           lede={
             <>
-              Size is the number of game servers running Auto Tournament software (platform-managed, CS2 Server Manager-managed, or running ReadyUp) during the event.
-              Prices are in EUR, excluding VAT.
+              A seat is one game server you set up for the event, spares included, even if it&apos;s never used. Prices are in EUR, excluding VAT. Yearly is 4× the
+              per-event seat price, for unlimited events on that many seats.
             </>
           }
         >
@@ -255,6 +270,12 @@ export default function Pricing() {
               </Box>
             ))}
           </Box>
+          <Typography sx={{ mt: 3, color: color.ink2, fontSize: '0.9375rem' }}>
+            Work out your price: seats × price per seat. Example: 34 seats (32 + 2 spares) for one event = €102 servers only, or €170 with the platform.
+          </Typography>
+          <Typography sx={{ mt: 1, color: color.muted, fontSize: '0.875rem' }}>
+            Non-profit or community events where entry only covers costs get 50% off any price above.
+          </Typography>
         </Section>
 
         <Section id="examples" title="Examples">
@@ -300,9 +321,8 @@ export default function Pricing() {
           <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2 }}>
             {[
               'Who you are: name or company, country, and VAT ID if you have one.',
-              'Which tier.',
-              'Event date(s), or a yearly start date for Operator.',
-              'The number of servers.',
+              'Event date(s), or a start date for a yearly license.',
+              'The number of seats, and which option: servers only, or platform + servers.',
             ].map((item) => (
               <Box key={item} component="li" sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, '&::before': { content: '""', width: 6, height: 6, mt: '0.55em', borderRadius: '50%', bgcolor: color.accent, flex: 'none' } }}>
                 {item}
@@ -310,11 +330,11 @@ export default function Pricing() {
             ))}
           </Box>
           <Typography sx={{ mt: 3, color: color.ink2 }}>
-            You get an invoice, and the license is valid once paid. The written license confirmation names the licensee, tier and period. Buy it before the event.
+            You get an invoice, and the license is valid once paid. The written license confirmation names the licensee, option, seats and period. Buy it before
+            the event.
           </Typography>
           <Typography sx={{ mt: 2, color: color.ink2 }}>
-            Not sure which tier? Email and ask, no charge for asking. Non-profits and small community events that charge entry only to cover costs can ask for a
-            free or reduced license.
+            Not sure which option fits? Email and ask, no charge for asking.
           </Typography>
           <Button variant="contained" href={mailHref} sx={{ mt: 3 }}>
             Email {email}
