@@ -9,7 +9,9 @@ import { tokens } from '@/theme/tokens';
 import { fontDisplay } from '@/theme/theme';
 import { mono } from '@/components/ui';
 import type { CompatCheck, CompatRunSummary, CompatSnapshot, CompatView } from '@/lib/compat/document';
+import { runProgress } from '@/lib/compat/steps';
 import { CompatDot, compatTone, compatToneColor } from './CompatDot';
+import { CompatRunSteps } from './CompatRunSteps';
 import {
   checkStatusLabel,
   componentStatusLabel,
@@ -17,6 +19,7 @@ import {
   kindLabel,
   overallHint,
   overallLabel,
+  progressLabel,
   relativeTime,
   stageLabel,
   stateLabel,
@@ -77,8 +80,12 @@ function Fact({ label, children, testId }: { label: string; children: React.Reac
 
 /** The verdict at the top: overall status, when it was checked, and what was checked. */
 function Verdict({ latest, runs, now }: { latest: CompatSnapshot; runs: CompatRunSummary[]; now: number }) {
-  const tone = compatTone(latest.overall);
-  const previous = latest.overall === 'checking' ? previousVerdict(latest, runs) : undefined;
+  // While the run is still going, a stage that finished early does not get to say "Compatible".
+  const progress = runProgress(latest, now);
+  const overall = progress.inProgress ? 'checking' : latest.overall;
+  const where = progressLabel(progress);
+  const tone = compatTone(overall);
+  const previous = overall === 'checking' ? previousVerdict(latest, runs) : undefined;
   return (
     <Box data-testid="compat-overall" sx={{ ...panel, p: { xs: 3, md: 4 }, display: 'grid', gap: 3 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, flexWrap: 'wrap' }}>
@@ -87,18 +94,28 @@ function Verdict({ latest, runs, now }: { latest: CompatSnapshot; runs: CompatRu
           <Typography
             component="h2"
             data-testid="compat-overall-status"
-            data-status={latest.overall}
+            data-status={overall}
             sx={{ fontFamily: fontDisplay, fontWeight: 700, fontSize: 'clamp(1.6rem, 1.4vw + 1rem, 2.25rem)', letterSpacing: '-0.02em', lineHeight: 1.1, color: compatToneColor[tone] }}
           >
-            {overallLabel[latest.overall]}
-            {latest.overall === 'checking' && (
+            {overallLabel[overall]}
+            {overall === 'checking' && (
               <Box component="span" sx={{ color: color.ink2 }}>
                 {' '}
                 {cs2Label(latest.cs2)}
               </Box>
             )}
+            {where && (
+              <Box
+                component="span"
+                data-testid="compat-overall-progress"
+                sx={{ display: 'block', mt: 0.75, fontFamily: 'inherit', fontWeight: 600, fontSize: '1.0625rem', letterSpacing: 0, lineHeight: 1.35, color: color.ink }}
+              >
+                ({where.charAt(0).toLowerCase()}
+                {where.slice(1)})
+              </Box>
+            )}
           </Typography>
-          <Typography sx={{ color: color.ink2, mt: 0.75, maxWidth: '60ch' }}>{overallHint[latest.overall]}</Typography>
+          <Typography sx={{ color: color.ink2, mt: 0.75, maxWidth: '60ch' }}>{overallHint[overall]}</Typography>
           {previous && (
             <Typography data-testid="compat-previous" sx={{ color: color.muted, mt: 0.75, fontSize: '0.875rem' }}>
               Last result: {overallLabel[previous.overall]} on {cs2Label(previous.cs2)}, <TimeAgo iso={previous.checked_at} now={now} />.
@@ -134,7 +151,7 @@ function Verdict({ latest, runs, now }: { latest: CompatSnapshot; runs: CompatRu
           </Box>
         </Fact>
         <Fact label="Stage" testId="compat-stage">
-          {stageLabel[latest.run.stage]} · {stateLabel[latest.run.state]}
+          {stageLabel[latest.run.stage]} · {progress.inProgress ? stateLabel.checking : stateLabel[latest.run.state]}
         </Fact>
       </Box>
     </Box>
@@ -305,11 +322,28 @@ function History({ runs, now }: { runs: CompatRunSummary[]; now: number }) {
   );
 }
 
-function SectionTitle({ id, children }: { id: string; children: React.ReactNode }) {
+function SectionTitle({ id, children, aside }: { id: string; children: React.ReactNode; aside?: React.ReactNode }) {
   return (
-    <Typography id={id} variant="h3" component="h2" sx={{ mb: 2 }}>
-      {children}
-    </Typography>
+    <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 1.5, rowGap: 0.5, mb: 2 }}>
+      <Typography id={id} variant="h3" component="h2">
+        {children}
+      </Typography>
+      {aside}
+    </Box>
+  );
+}
+
+/** "Partial": the components of a run that is still going show only the stages finished so far. */
+function PartialNote() {
+  return (
+    <Box
+      component="span"
+      data-testid="compat-partial"
+      sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, fontSize: '0.8125rem', color: color.warn }}
+    >
+      <CompatDot tone="checking" size={6} />
+      Partial: results so far, the run is still going
+    </Box>
   );
 }
 
@@ -322,6 +356,8 @@ export function CompatibilityLive({ initial, serverNow }: { initial: CompatView;
   const { view, mode } = useCompatLive(initial);
   const now = useNow(serverNow);
   const { latest, runs } = view;
+  const inProgress = latest ? runProgress(latest, now).inProgress : false;
+  const hasSteps = (latest?.run.steps?.length ?? 0) > 0;
 
   return (
     <Box data-testid="compat-live-root" sx={{ display: 'grid', gap: { xs: 5, md: 6 } }}>
@@ -346,9 +382,18 @@ export function CompatibilityLive({ initial, serverNow }: { initial: CompatView;
         )}
       </Box>
 
+      {latest && hasSteps && (
+        <Box component="section" aria-labelledby="compat-run-title">
+          <SectionTitle id="compat-run-title">{inProgress ? 'Current run' : 'Last run'}</SectionTitle>
+          <CompatRunSteps latest={latest} serverNow={now} />
+        </Box>
+      )}
+
       {latest && latest.components.length > 0 && (
         <Box component="section" aria-labelledby="compat-components-title">
-          <SectionTitle id="compat-components-title">Components</SectionTitle>
+          <SectionTitle id="compat-components-title" aside={inProgress ? <PartialNote /> : undefined}>
+            Components
+          </SectionTitle>
           <Box component="ul" data-testid="compat-components" sx={{ ...panel, listStyle: 'none', m: 0, p: 0, overflow: 'hidden' }}>
             {latest.components.map((component) => (
               <ComponentRow key={component.id} component={component} />

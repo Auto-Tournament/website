@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compatSummaryText, cs2Label, relativeTime, utcTime } from './labels';
+import { compatSummaryText, cs2Label, durationLabel, progressLabel, relativeTime, utcTime } from './labels';
 import { compatSummaryTone } from './CompatDot';
 
 describe('compat page wording', () => {
@@ -42,5 +42,20 @@ describe('nav status dot', () => {
       label: 'CS2 compatibility: unknown',
       title: 'Ready Up CS2 compatibility: Unknown',
     });
+  });
+  it('says how long a step took', () => {
+    expect(durationLabel(0)).toBe('0s');
+    expect(durationLabel(42_900)).toBe('42s');
+    expect(durationLabel(185_000)).toBe('3m 05s');
+    expect(durationLabel(3_720_000)).toBe('1h 02m');
+    expect(durationLabel(-5)).toBe('');
+  });
+  it('names where a run is', () => {
+    const step = (name: string, status: 'queued' | 'running') => ({ id: name, name, stage: 'live' as const, status });
+    expect(progressLabel({ inProgress: true, total: 7, index: 5, current: step('Live: match', 'running'), sub: step('round 1 ends', 'running') })).toBe(
+      'Step 5 of 7: Live: match · round 1 ends',
+    );
+    expect(progressLabel({ inProgress: true, total: 7, index: 1, current: step('Build bundle', 'queued'), sub: null })).toBe('Step 1 of 7: Build bundle (up next)');
+    expect(progressLabel({ inProgress: false, total: 7, index: 0, current: null, sub: null })).toBeNull();
   });
 });
