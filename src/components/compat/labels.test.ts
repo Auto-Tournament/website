@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { cs2Label, relativeTime, utcTime } from './labels';
+import { compatSummaryText, cs2Label, relativeTime, utcTime } from './labels';
+import { compatSummaryTone } from './CompatDot';
 
 describe('compat page wording', () => {
   const now = Date.parse('2026-09-25T12:00:00Z');
@@ -18,5 +19,28 @@ describe('compat page wording', () => {
   it('names the CS2 patch, or the build while the patch is not known yet', () => {
     expect(cs2Label({ buildid: '25537370', patch: '1.41.8.5' })).toBe('CS2 1.41.8.5');
     expect(cs2Label({ buildid: '25537999', patch: '' })).toBe('CS2 build 25537999');
+  });
+});
+
+describe('nav status dot', () => {
+  it('is green, yellow, red or grey', () => {
+    expect(compatSummaryTone('pass')).toBe('pass');
+    expect(compatSummaryTone('warn')).toBe('warn');
+    expect(compatSummaryTone('checking')).toBe('warn');
+    expect(compatSummaryTone('fail')).toBe('fail');
+    expect(compatSummaryTone('no_verdict')).toBe('none');
+    expect(compatSummaryTone(null)).toBe('none');
+  });
+  it('names the status for screen readers and the tooltip', () => {
+    const cs2 = { buildid: '25537370', patch: '1.41.8.5' };
+    expect(compatSummaryText({ overall: 'pass', cs2 })).toEqual({
+      label: 'CS2 compatibility: compatible',
+      title: 'Ready Up on CS2 1.41.8.5: Compatible',
+    });
+    expect(compatSummaryText({ overall: 'warn', cs2 }).label).toBe('CS2 compatibility: static check OK');
+    expect(compatSummaryText({ overall: null, cs2: null })).toEqual({
+      label: 'CS2 compatibility: unknown',
+      title: 'Ready Up CS2 compatibility: Unknown',
+    });
   });
 });

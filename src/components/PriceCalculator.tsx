@@ -385,8 +385,8 @@ export function PriceCalculator({ packs, pricesAvailable = true }: { packs: read
               <Box sx={{ mt: 1, display: 'grid', gap: 0.75, justifyItems: 'start' }}>
                 <Chip size="small" color="primary" label={founderBadge} />
                 <Typography sx={{ color: color.ink2, fontSize: '0.875rem' }}>
-                  Perpetual commercial use of the versions released within 12 months of purchase, including 1 year of updates. Renew updates later at{' '}
-                  {formatEuro(quote.pack.prices.year)} a year.
+                  Pay once. Every version released in the 12 months after you buy is yours to use commercially, for good. Renewing updates after
+                  that is optional, at {formatEuro(quote.pack.prices.year)} a year.
                 </Typography>
                 <Typography sx={{ color: color.ink, fontSize: '0.875rem', fontWeight: 600 }}>{founderUpdateWarning}.</Typography>
               </Box>
@@ -405,19 +405,18 @@ export function PriceCalculator({ packs, pricesAvailable = true }: { packs: read
                 disabled={checkoutLoading}
                 aria-busy={checkoutLoading}
                 data-testid="buy-with-card"
-                sx={{ whiteSpace: 'nowrap' }}
               >
                 {checkoutLoading ? 'Opening checkout…' : 'Buy with card'}
               </Button>
             )}
-            <Button variant={cardAvailable ? 'outlined' : 'contained'} href={mailHref} data-testid="request-by-email" sx={{ whiteSpace: 'nowrap' }}>
+            <Button variant={cardAvailable ? 'outlined' : 'contained'} href={mailHref} data-testid="request-by-email">
               Request by email
             </Button>
           </Box>
         )}
 
         {quote.kind === 'contact' && (
-          <Button variant="contained" href={helpHref} data-testid="contact-us" sx={{ whiteSpace: 'nowrap' }}>
+          <Button variant="contained" href={helpHref} data-testid="contact-us">
             Contact us for a quote
           </Button>
         )}
@@ -477,7 +476,7 @@ export function PriceCalculator({ packs, pricesAvailable = true }: { packs: read
           Tell us about your setup (the event, how many servers, which tools) and we&apos;ll work out the price with you and send you an invoice instead of
           card payment.
         </Typography>
-        <Button variant="outlined" href={helpHref} sx={{ mt: 0.5, whiteSpace: 'nowrap' }}>
+        <Button variant="outlined" href={helpHref} sx={{ mt: 0.5 }}>
           Email us about your setup
         </Button>
       </Box>

@@ -40,6 +40,24 @@ type LoadingKey = `${string}:${Period}`;
 const loadingKeyFor = (packId: string, period: Period): LoadingKey => `${packId}:${period}`;
 
 /**
+ * A founding supporter button holds two lines (pack, then price), so it is a
+ * rounded card rather than a pill, and its text wraps instead of spilling out.
+ */
+const founderButton = {
+  display: 'grid',
+  justifyItems: 'center',
+  alignContent: 'center',
+  gap: 0.25,
+  py: 1,
+  px: 1.5,
+  minWidth: 0,
+  height: 'auto',
+  borderRadius: `${radius.md}px`,
+  textAlign: 'center',
+  lineHeight: 1.25,
+} as const;
+
+/**
  * The top of the pricing page: Servers / Platform toggle, the S / M / L pack
  * cards, and the founding supporter strip. Every Buy button starts Stripe
  * Checkout directly for that pack and period.
@@ -191,7 +209,6 @@ export function PackPricing({ packs: allPacks, pricesAvailable = true }: { packs
                       aria-busy={eventLoading}
                       aria-label={`Buy ${pack.name} for one event, ${formatEuro(pack.prices.event)}`}
                       data-testid="buy-event"
-                      sx={{ whiteSpace: 'nowrap' }}
                     >
                       {eventLoading ? (
                         'Opening checkout…'
@@ -213,7 +230,6 @@ export function PackPricing({ packs: allPacks, pricesAvailable = true }: { packs
                       aria-busy={yearLoading}
                       aria-label={`Buy ${pack.name} yearly, ${formatEuro(pack.prices.year)}`}
                       data-testid="buy-year"
-                      sx={{ whiteSpace: 'nowrap' }}
                     >
                       {yearLoading ? (
                         'Opening checkout…'
@@ -235,7 +251,6 @@ export function PackPricing({ packs: allPacks, pricesAvailable = true }: { packs
                     href={`mailto:${seller.email}`}
                     aria-label={`Request ${pack.name} by email`}
                     data-testid="request-by-email"
-                    sx={{ whiteSpace: 'nowrap' }}
                   >
                     Request by email
                   </Button>
@@ -277,7 +292,8 @@ export function PackPricing({ packs: allPacks, pricesAvailable = true }: { packs
           <Chip size="small" variant="outlined" label={founderBadge} data-testid="founder-badge" />
         </Box>
         <Typography sx={{ color: color.ink2, maxWidth: '62ch' }}>
-          Pay once. Use every version released in the 12 months after you buy commercially, for good, with 1 year of updates included.
+          Pay once. Every version released in the 12 months after you buy is yours to use commercially, for good. Those 12 months are your included
+          year of updates.
         </Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0,1fr))' }, gap: 1, maxWidth: 560 }}>
           {packs.map((pack) => {
@@ -291,24 +307,13 @@ export function PackPricing({ packs: allPacks, pricesAvailable = true }: { packs
                 aria-busy={founderLoading}
                 aria-label={`Become a founding supporter with ${pack.name}, ${formatEuro(pack.prices.founder)}`}
                 data-testid="founder-price"
-                sx={{ display: 'grid', justifyItems: 'center', gap: 0.25, py: 1, px: 1, whiteSpace: 'nowrap', minWidth: 0 }}
+                sx={founderButton}
               >
                 <Box component="span" sx={{ fontSize: '0.8125rem', color: color.ink2, fontWeight: 500 }}>
                   {pack.size} · {pack.maxServers} servers
                 </Box>
                 <Box component="span" sx={{ fontFamily: fontDisplay, fontWeight: 700, fontSize: '1rem', color: color.ink }}>
-                  {founderLoading ? (
-                    'Opening checkout…'
-                  ) : (
-                    <>
-                      <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                        Become a founding supporter · {formatEuro(pack.prices.founder)}
-                      </Box>
-                      <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
-                        Founding supporter · {formatEuro(pack.prices.founder)}
-                      </Box>
-                    </>
-                  )}
+                  {founderLoading ? 'Opening checkout…' : `Pay once · ${formatEuro(pack.prices.founder)}`}
                 </Box>
               </Button>
             ) : (
@@ -318,7 +323,7 @@ export function PackPricing({ packs: allPacks, pricesAvailable = true }: { packs
                 href={`mailto:${seller.email}`}
                 aria-label={`Request ${pack.name} as a founding supporter by email`}
                 data-testid="request-by-email"
-                sx={{ display: 'grid', justifyItems: 'center', gap: 0.25, py: 1, px: 1, whiteSpace: 'nowrap', minWidth: 0 }}
+                sx={founderButton}
               >
                 <Box component="span" sx={{ fontSize: '0.8125rem', color: color.ink2, fontWeight: 500 }}>
                   {pack.size} · {pack.maxServers} servers
@@ -331,8 +336,8 @@ export function PackPricing({ packs: allPacks, pricesAvailable = true }: { packs
           })}
         </Box>
         <Typography sx={{ color: color.ink2, fontSize: '0.9375rem', maxWidth: '62ch' }}>
-          After a year, renewing updates is optional, at the yearly price of the same pack (for example {formatEuro(packs[2].prices.year)} a year for{' '}
-          {packs[2].name}). Without it, you keep the versions from your first 12 months.
+          After that, renewing updates is optional, at the pack&apos;s yearly price (for example {formatEuro(packs[2].prices.year)} a year for{' '}
+          {packs[2].name}). If you don&apos;t renew, you keep the versions from your first 12 months.
         </Typography>
         <Typography sx={{ color: color.ink, fontSize: '0.9375rem', fontWeight: 600 }}>{founderUpdateWarning}.</Typography>
         <Typography sx={{ color: color.muted, fontSize: '0.875rem' }}>

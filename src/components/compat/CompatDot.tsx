@@ -27,6 +27,16 @@ export function compatTone(status: CompatComponentStatus | CompatOverall | Compa
   }
 }
 
+/**
+ * One colour for the newest verdict where there is only room for a dot (the
+ * nav): the page's colours, except a run in progress shows yellow (no
+ * verdict yet), and no data at all, or a failed read, shows grey.
+ */
+export function compatSummaryTone(overall: CompatOverall | null): CompatTone {
+  if (overall === null) return 'none';
+  return overall === 'checking' ? 'warn' : compatTone(overall);
+}
+
 export const compatToneColor: Record<CompatTone, string> = {
   pass: color.live,
   warn: color.warn,

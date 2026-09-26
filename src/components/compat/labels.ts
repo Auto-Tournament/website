@@ -81,6 +81,21 @@ export const kindLabel: Record<CompatCheckKind, string> = {
   livetest: 'Live test',
 };
 
+/**
+ * The nav's status dot, in words: the accessible name ("CS2 compatibility:
+ * compatible") and the tooltip, which adds the CS2 patch when known.
+ * `overall` null means no run yet, or the status could not be read.
+ */
+export function compatSummaryText(status: { overall: CompatOverall | null; cs2: { buildid: string; patch: string } | null }): {
+  label: string;
+  title: string;
+} {
+  const words = status.overall ? overallLabel[status.overall] : 'Unknown';
+  const label = `CS2 compatibility: ${words.charAt(0).toLowerCase()}${words.slice(1)}`;
+  const title = status.overall && status.cs2 ? `Ready Up on ${cs2Label(status.cs2)}: ${words}` : `Ready Up CS2 compatibility: ${words}`;
+  return { label, title };
+}
+
 /** CS2 patch when known, else the build id (a queued run has no patch yet). */
 export function cs2Label(cs2: { buildid: string; patch: string }): string {
   return cs2.patch ? `CS2 ${cs2.patch}` : `CS2 build ${cs2.buildid}`;

@@ -14,6 +14,8 @@ import { VetoCard } from './cards/VetoCard';
 import { ServersCard } from './cards/ServersCard';
 import { ProfileCard } from './cards/ProfileCard';
 import { AtIcon } from './AtIcon';
+import { CodeBlock } from './CodeBlock';
+import { CompatNavStatus } from './compat/CompatNavStatus';
 import { ThemePicker } from './ThemePicker';
 import { links } from './links';
 import { seller } from './seller';
@@ -61,7 +63,7 @@ export function Nav() {
           '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
           display: 'flex',
           alignItems: 'center',
-          gap: 3,
+          gap: { xs: 1.5, sm: 3 },
           maxWidth: '100%',
           py: 1,
           pr: 1,
@@ -74,7 +76,10 @@ export function Nav() {
       >
         <Box component="a" href="/" aria-label="Auto Tournament, home" sx={{ display: 'flex', alignItems: 'center', gap: 1, textDecoration: 'none', color: 'inherit', fontFamily: fontDisplay, fontWeight: 600, whiteSpace: 'nowrap' }}>
           <AtIcon size={26} radius="7px" />
-          Auto Tournament
+          {/* On the narrowest phones the icon stands alone, so Pricing, the status dot and Install still fit. */}
+          <Box component="span" sx={{ '@media (max-width: 419.95px)': { display: 'none' } }}>
+            Auto Tournament
+          </Box>
         </Box>
         <Box component="nav" aria-label="Main" sx={{ display: { xs: 'none', md: 'flex' }, gap: 3, fontSize: '0.875rem' }}>
           {[
@@ -89,10 +94,11 @@ export function Nav() {
             </Box>
           ))}
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2 } }}>
           <Box component="a" href={links.pricing} sx={{ display: { xs: 'inline', md: 'none' }, color: color.ink2, textDecoration: 'none', fontSize: '0.875rem', whiteSpace: 'nowrap', '&:hover': { color: color.ink } }}>
             Pricing
           </Box>
+          <CompatNavStatus />
           <Button variant="contained" size="small" href={links.install}>
             Install
           </Button>
@@ -284,71 +290,6 @@ STEAM_API_KEY=
 AUTH_STEAM_ENABLED=true
 EOF
 docker compose up -d`;
-
-/** Wrapping code block with a copy button. Copies the commands, not the comment. */
-function CodeBlock({ code, comment }: { code: string; comment?: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    let ok = false;
-    try {
-      await navigator.clipboard.writeText(code);
-      ok = true;
-    } catch {
-      // The async clipboard API is blocked on plain http and in some embeds;
-      // fall back to a hidden textarea and the legacy copy command.
-      const ta = document.createElement('textarea');
-      ta.value = code;
-      ta.setAttribute('readonly', '');
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      ok = document.execCommand('copy');
-      ta.remove();
-    }
-    if (ok) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-  return (
-    <Box sx={{ position: 'relative', minWidth: 0 }}>
-      <Box
-        component="pre"
-        sx={{
-          ...mono,
-          m: 0,
-          p: 3,
-          pr: { xs: 3, sm: 11 },
-          borderRadius: `${radius.md}px`,
-          bgcolor: color.paper,
-          border: `1px solid ${color.rule}`,
-          fontSize: '0.875rem',
-          lineHeight: 1.7,
-          color: color.ink2,
-          whiteSpace: 'pre-wrap',
-          overflowWrap: 'anywhere',
-        }}
-      >
-        {comment && (
-          <Box component="span" sx={{ color: color.muted, display: 'block' }}>
-            {comment}
-          </Box>
-        )}
-        {code}
-      </Box>
-      <Button
-        size="small"
-        variant="outlined"
-        onClick={copy}
-        aria-label={copied ? 'Commands copied' : 'Copy commands'}
-        sx={{ position: { xs: 'static', sm: 'absolute' }, top: 12, right: 12, mt: { xs: 1.5, sm: 0 }, minWidth: 76, bgcolor: color.paper2 }}
-      >
-        <span aria-live="polite">{copied ? 'Copied' : 'Copy'}</span>
-      </Button>
-    </Box>
-  );
-}
 
 export function Install() {
   return (
