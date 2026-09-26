@@ -5,8 +5,10 @@ import type {
   CompatOverall,
   CompatRunState,
   CompatStage,
+  CompatStepStatus,
   CompatTrigger,
 } from '@/lib/compat/document';
+import type { CompatProgress } from '@/lib/compat/steps';
 
 /**
  * Words for the compatibility page. English only, like the rest of the site;
@@ -60,6 +62,32 @@ export const stateLabel: Record<CompatRunState, string> = {
   fail: 'Failed',
   no_verdict: 'No verdict',
 };
+
+export const stepStatusLabel: Record<CompatStepStatus, string> = {
+  queued: 'Queued',
+  running: 'Running',
+  pass: 'Passed',
+  fail: 'Failed',
+  skip: 'Skipped',
+};
+
+/** "Step 4 of 7: Boot + selftest", with the live test's own step when one is running; null without steps. */
+export function progressLabel(progress: CompatProgress): string | null {
+  if (!progress.current) return null;
+  const sub = progress.sub ? ` · ${progress.sub.name}` : '';
+  const waiting = progress.current.status === 'queued' ? ' (up next)' : '';
+  return `Step ${progress.index} of ${progress.total}: ${progress.current.name}${waiting}${sub}`;
+}
+
+/** "42s", "3m 05s", "1h 02m": how long a step took, or has been running. Empty for a negative or unknown span. */
+export function durationLabel(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return '';
+  const total = Math.floor(ms / 1000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  if (total < 60) return `${total}s`;
+  if (total < 3600) return `${Math.floor(total / 60)}m ${pad(total % 60)}s`;
+  return `${Math.floor(total / 3600)}h ${pad(Math.floor((total % 3600) / 60))}m`;
+}
 
 export const triggerLabel: Record<CompatTrigger, string> = {
   build_change: 'New CS2 build',

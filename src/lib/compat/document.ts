@@ -19,6 +19,8 @@
  * types and it is tested in process.
  */
 
+import { effectiveOverall } from './steps';
+
 export const COMPAT_SCHEMA_VERSION = 1;
 
 export const COMPAT_TRIGGERS = ['build_change', 'surface_change', 'nightly', 'release', 'manual'] as const;
@@ -38,6 +40,10 @@ export const COMPAT_CHECK_KINDS = [
   'livetest',
 ] as const;
 export const COMPAT_CHECK_STATUSES = ['pass', 'warn', 'fail', 'pending'] as const;
+/** A step of the run as it goes (`run.steps`, optional): like the steps of a GitHub Actions job. */
+export const COMPAT_STEP_STATUSES = ['queued', 'running', 'pass', 'fail', 'skip'] as const;
+/** What part of the run a step belongs to: the stages, plus getting ready and recording the result. */
+export const COMPAT_STEP_STAGES = ['setup', 'static', 'selftest', 'live', 'record'] as const;
 
 export type CompatTrigger = (typeof COMPAT_TRIGGERS)[number];
 export type CompatStage = (typeof COMPAT_STAGES)[number];
@@ -46,6 +52,8 @@ export type CompatOverall = (typeof COMPAT_OVERALL)[number];
 export type CompatComponentStatus = (typeof COMPAT_COMPONENT_STATUSES)[number];
 export type CompatCheckKind = (typeof COMPAT_CHECK_KINDS)[number];
 export type CompatCheckStatus = (typeof COMPAT_CHECK_STATUSES)[number];
+export type CompatStepStatus = (typeof COMPAT_STEP_STATUSES)[number];
+export type CompatStepStage = (typeof COMPAT_STEP_STAGES)[number];
 
 export interface CompatCheck {
   kind: CompatCheckKind;
@@ -62,6 +70,22 @@ export interface CompatComponent {
   checks: CompatCheck[];
 }
 
+/**
+ * One step of a run. `parent` (optional) nests it under another step: the
+ * live test's own steps ("warmup", "knife", "round 1 ends") sit under
+ * "Live: match".
+ */
+export interface CompatStep {
+  id: string;
+  name: string;
+  stage: CompatStepStage;
+  status: CompatStepStatus;
+  started_at?: string;
+  finished_at?: string;
+  detail?: string;
+  parent?: string;
+}
+
 export interface CompatRun {
   id: string;
   url: string;
@@ -70,6 +94,12 @@ export interface CompatRun {
   state: CompatRunState;
   started_at: string;
   finished_at: string | null;
+  /**
+   * Optional, and still schema 1 (older producers never send it): the run's
+   * steps so far. A later copy of the same run updates them step by step
+   * (lib/compat/steps.ts `mergeSteps`); a copy without steps keeps the ones stored.
+   */
+  steps?: CompatStep[];
 }
 
 /** One `compat.json`, as the Ready Up CI writes it. */
@@ -95,6 +125,9 @@ export const COMPAT_LIMITS = {
   versionLength: 64,
   urlLength: 2048,
   checkCount: 1_000_000,
+  steps: 100,
+  stepNameLength: 96,
+  stepDetailLength: 500,
 } as const;
 
 const BUILDID = /^[0-9]{1,20}$/;
@@ -102,6 +135,7 @@ const PATCH = /^[0-9]{1,6}(\.[0-9]{1,6}){1,4}$/;
 const COMMIT = /^[0-9a-fA-F]{7,64}$/;
 const RUN_ID = /^[A-Za-z0-9._:-]{1,128}$/;
 const COMPONENT_ID = /^[a-z0-9][a-z0-9_-]{0,31}$/;
+const STEP_ID = /^[A-Za-z0-9._:-]{1,64}$/;
 /** RFC 3339 date-time: `2026-09-25T12:00:00Z`, optional fraction, `Z` or an offset. */
 const ISO_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})$/;
 /** Control characters (tabs and newlines included) have no place in a label. */
@@ -119,14 +153,15 @@ class Checker {
     if (this.errors.length < 50) this.errors.push(`${path}: ${message}`);
   }
 
-  object(value: unknown, path: string, keys: readonly string[]): Record<string, unknown> | null {
+  /** An object with exactly `keys`, plus any of `optional`. */
+  object(value: unknown, path: string, keys: readonly string[], optional: readonly string[] = []): Record<string, unknown> | null {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
       this.fail(path, 'must be an object');
       return null;
     }
     const record = value as Record<string, unknown>;
     for (const key of Object.keys(record)) {
-      if (!keys.includes(key)) this.fail(path ? `${path}.${key}` : key, 'is not a known field');
+      if (!keys.includes(key) && !optional.includes(key)) this.fail(path ? `${path}.${key}` : key, 'is not a known field');
     }
     for (const key of keys) {
       if (!(key in record)) this.fail(path ? `${path}.${key}` : key, 'is required');
@@ -250,6 +285,58 @@ function validateComponent(c: Checker, value: unknown, path: string): CompatComp
   return { id, name, status, checks };
 }
 
+function validateStep(c: Checker, value: unknown, path: string): CompatStep | null {
+  const raw = c.object(value, path, ['id', 'name', 'stage', 'status'], ['started_at', 'finished_at', 'detail', 'parent']);
+  if (!raw) return null;
+  const idLabel = 'must be 1-64 letters, digits, . _ : or -';
+  const id = c.string(raw.id, `${path}.id`, { max: 64, pattern: STEP_ID, label: idLabel });
+  const name = c.string(raw.name, `${path}.name`, { max: COMPAT_LIMITS.stepNameLength });
+  const stage = c.oneOf(raw.stage, `${path}.stage`, COMPAT_STEP_STAGES);
+  const status = c.oneOf(raw.status, `${path}.status`, COMPAT_STEP_STATUSES);
+  const step: Partial<CompatStep> = {};
+  let ok = id !== null && name !== null && stage !== null && status !== null;
+  if (raw.started_at !== undefined) {
+    const at = c.timestamp(raw.started_at, `${path}.started_at`);
+    if (at === null) ok = false;
+    else step.started_at = at;
+  }
+  if (raw.finished_at !== undefined) {
+    const at = c.timestamp(raw.finished_at, `${path}.finished_at`);
+    if (at === null) ok = false;
+    else step.finished_at = at;
+  }
+  if (raw.detail !== undefined) {
+    const detail = c.string(raw.detail, `${path}.detail`, { max: COMPAT_LIMITS.stepDetailLength });
+    if (detail === null) ok = false;
+    else step.detail = detail;
+  }
+  if (raw.parent !== undefined) {
+    const parent = c.string(raw.parent, `${path}.parent`, { max: 64, pattern: STEP_ID, label: idLabel });
+    if (parent === null) ok = false;
+    else step.parent = parent;
+  }
+  if (!ok) return null;
+  return { id: id!, name: name!, stage: stage!, status: status!, ...step };
+}
+
+function validateSteps(c: Checker, value: unknown, path: string): CompatStep[] | null {
+  const list = c.array(value, path, COMPAT_LIMITS.steps);
+  if (!list) return null;
+  const steps: CompatStep[] = [];
+  const seen = new Set<string>();
+  list.forEach((entry, i) => {
+    const step = validateStep(c, entry, `${path}[${i}]`);
+    if (!step) return;
+    if (seen.has(step.id)) {
+      c.fail(`${path}[${i}].id`, `duplicates "${step.id}"`);
+      return;
+    }
+    seen.add(step.id);
+    steps.push(step);
+  });
+  return steps.length === list.length ? steps : null;
+}
+
 /**
  * Check `input` against the schema-1 contract. On success `value` is a fresh
  * object holding exactly the contract's fields, in the contract's order, with
@@ -284,7 +371,7 @@ export function validateCompatDocument(input: unknown): CompatValidation {
     ? c.string(readyupRaw.commit, 'readyup.commit', { max: 64, pattern: COMMIT, label: 'must be a hex commit sha' })
     : null;
 
-  const runRaw = c.object(raw.run, 'run', ['id', 'url', 'trigger', 'stage', 'state', 'started_at', 'finished_at']);
+  const runRaw = c.object(raw.run, 'run', ['id', 'url', 'trigger', 'stage', 'state', 'started_at', 'finished_at'], ['steps']);
   let run: CompatRun | null = null;
   if (runRaw) {
     const id = c.string(runRaw.id, 'run.id', { max: 128, pattern: RUN_ID, label: 'must be letters, digits, . _ : or -' });
@@ -295,8 +382,9 @@ export function validateCompatDocument(input: unknown): CompatValidation {
     const startedAt = c.timestamp(runRaw.started_at, 'run.started_at');
     const finishedAt = runRaw.finished_at === null ? null : c.timestamp(runRaw.finished_at, 'run.finished_at');
     const finishedOk = runRaw.finished_at === null || finishedAt !== null;
-    if (id && url && trigger && stage && state && startedAt && finishedOk) {
-      run = { id, url, trigger, stage, state, started_at: startedAt, finished_at: finishedAt };
+    const steps = runRaw.steps === undefined ? undefined : validateSteps(c, runRaw.steps, 'run.steps');
+    if (id && url && trigger && stage && state && startedAt && finishedOk && steps !== null) {
+      run = { id, url, trigger, stage, state, started_at: startedAt, finished_at: finishedAt, ...(steps ? { steps } : {}) };
     }
   }
 
@@ -383,16 +471,17 @@ export interface CompatStatus {
   checked_at: string | null;
 }
 
-export function compatStatus(doc: CompatDocument | null): CompatStatus {
+/** `overall` is "checking" while the run is still going (lib/compat/steps.ts), whatever a finished stage said. */
+export function compatStatus(doc: CompatDocument | null, now = Date.now()): CompatStatus {
   if (!doc) return { overall: null, cs2: null, checked_at: null };
-  return { overall: doc.overall, cs2: doc.cs2, checked_at: doc.checked_at };
+  return { overall: effectiveOverall(doc, now), cs2: doc.cs2, checked_at: doc.checked_at };
 }
 
 /** The badge for the latest document, or "unknown" when there is none yet. */
-export function compatBadge(doc: CompatDocument | null): ShieldsEndpointBadge {
+export function compatBadge(doc: CompatDocument | null, now = Date.now()): ShieldsEndpointBadge {
   const base = { schemaVersion: 1 as const, label: 'Ready Up', cacheSeconds: 300 };
   if (!doc) return { ...base, message: 'unknown', color: 'lightgrey' };
-  const { message, color } = BADGE_WORDING[doc.overall];
+  const { message, color } = BADGE_WORDING[effectiveOverall(doc, now)];
   const cs2 = doc.cs2.patch ? `CS2 ${doc.cs2.patch}` : `CS2 build ${doc.cs2.buildid}`;
   return { ...base, message: `${message} · ${cs2}`, color };
 }
@@ -415,7 +504,7 @@ export interface CompatReceived {
 /** A run with every component's checks: `GET /api/compat/latest`. */
 export type CompatSnapshot = CompatDocument & CompatReceived;
 
-/** A run with each component's status only: `GET /api/compat/runs`. */
+/** A run with each component's status only, and no steps: `GET /api/compat/runs`. */
 export type CompatRunSummary = Omit<CompatDocument, 'components'> &
   CompatReceived & {
     components: Array<{ id: string; name: string; status: CompatComponentStatus }>;
@@ -436,7 +525,8 @@ export interface CompatView {
 }
 
 export function toRunSummary(run: CompatSnapshot): CompatRunSummary {
-  return { ...run, components: run.components.map(({ id, name, status }) => ({ id, name, status })) };
+  const { steps: _steps, ...rest } = run.run;
+  return { ...run, run: rest, components: run.components.map(({ id, name, status }) => ({ id, name, status })) };
 }
 
 /** The document part of a stored run, in the contract's field order. */

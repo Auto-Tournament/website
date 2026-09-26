@@ -11,6 +11,7 @@ import {
   type CompatSnapshot,
   type CompatSource,
 } from './document';
+import { withMergedSteps } from './steps';
 
 /**
  * The runs Ready Up's CI reported, kept in one small JSON file.
@@ -22,7 +23,8 @@ import {
  * a crash mid-write leaves the previous file, never half of one.
  *
  * A run is upserted by its `run.id`, so one CI run moving from `queued` to
- * `checking` to `pass` is one entry. A copy that says nothing new is not
+ * `checking` to `pass` is one entry, and its `run.steps` are merged step by
+ * step (lib/compat/steps.ts), never dropped. A copy that says nothing new is not
  * written, and a copy older (`checked_at`) than the stored one is ignored, so
  * an out-of-order push, or the published file lagging the pushes, cannot roll
  * a run back. Ported from the platform's compatService.ts, with the database
@@ -149,9 +151,11 @@ export function createCompatStore(dir: string, { historyLimit = COMPAT_HISTORY_L
     }
   }
 
-  async function ingestNow(doc: CompatDocument, source: CompatSource, now: number): Promise<CompatIngestOutcome> {
+  async function ingestNow(incoming: CompatDocument, source: CompatSource, now: number): Promise<CompatIngestOutcome> {
     const list = await current();
-    const existing = list.find((r) => r.run.id === doc.run.id);
+    const existing = list.find((r) => r.run.id === incoming.run.id);
+    // A copy of the run updates its steps one by one; one without steps keeps them.
+    const doc = withMergedSteps(incoming, existing);
     if (existing) {
       // A copy checked earlier than the one stored is late, not news.
       if (doc.checked_at < existing.checked_at) {

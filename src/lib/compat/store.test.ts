@@ -112,6 +112,32 @@ describe('compat store', () => {
     ]);
   });
 
+  it('merges run.steps across copies of one run: step updates, then a stage verdict without steps', async () => {
+    const store = createCompatStore(dir);
+    const id = 'gh-steps';
+    const s = (sid: string, status: string, extra: object = {}) => ({ id: sid, name: sid, stage: 'setup', status, ...extra });
+    const withSteps = (doc: TestCompatDoc, steps: object[]) => valid({ ...doc, run: { ...doc.run, steps } } as TestCompatDoc);
+    const base = { run: { id, state: 'checking', started_at: at(0), finished_at: null }, overall: 'checking' } as const;
+
+    await store.ingest(withSteps(compatDoc({ ...base, checked_at: at(0) }), [s('build', 'running'), s('selftest', 'queued'), s('record', 'queued')]), 'push');
+    await store.ingest(withSteps(compatDoc({ ...base, checked_at: at(1) }), [s('build', 'pass', { finished_at: at(1) })]), 'push');
+    // The selftest stage verdict: final state, no steps. The steps must survive it.
+    const verdict = await store.ingest(valid(compatDoc({ run: { id, state: 'warn', started_at: at(0), finished_at: at(2) }, overall: 'warn', checked_at: at(2) })), 'push');
+    expect(verdict.result.status).toBe('stored');
+    expect(verdict.change?.latest?.run.steps?.map((x) => `${x.id}:${x.status}`)).toEqual(['build:pass', 'selftest:queued', 'record:queued']);
+    // Summaries (the history, the stream's `run`) leave the steps out.
+    expect('steps' in (verdict.change?.run.run ?? {})).toBe(false);
+
+    // A copy that only repeats a step as it is changes nothing.
+    const again = await store.ingest(withSteps(compatDoc({ run: { id, state: 'warn', started_at: at(0), finished_at: at(2) }, overall: 'warn', checked_at: at(2) }), [s('build', 'pass', { finished_at: at(1) })]), 'push');
+    expect(again.result.status).toBe('unchanged');
+
+    // And they are on disk.
+    const reread = await createCompatStore(dir).latest();
+    expect(reread?.run.steps).toHaveLength(3);
+    expect(reread?.overall).toBe('warn');
+  });
+
   it('ignores a copy older than the stored one (stale), and one that says nothing new (unchanged)', async () => {
     const store = createCompatStore(dir);
     const id = 'gh-7';
