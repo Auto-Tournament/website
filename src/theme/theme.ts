@@ -55,7 +55,14 @@ export const theme = createTheme({
         root: {
           borderRadius: radius.pill,
           padding: '0.7rem 1.2rem',
-          whiteSpace: 'nowrap',
+          // Labels wrap rather than spill out of the pill on narrow screens;
+          // the button grows taller and the text stays inside its padding.
+          whiteSpace: 'normal',
+          overflowWrap: 'break-word',
+          textAlign: 'center',
+          lineHeight: 1.3,
+          maxWidth: '100%',
+          minHeight: 44,
           transition: `background-color ${duration.fast}ms ${ease.out}, transform ${duration.fast}ms ${ease.out}`,
           '&:active': { transform: 'translateY(1px)' },
         },
@@ -67,7 +74,7 @@ export const theme = createTheme({
           color: color.ink,
           '&:hover': { borderColor: color.rule, backgroundColor: color.paper3 },
         },
-        sizeSmall: { padding: '0.55rem 0.95rem' },
+        sizeSmall: { padding: '0.55rem 0.95rem', minHeight: 36 },
       },
     },
     MuiChip: {

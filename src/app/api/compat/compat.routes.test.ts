@@ -8,6 +8,7 @@ import { POST } from './events/route';
 import { GET as getLatest } from './latest/route';
 import { GET as getRuns } from './runs/route';
 import { GET as getBadge } from './badge.json/route';
+import { GET as getStatus } from './status/route';
 import { GET as getStream } from './stream/route';
 import { DEFAULT_COMPAT_FEED_URL, compatFeedSetting, isValidCompatIngestAuth } from '@/lib/compat/config';
 import { COMPAT_MAX_BYTES } from '@/lib/compat/document';
@@ -144,6 +145,10 @@ describe('POST /api/compat/events', () => {
 describe('public reads', () => {
   it('latest, runs and the badge follow what was pushed', async () => {
     expect(await (await getBadge(get('/api/compat/badge.json'))).json()).toMatchObject({ message: 'unknown', color: 'lightgrey' });
+    expect(await (await getStatus(get('/api/compat/status'))).json()).toEqual({
+      success: true,
+      status: { overall: null, cs2: null, checked_at: null },
+    });
     await post(compatDoc({ run: { id: 'old', started_at: '2026-09-24T10:00:00Z' }, overall: 'fail', checked_at: '2026-09-24T10:05:00Z' }));
     await post(compatDoc({ run: { id: 'new', started_at: '2026-09-25T10:00:00Z' }, overall: 'warn', checked_at: '2026-09-25T10:05:00Z' }));
 
@@ -160,6 +165,13 @@ describe('public reads', () => {
     const badgeRes = await getBadge(get('/api/compat/badge.json'));
     expect(badgeRes.headers.get('cache-control')).toBe('public, max-age=60');
     expect(await badgeRes.json()).toEqual({ schemaVersion: 1, label: 'Ready Up', message: 'static ok · CS2 1.41.8.5', color: 'yellow', cacheSeconds: 300 });
+
+    const statusRes = await getStatus(get('/api/compat/status'));
+    expect(statusRes.headers.get('cache-control')).toBe('public, max-age=60');
+    expect(await statusRes.json()).toEqual({
+      success: true,
+      status: { overall: 'warn', cs2: { buildid: latest.cs2.buildid, patch: '1.41.8.5' }, checked_at: '2026-09-25T10:05:00.000Z' },
+    });
   });
 
   it('runs refuses a limit outside 1..200', async () => {

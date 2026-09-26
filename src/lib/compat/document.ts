@@ -372,6 +372,22 @@ export const BADGE_WORDING: Record<CompatOverall, { message: string; color: stri
   no_verdict: { message: 'no verdict', color: 'lightgrey' },
 };
 
+/**
+ * The newest verdict in brief, for the site-wide status dot in the nav
+ * (`GET /api/compat/status`): no components or checks, so it stays a few
+ * bytes. `overall` is null until the first run arrives.
+ */
+export interface CompatStatus {
+  overall: CompatOverall | null;
+  cs2: { buildid: string; patch: string } | null;
+  checked_at: string | null;
+}
+
+export function compatStatus(doc: CompatDocument | null): CompatStatus {
+  if (!doc) return { overall: null, cs2: null, checked_at: null };
+  return { overall: doc.overall, cs2: doc.cs2, checked_at: doc.checked_at };
+}
+
 /** The badge for the latest document, or "unknown" when there is none yet. */
 export function compatBadge(doc: CompatDocument | null): ShieldsEndpointBadge {
   const base = { schemaVersion: 1 as const, label: 'Ready Up', cacheSeconds: 300 };

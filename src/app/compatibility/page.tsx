@@ -7,13 +7,11 @@ import { Footer, Nav } from '@/components/sections';
 import { links } from '@/components/links';
 import { CompatibilityLive } from '@/components/compat/CompatibilityLive';
 import { CompatDot, type CompatTone } from '@/components/compat/CompatDot';
+import { CodeBlock } from '@/components/CodeBlock';
 import type { CompatView } from '@/lib/compat/document';
 import { getCompatView } from '@/lib/compat/service';
 
 const { color, radius } = tokens;
-
-// fontMono lives in the 'use client' theme module; a server component can't read its values.
-const mono = { fontFamily: 'var(--font-mono), monospace' } as const;
 
 // The latest run is read at request time (from the data file, or Ready Up's
 // published compat.json), then the page follows it live.
@@ -41,6 +39,15 @@ const legend: { tone: CompatTone; name: string; body: string }[] = [
   { tone: 'fail', name: 'Not compatible', body: 'Something Ready Up needs moved or broke. Hold off on updating your servers until a fix is out.' },
   { tone: 'checking', name: 'Checking…', body: 'A new build is being checked right now. The page updates by itself.' },
   { tone: 'none', name: 'No verdict', body: 'The check broke before it reached a result. The next run tries again.' },
+];
+
+// The shields.io badge for a README, and what to paste for it.
+const pageUrl = 'https://autotournament.gg/compatibility';
+const badgeUrl = 'https://img.shields.io/endpoint?url=https://autotournament.gg/api/compat/badge.json';
+const badgeSnippets: { name: string; what: string; code: string }[] = [
+  { name: 'Markdown', what: 'Markdown', code: `[![Ready Up CS2 compatibility](${badgeUrl})](${pageUrl})` },
+  { name: 'HTML', what: 'HTML', code: `<a href="${pageUrl}"><img alt="Ready Up CS2 compatibility" src="${badgeUrl}"></a>` },
+  { name: 'Image URL', what: 'badge URL', code: badgeUrl },
 ];
 
 const bullet = {
@@ -112,12 +119,17 @@ export default async function Compatibility() {
                   </span>
                 </Box>
               </Box>
-              <Typography sx={{ mt: 3, color: color.muted, fontSize: '0.875rem' }}>
-                Want it in a README? Use the badge:{' '}
-                <Box component="code" sx={{ ...mono, color: color.ink2, overflowWrap: 'anywhere' }}>
-                  https://img.shields.io/endpoint?url=https://autotournament.gg/api/compat/badge.json
-                </Box>
-              </Typography>
+              <Box data-testid="compat-badge-embed" sx={{ mt: 4, display: 'grid', gap: 1.5, minWidth: 0 }}>
+                <Typography component="h3" sx={{ color: color.ink, fontWeight: 600 }}>
+                  Put the badge in a README
+                </Typography>
+                {badgeSnippets.map((snippet) => (
+                  <Box key={snippet.name} sx={{ display: 'grid', gap: 0.75, minWidth: 0 }}>
+                    <Typography sx={{ color: color.muted, fontSize: '0.8125rem' }}>{snippet.name}</Typography>
+                    <CodeBlock code={snippet.code} what={snippet.what} size="sm" />
+                  </Box>
+                ))}
+              </Box>
             </div>
             <div>
               <Typography variant="h2">Reading the colours</Typography>
