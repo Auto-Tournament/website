@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST } from './route';
+import { setDb } from '@/lib/db/client';
+import { testDb } from '@/lib/db/testing';
+import { leads } from '@/lib/db/schema';
 
 let ipCounter = 0;
 const nextIp = () => `10.9.0.${(ipCounter += 1) % 250}`;
@@ -117,5 +120,43 @@ describe('POST /api/contact: rate limit', () => {
     }
     const res = await attempt();
     expect(res.status).toBe(429);
+  });
+});
+
+describe('POST /api/contact: keeps the message as a lead', () => {
+  let t: Awaited<ReturnType<typeof testDb>>;
+  beforeEach(async () => {
+    t = await testDb();
+    setDb(t.db);
+    vi.stubEnv('DATABASE_URL', 'postgres://test/unused');
+  });
+  afterEach(async () => {
+    setDb(null);
+    await t.close();
+  });
+
+  it('stores it even when email is off, and answers as usual', async () => {
+    vi.stubEnv('POSTMARK_SERVER_TOKEN', '');
+    const res = await post(valid);
+    expect(res.status).toBe(200);
+    const rows = await t.db.select().from(leads);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ name: 'Jane Doe', email: 'jane@example.com', organization: 'Example LAN', topic: 'quote', servers: '50', eventDates: null, status: 'new' });
+  });
+
+  it('stores it and emails it; a failed email is no error once it is stored', async () => {
+    vi.stubEnv('POSTMARK_SERVER_TOKEN', 'test-token');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('down', { status: 500 }));
+    const res = await post(valid);
+    expect(res.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(await t.db.select().from(leads)).toHaveLength(1);
+  });
+
+  it('stores nothing for a bot (honeypot) or an invalid message', async () => {
+    vi.stubEnv('POSTMARK_SERVER_TOKEN', '');
+    await post({ ...valid, website: 'spam' });
+    await post({ ...valid, email: 'nope' });
+    expect(await t.db.select().from(leads)).toHaveLength(0);
   });
 });

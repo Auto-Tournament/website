@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { eurNokRate, resetRateCache, FALLBACK_RATE, NORGES_BANK_URL } from './rate';
+import { eurNokDailyRates, eurNokRate, resetRateCache, FALLBACK_RATE, NORGES_BANK_URL } from './rate';
 
 const okResponse = (rate: string) =>
   Response.json({
@@ -49,5 +49,30 @@ describe('eurNokRate', () => {
     });
     const result = await eurNokRate({ fetchImpl, now: 0 });
     expect(result).toEqual({ rate: FALLBACK_RATE, fallback: true });
+  });
+});
+
+describe('eurNokDailyRates', () => {
+  it('reads a range in one request and gives each day its own rate, or the last business day before it', async () => {
+    const body = {
+      data: {
+        structure: { dimensions: { observation: [{ id: 'TIME_PERIOD', values: [{ id: '2026-09-24' }, { id: '2026-09-25' }, { id: '2026-09-28' }] }] } },
+        dataSets: [{ series: { '0:0:0:0': { observations: { '0': ['10.79'], '1': ['10.84'], '2': ['10.90'] } } } }],
+      },
+    };
+    const fetchImpl = vi.fn(async () => Response.json(body));
+    const rates = await eurNokDailyRates('2026-09-25', '2026-09-28', { fetchImpl });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(String((fetchImpl.mock.calls[0] as unknown[])[0])).toContain('startPeriod=2026-09-15&endPeriod=2026-09-28');
+    expect(rates?.rateOn('2026-09-25')).toBe(10.84);
+    // A weekend: Friday's rate.
+    expect(rates?.rateOn('2026-09-27')).toBe(10.84);
+    expect(rates?.rateOn('2026-09-28')).toBe(10.9);
+    expect(rates?.rateOn('2026-09-01')).toBeNull();
+  });
+
+  it('is null when the API fails, so the caller falls back', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(await eurNokDailyRates('2026-01-01', '2026-01-31', { fetchImpl: vi.fn(async () => new Response('x', { status: 503 })) })).toBeNull();
   });
 });

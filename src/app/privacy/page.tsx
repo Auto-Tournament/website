@@ -95,9 +95,12 @@ export default function Privacy() {
         license, such as an event or a client.
       </p>
       <p id="contact-form">
-        <strong>The contact form.</strong> On <a href="/contact">/contact</a> we collect your name, email, organization (if you give one) and message, and
-        send them to us by email through Postmark (see section 5). We keep the email in our mailbox for as long as we need it for the conversation, then
-        delete it.
+        <strong>The contact form.</strong> On <a href="/contact">/contact</a> we collect your name, email, organization (if you give one), topic, the
+        number of servers and event dates (if you give them) and your message. We send them to us by email through Postmark (see section 5), and we also
+        keep them in our database, with where the conversation stands (such as &quot;replied&quot;) and our own short note, so we can follow up. We delete
+        them from the database 24 months after the last activity on them (your message, or our last update to it), and the email in our mailbox when we no
+        longer need it for the conversation. When we confirm a free LAN, we keep the event&apos;s name, the organizer, the dates, the number of servers
+        and the day we confirmed it, as the record of that permission.
       </p>
       <p>
         The website uses no analytics and no tracking cookies. It remembers your colour theme in your own browser, and sets cookies only when you sign in to
@@ -126,7 +129,7 @@ export default function Privacy() {
       <H2 id="retention">4. How long we keep it</H2>
       <p>
         Sales records, invoices and the license log: 5 years after the end of the accounting year, as the Bookkeeping Act requires. Emails that don&apos;t lead to
-        a sale: deleted when we no longer need them to answer you. Your console account and your membership of organizations: until you ask us to delete
+        a sale: deleted when we no longer need them to answer you. Contact form messages in our database: 24 months after the last activity. Your console account and your membership of organizations: until you ask us to delete
         them. An organization&apos;s details: as long as it has members, and after that as long as its licenses and invoices must be kept. Sessions end after
         30 days or when you sign out; sign-in links after 15 minutes; invites as described above. The activity log: 2 years.
       </p>

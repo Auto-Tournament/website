@@ -18,12 +18,15 @@ export function ConsoleShell({
   site,
   email,
   signOut,
+  admin,
   children,
 }: {
   home: string;
   site: string;
   email?: string | null;
   signOut?: () => Promise<void>;
+  /** The admin CRM's link, for admins only (the server decides). */
+  admin?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -51,7 +54,12 @@ export function ConsoleShell({
             <span>Console</span>
           </Box>
           {email && signOut && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+              {admin && (
+                <Box component="a" href={admin} data-testid="admin-link" sx={{ color: `${color.ink} !important`, fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none', '&:hover': { color: `${color.accent} !important` } }}>
+                  Admin
+                </Box>
+              )}
               <Box component="span" data-testid="signed-in-as" sx={{ color: color.muted, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, maxWidth: { xs: '11rem', sm: '20rem' } }}>
                 {email}
               </Box>
@@ -64,7 +72,12 @@ export function ConsoleShell({
           )}
         </Box>
       </Box>
-      <Container component="main" maxWidth="md" sx={{ pt: { xs: 5, md: 8 }, pb: { xs: 8, md: 10 }, color: color.ink2, '& a': { color: 'inherit' } }}>
+      <Container
+        component="main"
+        maxWidth="md"
+        // The admin pages (data-admin-wide) get room for their tables on a laptop.
+        sx={{ pt: { xs: 5, md: 8 }, pb: { xs: 8, md: 10 }, color: color.ink2, '& a': { color: 'inherit' }, '&:has([data-admin-wide])': { maxWidth: 1280 } }}
+      >
         {children}
       </Container>
       <Container component="footer" maxWidth="md" sx={{ pb: 5, color: color.muted, fontSize: '0.8125rem', lineHeight: 1.6, '& a': { color: 'inherit' } }}>

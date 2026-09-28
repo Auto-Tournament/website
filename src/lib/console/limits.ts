@@ -13,4 +13,10 @@ export const limits = {
   write: createRateLimiter({ limit: 60, windowMs: 60_000 }),
   /** Stripe customer portal sessions, per user. */
   billing: createRateLimiter({ limit: 10, windowMs: 10 * 60_000 }),
+  /** Admin CRM writes (notes, lead status), per admin. */
+  adminWrite: createRateLimiter({ limit: 60, windowMs: 60_000 }),
+  /** Admin actions that sign keys or send email (reissue, manual license, mark paid, resend, refund/revoke), per admin. */
+  adminSensitive: createRateLimiter({ limit: 20, windowMs: 10 * 60_000 }),
+  /** The bookkeeping CSV export, per admin. */
+  adminExport: createRateLimiter({ limit: 10, windowMs: 10 * 60_000 }),
 };

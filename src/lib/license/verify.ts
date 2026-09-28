@@ -11,7 +11,7 @@ import { LIFETIME, type LicensePayload } from './format';
 /** License ids look like L-3kq8Zx0bQ1aR. */
 export const LICENSE_ID = /^L-[A-Za-z0-9_-]{6,40}$/;
 
-export type PublicStatus = 'valid' | 'upcoming' | 'expired' | 'test' | 'not-found';
+export type PublicStatus = 'valid' | 'upcoming' | 'expired' | 'test' | 'replaced' | 'revoked' | 'not-found';
 
 export type PublicCheck =
   | { status: 'not-found' }
@@ -19,15 +19,27 @@ export type PublicCheck =
       status: Exclude<PublicStatus, 'not-found'>;
       statusText: string;
       rows: [string, string][];
+      /** The license that replaced this one (a reissue), for a link. */
+      replacedBy?: string;
     };
 
-export function publicCheck(record: { payload: LicensePayload; livemode: boolean } | null, today: string): PublicCheck {
+export function publicCheck(
+  record: { payload: LicensePayload; livemode: boolean; superseded_by?: string | null; revoked_at?: string | null } | null,
+  today: string,
+): PublicCheck {
   if (!record) return { status: 'not-found' };
   const p = record.payload;
   const s = licenseStatus(p, today);
   let status: Exclude<PublicStatus, 'not-found'>;
   let statusText: string;
-  if (!record.livemode) {
+  // Refunded and revoked read the same in public: the reason is between us and the buyer.
+  if (record.revoked_at) {
+    status = 'revoked';
+    statusText = 'Revoked: this license is no longer valid';
+  } else if (record.superseded_by && LICENSE_ID.test(record.superseded_by)) {
+    status = 'replaced';
+    statusText = `Replaced by ${record.superseded_by}`;
+  } else if (!record.livemode) {
     status = 'test';
     statusText = 'Test license: made in test mode, not valid for use';
   } else if (s === 'upcoming') {
@@ -43,7 +55,7 @@ export function publicCheck(record: { payload: LicensePayload; livemode: boolean
     status = 'valid';
     statusText = 'Valid';
   }
-  if (record.livemode && p.kind !== 'founder') {
+  if (status !== 'revoked' && status !== 'replaced' && record.livemode && p.kind !== 'founder') {
     const hint = statusHint(p, new Date(`${today}T00:00:00Z`));
     if (hint) statusText += ` (${hint})`;
   }
@@ -55,5 +67,5 @@ export function publicCheck(record: { payload: LicensePayload; livemode: boolean
     ['Updates until', p.updates_until === LIFETIME ? 'For life' : formatDay(p.updates_until)],
     ['License id', p.id],
   ];
-  return { status, statusText, rows };
+  return status === 'replaced' ? { status, statusText, rows, replacedBy: record.superseded_by as string } : { status, statusText, rows };
 }

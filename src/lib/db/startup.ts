@@ -6,6 +6,7 @@ import { importLicenseFile, licenseDataDir, licenseStore } from '../license/stor
 import { databaseUrl, db } from './client';
 import { pruneExpired } from './prune';
 import { dbError } from './errors';
+import { syncAllAdmins } from '../admin/access';
 import { checkVatThreshold } from '../vat/threshold';
 
 /**
@@ -38,6 +39,13 @@ export async function startDatabase(): Promise<void> {
     if (result) console.info('[license] licenses.json import', { inFile: result.inFile, imported: result.imported });
   } catch (err) {
     console.error('[license] licenses.json import failed', dbError(err));
+  }
+  try {
+    // Counts only, never addresses.
+    const changed = await syncAllAdmins(db());
+    if (changed.granted + changed.revoked > 0) console.info('[admin] ADMIN_EMAILS applied', changed);
+  } catch (err) {
+    console.error('[admin] ADMIN_EMAILS sync failed', dbError(err));
   }
   const prune = () =>
     pruneExpired(db())

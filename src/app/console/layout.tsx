@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { ConsoleShell } from '@/components/console/ConsoleShell';
 import { currentUser } from '@/lib/console/session';
+import { isAdminUser } from '@/lib/admin/access';
 import { consoleHref } from '@/lib/console/urls';
 import { DEFAULT_SITE_URL, siteUrl } from '@/lib/site';
 import { signOutAction } from './actions';
@@ -19,7 +20,13 @@ export const dynamic = 'force-dynamic';
 export default async function ConsoleLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser();
   return (
-    <ConsoleShell home={consoleHref('/')} site={siteUrl() ?? DEFAULT_SITE_URL} email={user?.email} signOut={user ? signOutAction : undefined}>
+    <ConsoleShell
+      home={consoleHref('/')}
+      site={siteUrl() ?? DEFAULT_SITE_URL}
+      email={user?.email}
+      signOut={user ? signOutAction : undefined}
+      admin={isAdminUser(user) ? consoleHref('/admin') : undefined}
+    >
       {children}
     </ConsoleShell>
   );

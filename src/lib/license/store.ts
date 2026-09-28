@@ -1,8 +1,8 @@
-import { and, desc, eq, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, lt, or, sql } from 'drizzle-orm';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { db as sharedDb, type Db } from '../db/client';
-import { licenses } from '../db/schema';
+import { licenses, manualOrders, type LicenseSource, type RevokeReason } from '../db/schema';
 import type { LicensePayload } from './format';
 
 /**
@@ -41,11 +41,25 @@ export type LicenseRecord = {
   currency?: string | null;
   /** When Stripe considers the session paid (ISO 8601). Falls back to payload.issued_at when unknown. */
   paid_at?: string | null;
+  /** 'stripe' (default) or 'manual' (bank transfer / invoice, from the admin CRM). */
+  source?: LicenseSource;
+  /** Bank transfer / invoice reference (manual licenses and paid reissues). */
+  payment_ref?: string | null;
+  /** The license id this one replaced, and the one that replaced it (admin reissue). */
+  supersedes?: string | null;
+  superseded_by?: string | null;
+  /** Marked refunded or revoked in the admin CRM (ISO 8601), and which. */
+  revoked_at?: string | null;
+  revoke_reason?: RevokeReason | null;
 };
 
 export interface LicenseStore {
   bySession(sessionId: string): Promise<LicenseRecord | null>;
-  /** By session id or invoice number, only when the email hash matches too. */
+  /**
+   * By session id or invoice number, only when the email hash matches too.
+   * A reissued license leads to its newest replacement; a revoked or refunded
+   * one isn't found.
+   */
   find(reference: string, emailSha256: string): Promise<LicenseRecord | null>;
   /**
    * Returns the session's record, creating it with `create` only when there is
@@ -58,7 +72,12 @@ export interface LicenseStore {
   forEmail(emailSha256: string): Promise<LicenseRecord[]>;
   /** By license id (L-…), for the public check page. */
   byLicenseId(id: string): Promise<LicenseRecord | null>;
-  /** Live-mode founding supporter licenses issued so far (the founder cap). */
+  /**
+   * Founding supporter places taken (the founder cap): live-mode founder
+   * licenses that weren't replaced by a reissue (the replacement counts
+   * instead) or refunded, plus unpaid manual founder orders, which hold a
+   * place until they are paid or cancelled.
+   */
   founderCount(): Promise<number>;
   /**
    * Claims the right to email this license's key: the record, or null when
@@ -94,6 +113,12 @@ export function fromRow(row: Row): LicenseRecord {
     amount_total: row.amountTotal,
     currency: row.currency,
     paid_at: iso(row.paidAt),
+    source: row.source,
+    payment_ref: row.paymentRef,
+    supersedes: row.supersedes,
+    superseded_by: row.supersededBy,
+    revoked_at: iso(row.revokedAt),
+    revoke_reason: row.revokeReason,
   };
 }
 
@@ -115,6 +140,12 @@ export function toRow(r: LicenseRecord): typeof licenses.$inferInsert {
     amountTotal: r.amount_total ?? null,
     currency: r.currency ?? null,
     paidAt: r.paid_at ? new Date(r.paid_at) : null,
+    source: r.source ?? 'stripe',
+    paymentRef: r.payment_ref ?? null,
+    supersedes: r.supersedes ?? null,
+    supersededBy: r.superseded_by ?? null,
+    revokedAt: r.revoked_at ? new Date(r.revoked_at) : null,
+    revokeReason: r.revoke_reason ?? null,
   };
 }
 
@@ -128,9 +159,9 @@ export function createLicenseStore(db: Db): LicenseStore {
     bySession(sessionId) {
       return one(db.select().from(licenses).where(eq(licenses.sessionId, sessionId)).limit(1));
     },
-    find(reference, emailSha256) {
+    async find(reference, emailSha256) {
       const ref = reference.trim();
-      return one(
+      let found = await one(
         db
           .select()
           .from(licenses)
@@ -141,8 +172,16 @@ export function createLicenseStore(db: Db): LicenseStore {
               eq(licenses.emailHash, emailSha256),
             ),
           )
+          .orderBy(asc(licenses.issuedAt))
           .limit(1),
       );
+      // A reissue replaced it: the newest key (a short chain; the cap guards against a loop).
+      for (let hops = 0; found?.superseded_by && hops < 20; hops++) {
+        const next = await one(db.select().from(licenses).where(and(eq(licenses.licenseId, found.superseded_by), eq(licenses.emailHash, emailSha256))).limit(1));
+        if (!next) break;
+        found = next;
+      }
+      return found && !found.revoked_at ? found : null;
     },
     async forEmail(emailSha256) {
       const rows = await db.select().from(licenses).where(eq(licenses.emailHash, emailSha256)).orderBy(desc(licenses.issuedAt));
@@ -152,11 +191,22 @@ export function createLicenseStore(db: Db): LicenseStore {
       return one(db.select().from(licenses).where(eq(licenses.licenseId, id)).limit(1));
     },
     async founderCount() {
-      const [row] = await db
+      const [issued] = await db
         .select({ n: sql<number>`count(*)::int` })
         .from(licenses)
-        .where(and(eq(licenses.livemode, true), eq(licenses.kind, 'founder')));
-      return Number(row?.n ?? 0);
+        .where(
+          and(
+            eq(licenses.livemode, true),
+            eq(licenses.kind, 'founder'),
+            isNull(licenses.supersededBy),
+            or(isNull(licenses.revokeReason), sql`${licenses.revokeReason} <> 'refunded'`),
+          ),
+        );
+      const [pending] = await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(manualOrders)
+        .where(and(eq(manualOrders.status, 'unpaid'), eq(manualOrders.kind, 'founder')));
+      return Number(issued?.n ?? 0) + Number(pending?.n ?? 0);
     },
     claimEmail(sessionId, options = {}) {
       const stale = new Date(Date.now() - CLAIM_TTL_MS);

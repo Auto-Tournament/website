@@ -15,6 +15,13 @@
       "when": 1790587737218,
       "tag": "0001_curious_malcolm_colcord",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790588126843,
+      "tag": "0002_console_admin",
+      "breakpoints": true
     }
   ]
 }

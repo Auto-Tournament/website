@@ -35,6 +35,8 @@ const statusColor: Record<Exclude<PublicCheck['status'], 'not-found'>, string> =
   upcoming: color.info,
   expired: color.ban,
   test: color.warn,
+  replaced: color.info,
+  revoked: color.ban,
 };
 
 async function check(id: string): Promise<PublicCheck | 'busy' | 'error'> {
@@ -84,6 +86,15 @@ export default async function VerifyLicense({ params }: { params: Promise<{ id: 
                 <Box component="span" aria-hidden sx={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', bgcolor: statusColor[result.status], mr: 1.25 }} />
                 {result.statusText}
               </Typography>
+              {result.replacedBy && (
+                <Typography sx={{ fontSize: '0.9375rem' }}>
+                  The old key keeps working in the products, but this license was reissued.{' '}
+                  <Box component="a" href={`/verify/${result.replacedBy}`} sx={{ color: 'inherit' }}>
+                    Check {result.replacedBy}
+                  </Box>
+                  .
+                </Typography>
+              )}
               <DetailList rows={result.rows} />
               <Typography sx={{ fontSize: '0.9375rem' }}>
                 What a license allows is in the <Box component="a" href={links.terms} sx={{ color: 'inherit' }}>Commercial License Terms</Box>.

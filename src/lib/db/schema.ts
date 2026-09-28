@@ -23,7 +23,11 @@ export const users = pgTable('users', {
   /** Set when the email was proven: an email link was used, or Google said email_verified. */
   emailVerified: at('email_verified'),
   image: text('image'),
-  /** Auto Tournament staff: the admin CRM builds on this. Set by hand in the database for now. */
+  /**
+   * Auto Tournament staff: the admin CRM (/admin). Kept in step with the
+   * ADMIN_EMAILS env at every sign-in and at startup (src/lib/admin/access.ts);
+   * never set by hand.
+   */
   isAdmin: boolean('is_admin').notNull().default(false),
   createdAt: at('created_at').notNull().defaultNow(),
 });
@@ -133,6 +137,9 @@ export const invites = pgTable(
  * Issued license keys, one per Stripe Checkout Session (was licenses.json).
  * The buyer's email is kept only as a SHA-256 (email_hash), never in plain.
  */
+export type LicenseSource = 'stripe' | 'manual';
+export type RevokeReason = 'refunded' | 'revoked';
+
 export const licenses = pgTable(
   'licenses',
   {
@@ -152,18 +159,32 @@ export const licenses = pgTable(
     /** A send in progress (claimed); a claim older than 5 minutes is treated as abandoned. */
     emailClaimedAt: at('email_claimed_at'),
     orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'set null' }),
+    /** 'stripe' (card checkout) or 'manual' (bank transfer / invoice, created in the admin CRM). */
+    source: text('source').$type<LicenseSource>().notNull().default('stripe'),
     /**
      * The Checkout Session's amount_total, in minor units (cents) of `currency`
      * (EUR). Null on licenses issued before this column existed; the VAT
      * threshold check (src/lib/vat) treats a null amount as 0 — there is no
      * way to recover the historical amount without new Stripe permissions. A
-     * free or test purchase is recorded as 0, not null.
+     * free or test purchase is recorded as 0, not null. Manual licenses (bank
+     * transfer / invoice, source 'manual') carry what was invoiced, in EUR or
+     * NOK; a reissue carries only a difference paid for it, never the original
+     * amount again.
      */
     amountTotal: integer('amount_total'),
-    /** Always 'eur' so far; kept alongside amountTotal rather than assumed. */
+    /** Lowercase ISO 4217: 'eur' (Stripe, manual) or 'nok' (manual). */
     currency: text('currency'),
     /** When Stripe considers the session paid (falls back to issuedAt when unknown). Used for the VAT rolling window. */
     paidAt: at('paid_at'),
+    /** Bank transfer / invoice reference for manual licenses and paid reissues. */
+    paymentRef: text('payment_ref'),
+    /** The license id this one replaced (a reissue). */
+    supersedes: text('supersedes'),
+    /** The license id that replaced this one. The old key keeps working offline; /verify says "replaced by". */
+    supersededBy: text('superseded_by'),
+    /** Marked refunded or revoked by hand in the admin CRM. Never deleted: /verify shows "revoked". */
+    revokedAt: at('revoked_at'),
+    revokeReason: text('revoke_reason').$type<RevokeReason>(),
     createdAt: at('created_at').notNull().defaultNow(),
   },
   (t) => [
@@ -204,5 +225,99 @@ export const auditLog = pgTable(
     at: at('at').notNull().defaultNow(),
     details: jsonb('details').$type<Record<string, unknown>>().notNull().default({}),
   },
-  (t) => [index('audit_org_idx').on(t.orgId, t.at), index('audit_actor_idx').on(t.actorUserId, t.at)],
+  (t) => [index('audit_org_idx').on(t.orgId, t.at), index('audit_actor_idx').on(t.actorUserId, t.at), index('audit_action_idx').on(t.action, t.at)],
 );
+
+// ---------------------------------------------------------------------------
+// The admin CRM (/admin, src/lib/admin)
+
+export type ManualOrderStatus = 'unpaid' | 'paid' | 'cancelled';
+
+/**
+ * A license sold outside Stripe (bank transfer / invoice). Unpaid: no key yet,
+ * but a founder order already holds its place under the cap. "Mark paid"
+ * issues the key into `licenses` (source 'manual') and sets license_id.
+ */
+export const manualOrders = pgTable(
+  'manual_orders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    status: text('status').$type<ManualOrderStatus>().notNull(),
+    licensee: text('licensee').notNull(),
+    orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'set null' }),
+    /** SHA-256 of the buyer's lowercased email, like licenses.email_hash. Never the address. */
+    emailHash: text('email_hash'),
+    product: text('product').notNull(),
+    pack: text('pack').notNull(),
+    maxServers: integer('max_servers').notNull(),
+    kind: text('kind').notNull(),
+    /** YYYY-MM-DD. Event: the first day; year: the day updates count from. */
+    startDay: text('start_day'),
+    /** YYYY-MM-DD. Event: the last day. */
+    endDay: text('end_day'),
+    amountTotal: integer('amount_total').notNull(),
+    currency: text('currency').notNull(),
+    paymentRef: text('payment_ref'),
+    licenseId: text('license_id'),
+    createdBy: text('created_by'),
+    createdAt: at('created_at').notNull().defaultNow(),
+    paidAt: at('paid_at'),
+  },
+  (t) => [index('manual_orders_status_idx').on(t.status, t.createdAt)],
+);
+
+/** Staff notes on a license or an organization. */
+export const adminNotes = pgTable(
+  'admin_notes',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    targetType: text('target_type').$type<'license' | 'organization'>().notNull(),
+    targetId: text('target_id').notNull(),
+    authorUserId: text('author_user_id'),
+    body: text('body').notNull(),
+    createdAt: at('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('admin_notes_target_idx').on(t.targetType, t.targetId, t.createdAt)],
+);
+
+export const LEAD_STATUSES = ['new', 'replied', 'won', 'lost'] as const;
+export type LeadStatus = (typeof LEAD_STATUSES)[number];
+
+/**
+ * /contact submissions, kept next to the email they also send. Deleted 24
+ * months after the last activity (updated_at), src/lib/db/prune.ts.
+ */
+export const leads = pgTable(
+  'leads',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    email: text('email').notNull(),
+    organization: text('organization'),
+    topic: text('topic').notNull(),
+    servers: text('servers'),
+    eventDates: text('event_dates'),
+    message: text('message').notNull(),
+    status: text('status').$type<LeadStatus>().notNull().default('new'),
+    note: text('note'),
+    createdAt: at('created_at').notNull().defaultNow(),
+    /** The last activity: created, or status or note changed. Retention counts from here. */
+    updatedAt: at('updated_at').notNull().defaultNow(),
+  },
+  (t) => [index('leads_status_idx').on(t.status, t.createdAt), index('leads_updated_idx').on(t.updatedAt)],
+);
+
+/** The register of free LAN confirmations (non-profit LANs that may use the paid tools for free). */
+export const freeLans = pgTable('free_lan_confirmations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  event: text('event').notNull(),
+  organizer: text('organizer').notNull(),
+  dates: text('dates'),
+  servers: text('servers'),
+  /** YYYY-MM-DD. */
+  confirmedOn: text('confirmed_on').notNull(),
+  note: text('note'),
+  leadId: uuid('lead_id').references(() => leads.id, { onDelete: 'set null' }),
+  createdBy: text('created_by'),
+  createdAt: at('created_at').notNull().defaultNow(),
+});
