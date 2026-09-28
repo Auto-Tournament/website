@@ -2,7 +2,8 @@ import { links } from '../links';
 
 /**
  * What the site nav shows. The bar keeps the few things people come for
- * (Pricing and Install); everything else sits in two menus.
+ * (Pricing, the console, Install); everything else sits in two menus:
+ * Product (what it does and how it is licensed) and Resources (setting it up, community).
  * Pure data and helpers, no React, so the tests can read them.
  */
 
@@ -42,6 +43,14 @@ export const menus: NavMenu[] = [
           { label: 'CS2 compatibility', href: links.compatibility, note: 'Does Ready Up work on the latest CS2 build?', icon: 'compat', status: true },
         ],
       },
+      {
+        heading: 'Licenses',
+        items: [
+          { label: 'Licensing', href: links.licensing, note: 'What is free, and when you need a license.', icon: 'licensing' },
+          { label: 'License keys', href: links.license, note: 'Get your license key again.', icon: 'key' },
+          { label: 'Check a license', href: links.verify, note: 'See whether a license id is valid.', icon: 'verify' },
+        ],
+      },
     ],
   },
   {
@@ -50,11 +59,10 @@ export const menus: NavMenu[] = [
     fallbackHref: '#site-links',
     groups: [
       {
-        heading: 'Get started',
+        heading: 'Set it up',
         items: [
           { label: 'Docs', href: links.docs, note: 'Setup, configuration and the API.', icon: 'docs' },
           { label: 'Install guide', href: links.install, note: 'One Docker Compose file, up in five minutes.', icon: 'install' },
-          { label: 'Licensing', href: links.licensing, note: 'Free for non-commercial use. When you need a key.', icon: 'licensing' },
         ],
       },
       {
@@ -65,21 +73,14 @@ export const menus: NavMenu[] = [
           { label: 'Contact', href: links.contact, note: 'Quotes, invoices and free LAN confirmations.', icon: 'contact' },
         ],
       },
-      {
-        heading: 'Your licenses',
-        items: [
-          { label: 'Console', href: links.account, note: 'Your licenses, team and invoices.', icon: 'console' },
-          { label: 'License keys', href: links.license, note: 'Get your license key again.', icon: 'key' },
-          { label: 'Check a license', href: links.verify, note: 'See whether a license id is valid.', icon: 'verify' },
-        ],
-      },
     ],
   },
 ];
 
-/** Plain links in the bar: Product ▾ · Pricing · Resources ▾, then Install on the right. */
+/** Plain links: Pricing in the bar; Console and Install on the right. */
 export const barLinks = {
   pricing: { label: 'Pricing', href: links.pricing },
+  console: { label: 'Console', href: links.account },
   install: { label: 'Install', href: links.install },
 } as const;
 
