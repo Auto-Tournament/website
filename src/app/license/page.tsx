@@ -7,6 +7,7 @@ import { Footer, Nav } from '@/components/sections';
 import { LicenseRetrieve } from '@/components/LicenseRetrieve';
 import { links } from '@/components/links';
 import { seller } from '@/components/seller';
+import { emailConfig } from '@/lib/email/postmark';
 
 const { color } = tokens;
 
@@ -20,7 +21,11 @@ export const metadata: Metadata = {
   alternates: { canonical: '/license' },
 };
 
+// Reads POSTMARK_SERVER_TOKEN at request time (the "Email it to me again" button).
+export const dynamic = 'force-dynamic';
+
 export default function LicensePage() {
+  const emailEnabled = emailConfig() !== null;
   return (
     <>
       <Nav />
@@ -41,10 +46,10 @@ export default function LicensePage() {
             {title}
           </Typography>
           <Typography sx={{ mt: 3, fontSize: '1.0625rem' }}>
-            Every card purchase gets a signed license key, shown right after checkout. Lost it? Enter the order reference from the thanks page, or the invoice
+            Every card purchase gets a signed license key, shown right after checkout{emailEnabled ? ' and emailed to the address you paid with' : ''}. Lost it? Enter the order reference from the thanks page, or the invoice
             number on your Stripe receipt, and the email you paid with.
           </Typography>
-          <LicenseRetrieve />
+          <LicenseRetrieve emailEnabled={emailEnabled} />
 
           <Typography variant="h2">What the key is</Typography>
           <p>

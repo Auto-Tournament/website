@@ -57,7 +57,7 @@ URL in Dashboard → Settings → Public details first
 (`https://autotournament.gg/terms`); without it, creating a Checkout Session
 fails and the calculator falls back to the email request.
 
-`yarn test` runs the checkout, Stripe price, license key and CS2 compatibility tests.
+`yarn test` runs the checkout, Stripe price, license key, license email and CS2 compatibility tests.
 
 ## Prices live in Stripe
 
@@ -127,9 +127,12 @@ blocks**: a problem is a warning in the product, never a lockout.
 3. `/pricing/thanks?session_id=cs_…` shows the key. If the webhook hasn't
    arrived yet, the page asks Stripe whether the session is paid and issues
    the key itself (same one-per-session store, so never two keys).
-4. `/license` gets a key again with the order reference (`cs_…`, shown on the
+4. The key is emailed to the address paid with, once (see "License email"
+   below; off until Postmark is set up).
+5. `/license` gets a key again with the order reference (`cs_…`, shown on the
    thanks page) or the invoice number from Stripe's receipt, plus the email
-   paid with. The site sends no email of its own.
+   paid with. "Email it to me again" there sends it to that address, only when
+   it is the one the license was bought with.
 
 Issued keys live in `licenses.json` in `LICENSE_DATA_DIR` (default
 `./data/licenses`, `/app/data/licenses` on the same `compat-data` volume),
@@ -161,6 +164,44 @@ the email.
 Without `LICENSE_SIGNING_KEY`, no keys are issued: the webhook answers 503 so
 Stripe retries for up to 3 days, and the thanks page shows the old "we'll
 email your confirmation" text. Look for `[license]` in the container log.
+
+### License email
+
+When a key is issued (webhook or thanks page), the site emails it to the
+Checkout Session's email through Postmark's HTTP API: the key, pack, period,
+what it covers, order reference and invoice number, and the seller footer.
+Replies go to sivert@autotournament.gg. Open and click tracking are off.
+
+Exactly once per license: the send is claimed in the store and `emailed_at` is
+written to the license's record in `licenses.json` when it works. A failed send
+never fails the webhook or the key; it logs `[license] email failed` with the
+license id and the error (never the address) and keeps it in `email_error`. It
+is tried again when Stripe delivers the event again (Stripe Dashboard →
+Webhooks → the event → Resend), or the buyer uses "Email it to me again" on
+`/license` (rate-limited: 5 per IP per 10 minutes, 3 per license per hour).
+
+Env, in `.env` on the server (all optional; unset `POSTMARK_SERVER_TOKEN` means
+no email is sent and the site works as before):
+
+- `POSTMARK_SERVER_TOKEN`: the Server API token (Postmark → the server → API
+  Tokens). Secret.
+- `EMAIL_FROM`: default `Auto Tournament <licenses@autotournament.gg>`.
+- `POSTMARK_MESSAGE_STREAM`: default `outbound` (the transactional stream).
+
+Postmark setup (once), in this order:
+
+1. Postmark → Sender Signatures → Add Domain: `autotournament.gg`.
+2. Postmark shows a DKIM TXT record and a Return-Path CNAME (for example
+   `pm-bounces`). Add both in Cloudflare → autotournament.gg → DNS, as shown
+   there, with the proxy off (DNS only). Keep the Email Routing MX and SPF
+   records as they are: Postmark doesn't need the root SPF, the Return-Path
+   covers it.
+3. Wait for Postmark to verify both, then send a test from Postmark to
+   yourself.
+4. A new Postmark account can only send to its own domain until Postmark
+   approves it: request approval in the account if it isn't yet.
+5. Put the token in `.env` and `docker compose up -d`.
+6. Optional: a DMARC record (`_dmarc` TXT) once DKIM passes.
 
 **Rotating:** run the keygen again, add the new public key to
 `public-keys.json` (keep the old one, so old keys still verify), ship the new
