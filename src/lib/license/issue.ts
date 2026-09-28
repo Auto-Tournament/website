@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import { packIn } from '@/components/pricing';
 import { getPacks } from '@/lib/stripePrices';
 import { checkSession, emailHash, payloadForSession, sessionEmail, signLicense, type SessionLike } from './format';
+import { emailLicense } from './deliver';
 import { licenseSigningKey } from './keys';
 import { licenseStore, type LicenseRecord } from './store';
 
@@ -12,6 +13,8 @@ import { licenseStore, type LicenseRecord } from './store';
  * Stripe webhook (checkout.session.completed / async_payment_succeeded) and
  * by the thanks page (so the buyer sees the key even when the webhook is
  * late). Both go through the store's issueOnce, so a session gets one key.
+ * Then the key is emailed to the address paid with, once (./deliver.ts; off
+ * without POSTMARK_SERVER_TOKEN). A failed email never fails the issuing.
  */
 
 export type IssueResult =
@@ -71,5 +74,8 @@ export async function issueForSession(session: Stripe.Checkout.Session, now: Dat
   if (created) {
     console.info('[license] issued', { id: record.payload.id, kid: record.payload.kid, kind: record.payload.kind, livemode: record.livemode });
   }
+  // Also on 'existing': a webhook retry (or one resent from the Stripe dashboard) sends it when an earlier try failed.
+  const email = sessionEmail(session as unknown as SessionLike);
+  if (email && !record.emailed_at) await emailLicense(session.id, email);
   return { status: created ? 'issued' : 'existing', record };
 }

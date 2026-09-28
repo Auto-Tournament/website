@@ -13,6 +13,7 @@ import { licenseStore } from '@/lib/license/store';
 import { lookupKey } from '@/lib/stripePacks';
 import { getPacks, invalidatePacks } from '@/lib/stripePrices';
 import { readCapped } from '@/lib/readCapped';
+import { siteUrl } from '@/lib/site';
 
 // Starts a Stripe Checkout Session for a commercial license pack. Server only: the
 // secret key comes from STRIPE_SECRET_KEY at runtime and never reaches the
@@ -21,8 +22,6 @@ import { readCapped } from '@/lib/readCapped';
 // the email request.
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const defaultSiteUrl = 'https://autotournament.gg';
 
 // Seller details a Norwegian invoice needs (org number), and why no VAT is shown.
 const invoiceFooter =
@@ -56,17 +55,6 @@ function logStripeError(step: string, err: unknown) {
     });
   } else {
     console.error(`[checkout] ${step} failed`, err instanceof Error ? err.name : 'unknown error');
-  }
-}
-
-function siteUrl(): string | null {
-  const raw = process.env.SITE_URL?.trim() || defaultSiteUrl;
-  try {
-    const url = new URL(raw);
-    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
-    return url.origin;
-  } catch {
-    return null;
   }
 }
 

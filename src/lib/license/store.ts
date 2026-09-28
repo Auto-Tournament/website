@@ -29,6 +29,10 @@ export type LicenseRecord = {
   dates_from_form: boolean;
   payload: LicensePayload;
   token: string;
+  /** When the key was first emailed to the buyer (ISO 8601). Unset: not yet. */
+  emailed_at?: string | null;
+  /** The last failed send: when, and the error (never the address). Cleared once a send works. */
+  email_error?: string | null;
 };
 
 type StoreFile = { version: typeof FILE_VERSION; licenses: LicenseRecord[] };
@@ -42,6 +46,14 @@ export interface LicenseStore {
   issueOnce(sessionId: string, create: () => Promise<LicenseRecord>): Promise<{ record: LicenseRecord; created: boolean }>;
   /** Live-mode founding supporter licenses issued so far (the founder cap). */
   founderCount(): Promise<number>;
+  /**
+   * Claims the right to email this license's key: the record, or null when
+   * there is no such license, a send is already running, or (unless `again`)
+   * it was already emailed. Call finishEmail afterwards, always.
+   */
+  claimEmail(sessionId: string, options?: { again?: boolean }): Promise<LicenseRecord | null>;
+  /** Records how a claimed send went, and releases the claim. */
+  finishEmail(sessionId: string, result: { ok: true; at: string } | { ok: false; at: string; error: string }): Promise<void>;
 }
 
 function sameHash(a: string | null, b: string): boolean {
@@ -53,6 +65,8 @@ export function createLicenseStore(dir: string): LicenseStore {
   const file = path.join(dir, FILE_NAME);
   let records: LicenseRecord[] | null = null;
   let queue: Promise<unknown> = Promise.resolve();
+  /** Sessions whose email is being sent right now (one process, so memory is enough). */
+  const sending = new Set<string>();
 
   async function load(): Promise<LicenseRecord[]> {
     let text: string;
@@ -113,6 +127,32 @@ export function createLicenseStore(dir: string): LicenseStore {
     },
     founderCount() {
       return serial(async () => (await current()).filter((r) => r.livemode && r.payload.kind === 'founder').length);
+    },
+    claimEmail(sessionId, options = {}) {
+      return serial(async () => {
+        const record = (await current()).find((r) => r.session_id === sessionId);
+        if (!record || sending.has(sessionId)) return null;
+        if (record.emailed_at && !options.again) return null;
+        sending.add(sessionId);
+        return record;
+      });
+    },
+    finishEmail(sessionId, result) {
+      return serial(async () => {
+        try {
+          const list = await current();
+          const next = list.map((r) => {
+            if (r.session_id !== sessionId) return r;
+            return result.ok
+              ? { ...r, emailed_at: r.emailed_at ?? result.at, email_error: null }
+              : { ...r, email_error: `${result.at} ${result.error}`.slice(0, 200) };
+          });
+          await persist(next);
+          records = next;
+        } finally {
+          sending.delete(sessionId);
+        }
+      });
     },
     issueOnce(sessionId, create) {
       return serial(async () => {

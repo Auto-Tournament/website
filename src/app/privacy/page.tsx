@@ -44,9 +44,14 @@ export default function Privacy() {
         keep the issued keys on our server with a one-way hash of your email (not the email itself), so you can <a href="/license">get your key again</a>. The
         software checks the key offline and sends nothing to us.
       </p>
+      <p id="license-email">
+        <strong>The license email.</strong> We email your license key to the address you paid with, once, right after payment, and again when you ask for it
+        on the license page. The email contains the key, the license details above, the order reference and the invoice number. We send it through Postmark
+        (see section 5). We keep when it was sent and, if sending failed, the error, but not your address.
+      </p>
       <p>
-        The website uses no analytics and no tracking cookies. It remembers your colour theme in your own browser. To limit abuse, the checkout keeps your IP
-        address in memory for about a minute.
+        The website uses no analytics and no tracking cookies. It remembers your colour theme in your own browser. To limit abuse, the checkout and the license
+        page keep your IP address in memory for up to an hour.
       </p>
 
       <H2 id="why">3. Why, and on what legal basis</H2>
@@ -73,6 +78,10 @@ export default function Privacy() {
         <li>
           <strong>Stripe</strong> processes card payments and invoices. Stripe may transfer data to the United States, covered by the EU-US Data Privacy Framework
           and Stripe&apos;s standard contractual clauses. See <a href={links.stripePrivacy} target="_blank" rel="noopener noreferrer">Stripe&apos;s privacy policy</a>.
+        </li>
+        <li>
+          <strong>Postmark</strong> (ActiveCampaign, LLC, USA) sends the license email for us, as our processor. It gets your email address and the content of
+          that email. Transfers to the United States are covered by the EU standard contractual clauses. We turn off open and click tracking.
         </li>
         <li>Our email and hosting providers, which handle data only to run those services for us.</li>
         <li>An accountant, if we use one, and public authorities when the law requires it.</li>

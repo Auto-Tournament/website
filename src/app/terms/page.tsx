@@ -160,7 +160,8 @@ export default async function Terms() {
 
       <H2 id="start">10. When the license starts</H2>
       <p>
-        For card payments the license starts at payment: your license key is shown right after checkout and can be retrieved later on the license page (/license).
+        For card payments the license starts at payment: your license key is shown right after checkout, emailed to the address you paid with, and can be
+        retrieved later on the license page (/license).
         For invoice orders we email your license key once the invoice is paid. The key names the licensee, pack (with its server limit) and period, and it is part of
         the license together with these terms.
       </p>
