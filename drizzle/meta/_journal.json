@@ -43,6 +43,13 @@
       "when": 1790597864855,
       "tag": "0005_admin_passkeys",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790607334115,
+      "tag": "0006_org_from_checkout",
+      "breakpoints": true
     }
   ]
 }

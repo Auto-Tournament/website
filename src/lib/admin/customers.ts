@@ -6,7 +6,7 @@
  */
 import { and, asc, desc, eq, ilike, lt, or, sql, type SQL } from 'drizzle-orm';
 import type { Db } from '../db/client';
-import { auditLog, licenses, memberships, organizations, users, type Role } from '../db/schema';
+import { auditLog, licenses, memberships, organizations, orgPendingOwners, users, type Role } from '../db/schema';
 import { isUuid } from '../console/orgs';
 import { fromRow, type LicenseRecord } from '../license/store';
 import { line, notesFor, type Note } from './licenses';
@@ -38,13 +38,29 @@ export type OrgDetail = {
   members: { userId: string; email: string | null; name: string | null; role: Role; since: Date }[];
   licenses: LicenseRecord[];
   notes: Note[];
+  /** The organization's audit log, newest first (at most 100). */
+  history: { id: number; at: Date; action: string; actorEmail: string | null; actorUserId: string | null; targetType: string | null; targetId: string | null; details: Record<string, unknown> }[];
+  /** Owners waiting to sign in (created from checkout); only how many, the hashes stay in the database. */
+  pendingOwners: number;
 };
+
+/** One audit entry in words, for the organization's history. */
+export function describeOrgEvent(e: { action: string; details: Record<string, unknown> }): string {
+  const d = e.details;
+  const session = typeof d.session === 'string' ? d.session : null;
+  if (e.action === 'org.create' && d.via === 'checkout' && session) return `Created from checkout ${session}`;
+  if (e.action === 'org.create') return 'Created in the console';
+  if (e.action === 'org.pending_owner') return session ? `Owner pending: the buyer of ${session} becomes owner at sign-in` : 'Owner pending until the buyer signs in';
+  if (e.action === 'member.owner_from_checkout') return session ? `Became owner as the buyer of ${session}` : 'Became owner as the buyer';
+  if (e.action === 'license.issue' && d.via === 'checkout') return session ? `License added from checkout ${session}` : 'License added from checkout';
+  return e.action;
+}
 
 export async function orgDetail(db: Db, orgId: string): Promise<OrgDetail | null> {
   if (!isUuid(orgId)) return null;
   const [org] = await db.select().from(organizations).where(eq(organizations.id, orgId)).limit(1);
   if (!org) return null;
-  const [members, rows, notes] = await Promise.all([
+  const [members, rows, notes, history, [pending]] = await Promise.all([
     db
       .select({ userId: users.id, email: users.email, name: users.name, role: memberships.role, since: memberships.createdAt })
       .from(memberships)
@@ -53,8 +69,25 @@ export async function orgDetail(db: Db, orgId: string): Promise<OrgDetail | null
       .orderBy(asc(memberships.createdAt)),
     db.select().from(licenses).where(eq(licenses.orgId, orgId)).orderBy(desc(licenses.issuedAt)),
     notesFor(db, 'organization', [orgId]),
+    db
+      .select({
+        id: auditLog.id,
+        at: auditLog.at,
+        action: auditLog.action,
+        actorEmail: users.email,
+        actorUserId: auditLog.actorUserId,
+        targetType: auditLog.targetType,
+        targetId: auditLog.targetId,
+        details: auditLog.details,
+      })
+      .from(auditLog)
+      .leftJoin(users, eq(users.id, auditLog.actorUserId))
+      .where(eq(auditLog.orgId, orgId))
+      .orderBy(desc(auditLog.id))
+      .limit(100),
+    db.select({ n: sql<number>`count(*)::int` }).from(orgPendingOwners).where(eq(orgPendingOwners.orgId, orgId)),
   ]);
-  return { org, members, licenses: rows.map(fromRow), notes };
+  return { org, members, licenses: rows.map(fromRow), notes, history, pendingOwners: Number(pending?.n ?? 0) };
 }
 
 export type UserRow = { id: string; email: string | null; name: string | null; isAdmin: boolean; verified: boolean; createdAt: Date; lastSignIn: Date | null; orgs: string[] };

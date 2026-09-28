@@ -384,7 +384,7 @@ export function stripeCustomerOf(record: Pick<LicenseRecord, 'payload'>): string
 }
 
 /** Sets the organization's Stripe customer from a license, only when it has none yet and the license is in the mode the site's Stripe key uses. */
-async function adoptStripeCustomer(tx: Tx, orgId: string, record: LicenseRecord, stripeLivemode: boolean, actor: string | null): Promise<void> {
+export async function adoptStripeCustomer(tx: Tx, orgId: string, record: LicenseRecord, stripeLivemode: boolean, actor: string | null): Promise<void> {
   const customer = stripeCustomerOf(record);
   if (!customer || record.livemode !== stripeLivemode) return;
   const rows = await tx

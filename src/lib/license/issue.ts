@@ -10,6 +10,7 @@ import { licenseStore, type LicenseRecord } from './store';
 import { db } from '@/lib/db/client';
 import { dbError } from '@/lib/db/errors';
 import { licenseIssuedToOrg, orgForCheckout } from '@/lib/console/orgs';
+import { assignCheckoutOrg, type CheckoutSessionLike } from '@/lib/console/checkoutOrg';
 import { stripeLivemode } from '@/lib/stripeMode';
 import { checkVatThreshold } from '@/lib/vat/threshold';
 
@@ -98,8 +99,20 @@ export async function issueForSession(session: Stripe.Checkout.Session, now: Dat
       checkVatThreshold().catch((err) => console.error('[vat] threshold check failed', dbError(err)));
     }
   }
+  // Not from the console: the organization from the checkout details (found or created, once; see
+  // src/lib/console/checkoutOrg.ts). Also on 'existing', so a retry finishes what a failed try left. A
+  // failure never fails the issuing: the startup backfill picks the license up.
+  let current = record;
+  if (!record.org_id) {
+    const org = await assignCheckoutOrg(db(), session as unknown as CheckoutSessionLike, stripeLivemode(), { now }).catch((err) => {
+      console.error('[license] could not put the license in an organization', { id: record.payload.id }, dbError(err));
+      return null;
+    });
+    if (org && org.outcome !== 'done') console.info('[license] organization', { id: record.payload.id, outcome: org.outcome });
+    if (org?.orgId) current = { ...record, org_id: org.orgId };
+  }
   // Also on 'existing': a webhook retry (or one resent from the Stripe dashboard) sends it when an earlier try failed.
   const email = sessionEmail(session as unknown as SessionLike);
   if (email && !record.emailed_at) await emailLicense(session.id, email);
-  return { status: created ? 'issued' : 'existing', record };
+  return { status: created ? 'issued' : 'existing', record: current };
 }

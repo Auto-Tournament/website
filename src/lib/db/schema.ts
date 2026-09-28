@@ -111,6 +111,28 @@ export const memberships = pgTable(
   (t) => [primaryKey({ columns: [t.orgId, t.userId] }), index('memberships_user_idx').on(t.userId)],
 );
 
+/**
+ * Ownership waiting for a buyer to sign in: an organization created from a
+ * Checkout Session (src/lib/console/checkoutOrg.ts) whose buyer has no
+ * verified console account yet. Only a SHA-256 of the buyer's lowercased
+ * email is kept (like licenses.email_hash), never the address. At sign-in
+ * with that verified address the row becomes an owner membership and is
+ * deleted.
+ */
+export const orgPendingOwners = pgTable(
+  'org_pending_owners',
+  {
+    orgId: uuid('org_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    emailHash: text('email_hash').notNull(),
+    /** The Checkout Session that created the organization. */
+    sessionId: text('session_id').notNull(),
+    createdAt: at('created_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.orgId, t.emailHash] }), index('org_pending_owners_email_idx').on(t.emailHash)],
+);
+
 /** Invitations to an organization. The link's token is kept as a SHA-256 only. Single use, 7 days. */
 export const invites = pgTable(
   'invites',
@@ -201,6 +223,13 @@ export const licenses = pgTable(
     refundedAmount: integer('refunded_amount'),
     /** The last refund. */
     refundedAt: at('refunded_at'),
+    /**
+     * When the checkout's organization was worked out (src/lib/console/checkoutOrg.ts):
+     * found or created and the license put in it, or decided there is none.
+     * Set once, so a redelivered webhook or the startup backfill never does
+     * it again (and the backfill never asks Stripe twice for one license).
+     */
+    orgResolvedAt: at('org_resolved_at'),
     createdAt: at('created_at').notNull().defaultNow(),
   },
   (t) => [

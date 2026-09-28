@@ -10,6 +10,7 @@ import { emailConfig, sendEmail } from '@/lib/email/postmark';
 import { audit } from './audit';
 import { syncAdminFlag } from '@/lib/admin/access';
 import { consoleAdapter } from './adapter';
+import { claimPendingOwnership } from './checkoutOrg';
 import { signInEmail } from './emails';
 import { consoleHref, consoleOrigin, consoleUrl } from './urls';
 
@@ -131,6 +132,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => ({
         await audit(db(), { actor: user.id, action: 'auth.signin', targetType: 'user', targetId: user.id, details: { provider: account?.provider ?? 'unknown', new_user: Boolean(isNewUser) } });
       } catch (err) {
         console.error('[console] sign-in bookkeeping failed', dbError(err));
+      }
+      try {
+        // Organizations created from this address's checkouts: the user becomes their owner (only with a verified email; see checkoutOrg.ts).
+        const claimed = await claimPendingOwnership(db(), user.id);
+        if (claimed.length > 0) console.info('[console] ownership from checkout taken up', { orgs: claimed.length });
+      } catch (err) {
+        console.error('[console] pending ownership failed', dbError(err));
       }
     },
     async linkAccount({ user, account }) {

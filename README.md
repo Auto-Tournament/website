@@ -130,10 +130,12 @@ blocks**: a problem is a warning in the product, never a lockout.
    the key itself (same one-per-session store, so never two keys).
 4. The key is emailed to the address paid with, once (see "License email"
    below; off until Postmark is set up).
-5. Every license bought with an email shows up when that email signs in at
-   the console (console.autotournament.gg). That is the one place to see a
-   license or its key again; the site itself no longer has a "get it again"
-   page.
+5. The license goes into an organization in the console
+   (console.autotournament.gg), made from the checkout details (see
+   "Organizations from checkout" under Console). The buyer signs in with the
+   email they paid with and lands on their licenses. That is the one place
+   to see a license or its key again; the site itself no longer has a "get
+   it again" page.
 
 Issued keys live in Postgres (the `licenses` table, see Console), with a
 SHA-256 of the buyer's email instead of the email. Until the console they
@@ -351,6 +353,24 @@ instead.
   kept as a hash), change roles, remove members and open billing; only owners
   make owners, and the last owner can't leave. One person can be in several
   organizations (operators working for clients): the switcher at the top.
+- **Organizations from checkout** (`src/lib/console/checkoutOrg.ts`): when a
+  card license is issued (webhook or thanks page, same code path), it goes
+  into (1) the organization chosen on the console's Buy page
+  (`metadata.org_id`), else (2) the organization whose Stripe customer paid,
+  else (3) an organization with the same VAT id / org number (normalized)
+  that the buyer already belongs to or is the pending owner of (a VAT id is
+  public, so a match alone never gives access), else (4) a new one from the
+  checkout's business name (never the event/client field), tax id, country,
+  billing address and Stripe customer. The buyer of a new one is its owner:
+  at once when a user with that verified email exists, else a pending owner
+  kept only as the email's SHA-256 (`org_pending_owners`) until they sign in
+  with that address, verified (Auth.js `events.signIn`, and `/` as a
+  fallback). Once per license (`licenses.org_resolved_at`, row lock), so a
+  redelivered webhook changes nothing. Older card licenses without an
+  organization are run through it once in the background at startup (one
+  Stripe read each; a buyer who already has an organization keeps "Licenses
+  bought with your email" instead). The admin org page's History shows
+  "Created from checkout cs_…".
 - **Licenses**: each organization's licenses, with the key, the public check
   link, status and the versions covered. "Licenses bought with your email"
   lists licenses whose email hash matches the signed-in user's verified email
@@ -366,7 +386,8 @@ instead.
   organization's Stripe customer (owners and admins; otherwise the user's
   verified email) and
   `metadata.org_id`, and the webhook issues the license straight into the
-  organization. From the main site, checkout is exactly as before.
+  organization. From the main site, checkout is as before, and the
+  organization comes from the checkout details (above).
 - **Audit log**: every write (and sign-in) goes into `audit_log`: actor, action,
   organization, target, time, details. Never tokens.
 - `users.is_admin` marks Auto Tournament staff (the admin CRM). It follows
@@ -455,7 +476,8 @@ rate-limited (20 per 10 minutes).
   key; "Mark paid" issues it. The buyer email is kept as a hash, like card
   purchases. Unpaid founder orders hold a place under the founder cap, which
   checkout and the pricing page count too.
-- **Organizations** and **Users**: members, licenses, Stripe customer, notes;
+- **Organizations** and **Users**: members, licenses, Stripe customer, notes,
+  the organization's history (its audit log);
   users with organizations and last sign-in (from the audit log).
 - **Leads**: every `/contact` message is stored in `leads` as well as emailed
   (status new/replied/won/lost and a note; "Reply" opens your mail app).

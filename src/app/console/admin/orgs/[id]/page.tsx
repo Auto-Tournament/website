@@ -10,7 +10,7 @@ import { Badge, DataTable, Muted } from '@/components/admin/AdminUi';
 import { day, dayTime, money, statusTone } from '@/components/admin/format';
 import { db } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/admin/guard';
-import { orgDetail } from '@/lib/admin/customers';
+import { describeOrgEvent, orgDetail } from '@/lib/admin/customers';
 import { adminStatus, adminStatusLabel } from '@/lib/admin/licenses';
 import { countryName } from '@/lib/console/countries';
 import { kindNames, packName, todayUtc } from '@/lib/license/describe';
@@ -28,7 +28,7 @@ export default async function AdminOrg({ params }: { params: Promise<{ id: strin
   await requireAdmin();
   const detail = await orgDetail(db(), (await params).id);
   if (!detail) notFound();
-  const { org, members, licenses, notes } = detail;
+  const { org, members, licenses, notes, history, pendingOwners } = detail;
   const today = todayUtc();
   const stripeBase = 'https://dashboard.stripe.com';
   const address = [org.addressLine1, org.addressLine2, [org.postalCode, org.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
@@ -56,6 +56,13 @@ export default async function AdminOrg({ params }: { params: Promise<{ id: strin
       />
 
       <Panel title={`Members (${members.length})`}>
+        {pendingOwners > 0 && (
+          <Box data-testid="pending-owners" sx={{ mb: 2 }}>
+            <Muted>
+              {pendingOwners === 1 ? 'The buyer becomes owner' : `${pendingOwners} buyers become owners`} on first sign-in with the email paid with.
+            </Muted>
+          </Box>
+        )}
         <DataTable
           label="Members"
           empty="No members."
@@ -97,6 +104,26 @@ export default async function AdminOrg({ params }: { params: Promise<{ id: strin
               },
             };
           })}
+        />
+      </Panel>
+
+      <Panel title="History">
+        <DataTable
+          label="History"
+          empty="Nothing recorded."
+          columns={[
+            { key: 'at', label: 'When' },
+            { key: 'who', label: 'By' },
+            { key: 'what', label: 'What' },
+          ]}
+          rows={history.map((e) => ({
+            key: String(e.id),
+            cells: {
+              at: dayTime(e.at),
+              who: e.actorEmail ?? (e.actorUserId ? <Muted>deleted user</Muted> : <Muted>system</Muted>),
+              what: describeOrgEvent(e),
+            },
+          }))}
         />
       </Panel>
 
