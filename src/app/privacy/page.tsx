@@ -49,9 +49,20 @@ export default function Privacy() {
         on the license page. The email contains the key, the license details above, the order reference and the invoice number. We send it through Postmark
         (see section 5). We keep when it was sent and, if sending failed, the error, but not your address.
       </p>
+      <p id="account">
+        <strong>Your licenses page.</strong> On <a href="/account">/account</a> you sign in with a link we email you (through Postmark), with no password. We
+        keep a one-way hash of the link for 15 minutes and, once you sign in, a hash of your session with the hash of your email for up to 30 days, or until
+        you sign out. One cookie keeps you signed in; it is needed for the sign-in and isn&apos;t used for anything else.
+      </p>
+      <p id="license-check">
+        <strong>The public license check.</strong> Anyone who has a license id (it is also inside the key) can open its check page,{' '}
+        <code>/verify/&lt;license id&gt;</code>, and see the licensee name, the product, pack and server limit, the kind of license, its period and whether it
+        is valid. It never shows the key, your email, your Stripe customer id or the order reference. Share the id only with people who need to check your
+        license, such as an event or a client.
+      </p>
       <p>
-        The website uses no analytics and no tracking cookies. It remembers your colour theme in your own browser. To limit abuse, the checkout and the license
-        page keep your IP address in memory for up to an hour.
+        The website uses no analytics and no tracking cookies. It remembers your colour theme in your own browser, and sets one cookie only when you sign in
+        to your licenses. To limit abuse, the checkout, the license and sign-in pages and the license check keep your IP address in memory for up to an hour.
       </p>
 
       <H2 id="why">3. Why, and on what legal basis</H2>
@@ -80,8 +91,8 @@ export default function Privacy() {
           and Stripe&apos;s standard contractual clauses. See <a href={links.stripePrivacy} target="_blank" rel="noopener noreferrer">Stripe&apos;s privacy policy</a>.
         </li>
         <li>
-          <strong>Postmark</strong> (ActiveCampaign, LLC, USA) sends the license email for us, as our processor. It gets your email address and the content of
-          that email. Transfers to the United States are covered by the EU standard contractual clauses. We turn off open and click tracking.
+          <strong>Postmark</strong> (ActiveCampaign, LLC, USA) sends the license email and the sign-in link for us, as our processor. It gets your email
+          address and the content of those emails. Transfers to the United States are covered by the EU standard contractual clauses. We turn off open and click tracking.
         </li>
         <li>Our email and hosting providers, which handle data only to run those services for us.</li>
         <li>An accountant, if we use one, and public authorities when the law requires it.</li>

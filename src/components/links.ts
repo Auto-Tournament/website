@@ -14,6 +14,8 @@ export const links = {
   compatibility: '/compatibility',
   terms: '/terms',
   license: '/license',
+  account: '/account',
+  verify: '/verify',
   termsOfSale: '/terms-of-sale',
   privacy: '/privacy',
   polyform: 'https://polyformproject.org/licenses/noncommercial/1.0.0',

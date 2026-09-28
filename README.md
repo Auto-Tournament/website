@@ -57,7 +57,7 @@ URL in Dashboard → Settings → Public details first
 (`https://autotournament.gg/terms`); without it, creating a Checkout Session
 fails and the calculator falls back to the email request.
 
-`yarn test` runs the checkout, Stripe price, license key, license email and CS2 compatibility tests.
+`yarn test` runs the checkout, Stripe price, license key, license email, account and CS2 compatibility tests.
 
 ## Prices live in Stripe
 
@@ -202,6 +202,46 @@ Postmark setup (once), in this order:
    approves it: request approval in the account if it isn't yet.
 5. Put the token in `.env` and `docker compose up -d`.
 6. Optional: a DMARC record (`_dmarc` TXT) once DKIM passes.
+
+### Your licenses (/account)
+
+Buyers sign in with an emailed link (no password) and see every license bought
+with that email, newest first: licensee, pack, kind, period, status, license
+id, order reference, the key, the public check link, and the versions covered.
+
+- `POST /api/account/link { email }` emails a single-use link valid 15 minutes,
+  only when a license has that email's hash. Same answer either way; sent
+  after the response. Limits: 5 per IP per 10 minutes, 3 per email per hour.
+- The link opens `/account/signin?token=…`, which only shows a button (mail
+  scanners that open links don't use it up). The button posts to
+  `/api/account/signin`, which sets the session cookie (`__Host-at-account`:
+  HttpOnly, Secure, SameSite=Lax, 30 days, HMAC-signed) and goes to `/account`.
+  `/api/account/signout` ends the session.
+- Tokens and sessions are kept in `account.json` next to `licenses.json`, as
+  SHA-256 hashes with the email hash (never the email), mode 600, expired
+  entries dropped on every write. Deleting the file signs everyone out.
+- Versions covered come from the GitHub releases of Ready Up and CS2 Server
+  Manager (plus the platform for Platform packs), public API, cached an hour.
+  When GitHub can't be read, the section is hidden.
+
+Env, in `.env` on the server:
+
+- `ACCOUNT_SESSION_SECRET`: at least 32 characters, for signing the session
+  cookie. Make one with `openssl rand -base64 48`. Changing it signs everyone
+  out.
+
+/account is on only when both `ACCOUNT_SESSION_SECRET` and
+`POSTMARK_SERVER_TOKEN` are set; otherwise it says sign-in isn't available and
+the routes answer 404.
+
+### Public license check (/verify)
+
+`/verify/<license id>` shows the licensee, pack and server limit, kind,
+period, updates until, and a status: valid, upcoming, expired, test, or not
+found (the same for every unknown id). Never the key, email, customer id or
+order reference. 30 checks per IP per minute, not indexed. `/license` has a
+"Check a license" form; the thanks page and /account show each license's check
+link. Always on.
 
 **Rotating:** run the keygen again, add the new public key to
 `public-keys.json` (keep the old one, so old keys still verify), ship the new

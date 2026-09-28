@@ -7,7 +7,8 @@ services:
         GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:-dev}
     container_name: autotournament-website
     # Server-side secrets (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SITE_URL,
-    # COMPAT_INGEST_TOKEN, LICENSE_SIGNING_KEY, POSTMARK_SERVER_TOKEN)
+    # COMPAT_INGEST_TOKEN, LICENSE_SIGNING_KEY, POSTMARK_SERVER_TOKEN,
+    # ACCOUNT_SESSION_SECRET)
     # live in .env next to this file, read at runtime and never baked into the
     # image. Optional: without it card checkout is off and the calculator
     # falls back to the email request. Needs Docker Compose 2.24 or newer.

@@ -18,6 +18,8 @@ describe('sameOrigin', () => {
     expect(sameOrigin(h({ origin: site, 'sec-fetch-site': 'same-origin' }), site)).toBe(true);
     expect(sameOrigin(h({ origin: 'http://localhost:4611', host: 'localhost:4611' }), site)).toBe(true);
     expect(sameOrigin(h({}), site)).toBe(true);
+    // A form on a no-referrer page posts with Origin: null; Sec-Fetch-Site still says same-origin.
+    expect(sameOrigin(h({ origin: 'null', 'sec-fetch-site': 'same-origin' }), site)).toBe(true);
   });
   it('refuses other sites', () => {
     expect(sameOrigin(h({ origin: 'https://evil.example', host: 'autotournament.gg' }), site)).toBe(false);
