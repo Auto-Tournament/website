@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -15,7 +14,6 @@ import { ServersCard } from './cards/ServersCard';
 import { ProfileCard } from './cards/ProfileCard';
 import { AtIcon } from './AtIcon';
 import { CodeBlock } from './CodeBlock';
-import { CompatNavStatus } from './compat/CompatNavStatus';
 import { ThemePicker } from './ThemePicker';
 import { links } from './links';
 import { seller } from './seller';
@@ -24,96 +22,7 @@ const { color, radius } = tokens;
 
 export { links } from './links';
 
-/** True while the visitor is scrolling down past the top of the page. */
-function useScrollingDown(threshold = 80) {
-  const [down, setDown] = useState(false);
-  useEffect(() => {
-    let last = window.scrollY;
-    let frame = 0;
-    const onScroll = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        const y = window.scrollY;
-        // Ignore tiny moves (trackpad jitter) so the nav doesn't flicker.
-        if (Math.abs(y - last) < 6) return;
-        setDown(y > last && y > threshold);
-        last = y;
-      });
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      cancelAnimationFrame(frame);
-    };
-  }, [threshold]);
-  return down;
-}
-
-/* N5 floating pill: shrinks while scrolling down, grows back on scroll up. */
-export function Nav() {
-  const compact = useScrollingDown();
-  return (
-    <Box component="header" sx={{ position: 'sticky', top: 16, zIndex: 10, display: 'flex', justifyContent: 'center', px: 2 }}>
-      <Box
-        data-compact={compact || undefined}
-        sx={{
-          transform: compact ? 'translateY(-6px) scale(0.86)' : 'none',
-          transformOrigin: 'top center',
-          transition: `transform ${tokens.duration.base}ms ${tokens.ease.out}, background-color ${tokens.duration.base}ms ${tokens.ease.out}`,
-          '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-          display: 'flex',
-          alignItems: 'center',
-          gap: { xs: 1.5, sm: 3 },
-          maxWidth: '100%',
-          py: 1,
-          pr: 1,
-          pl: 2,
-          bgcolor: color.navGlass,
-          border: `1px solid ${color.rule}`,
-          borderRadius: `${radius.pill}px`,
-        }}
-      >
-        <Box component="a" href="/" aria-label="Auto Tournament, home" sx={{ display: 'flex', alignItems: 'center', gap: 1, textDecoration: 'none', color: 'inherit', fontFamily: fontDisplay, fontWeight: 600, whiteSpace: 'nowrap' }}>
-          <AtIcon size={26} radius="7px" />
-          {/* On the narrowest phones the icon stands alone, so Pricing, the status dot and Install still fit. */}
-          <Box component="span" sx={{ '@media (max-width: 419.95px)': { display: 'none' } }}>
-            Auto Tournament
-          </Box>
-        </Box>
-        <Box component="nav" aria-label="Main" sx={{ display: { xs: 'none', md: 'flex' }, gap: 3, fontSize: '0.875rem' }}>
-          {[
-            ['Features', '/#features'],
-            ['Games', '/#games'],
-            ['Pricing', links.pricing],
-            ['Docs', links.docs],
-            ['GitHub', links.github],
-            ['Contact', links.contact],
-          ].map(([label, href]) => (
-            <Box key={label} component="a" href={href} sx={{ color: color.ink2, textDecoration: 'none', whiteSpace: 'nowrap', '&:hover': { color: color.ink } }}>
-              {label}
-            </Box>
-          ))}
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2 } }}>
-          <Box component="a" href={links.pricing} sx={{ display: { xs: 'inline', md: 'none' }, color: color.ink2, textDecoration: 'none', fontSize: '0.875rem', whiteSpace: 'nowrap', '&:hover': { color: color.ink } }}>
-            Pricing
-          </Box>
-          <Box
-            component="a"
-            href={links.contact}
-            sx={{ display: { xs: 'inline', md: 'none' }, color: color.ink2, textDecoration: 'none', fontSize: '0.875rem', whiteSpace: 'nowrap', '&:hover': { color: color.ink } }}
-          >
-            Contact
-          </Box>
-          <CompatNavStatus />
-          <Button variant="contained" size="small" href={links.install}>
-            Install
-          </Button>
-        </Box>
-      </Box>
-    </Box>
-  );
-}
+export { SiteNav as Nav } from './nav/SiteNav';
 
 export function Hero() {
   return (
@@ -341,7 +250,7 @@ export function Footer() {
         Made by people who run LANs, for people who run LANs.
       </Typography>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 2, mt: 6, color: color.muted, fontSize: '0.875rem' }}>
-        <Box component="nav" aria-label="Footer" sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+        <Box component="nav" id="site-links" aria-label="Footer" sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
           {[
             ['Pricing', links.pricing],
             ['CS2 compatibility', links.compatibility],

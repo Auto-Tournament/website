@@ -13,12 +13,11 @@ const { color } = tokens;
 const unknown: CompatStatus = { overall: null, cs2: null, checked_at: null };
 
 /**
- * The nav's CS2 compatibility dot, linking to /compatibility. Grey until
- * `GET /api/compat/status` answers (the page never waits on it), and grey for
- * good when that read fails. The word "CS2" shows from the sm breakpoint up;
- * on phones the dot stands alone, named by its aria-label.
+ * The newest CS2 compatibility verdict, for the nav. Unknown (grey) until
+ * `GET /api/compat/status` answers (the page never waits on it), and unknown
+ * for good when that read fails.
  */
-export function CompatNavStatus() {
+export function useCompatStatus(): CompatStatus {
   const [status, setStatus] = useState<CompatStatus>(unknown);
 
   useEffect(() => {
@@ -33,7 +32,15 @@ export function CompatNavStatus() {
       });
     return () => controller.abort();
   }, []);
+  return status;
+}
 
+/**
+ * The nav's CS2 compatibility dot, linking to /compatibility. The word "CS2"
+ * shows from the sm breakpoint up; on phones the dot stands alone, named by
+ * its aria-label.
+ */
+export function CompatNavStatus({ status }: { status: CompatStatus }) {
   const tone = compatSummaryTone(status.overall);
   const { label, title } = compatSummaryText(status);
   return (
