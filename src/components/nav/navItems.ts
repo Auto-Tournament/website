@@ -2,11 +2,11 @@ import { links } from '../links';
 
 /**
  * What the site nav shows. The bar keeps the few things people come for
- * (Pricing, Docs, Install, the console); everything else sits in two menus.
+ * (Pricing and Install); everything else sits in two menus.
  * Pure data and helpers, no React, so the tests can read them.
  */
 
-export type NavIcon = 'features' | 'games' | 'compat' | 'install' | 'licensing' | 'github' | 'discord' | 'key' | 'verify' | 'contact';
+export type NavIcon = 'features' | 'games' | 'compat' | 'install' | 'docs' | 'licensing' | 'github' | 'discord' | 'console' | 'key' | 'verify' | 'contact';
 
 export type NavLink = {
   label: string;
@@ -40,7 +40,6 @@ export const menus: NavMenu[] = [
           { label: 'Features', href: '/#features', note: 'Map veto, server allocation, brackets and stats.', icon: 'features' },
           { label: 'Games', href: '/#games', note: 'CS2 built in. More games as modules.', icon: 'games' },
           { label: 'CS2 compatibility', href: links.compatibility, note: 'Does Ready Up work on the latest CS2 build?', icon: 'compat', status: true },
-          { label: 'Install guide', href: links.install, note: 'One Docker Compose file, up in five minutes.', icon: 'install' },
         ],
       },
     ],
@@ -51,30 +50,36 @@ export const menus: NavMenu[] = [
     fallbackHref: '#site-links',
     groups: [
       {
-        heading: 'Community',
+        heading: 'Get started',
         items: [
-          { label: 'GitHub', href: links.github, note: 'Source code, issues and releases.', icon: 'github' },
-          { label: 'Discord', href: links.discord, note: 'Ask the people who build it.', icon: 'discord' },
+          { label: 'Docs', href: links.docs, note: 'Setup, configuration and the API.', icon: 'docs' },
+          { label: 'Install guide', href: links.install, note: 'One Docker Compose file, up in five minutes.', icon: 'install' },
           { label: 'Licensing', href: links.licensing, note: 'Free for non-commercial use. When you need a key.', icon: 'licensing' },
         ],
       },
       {
-        heading: 'Licenses',
+        heading: 'Community',
         items: [
+          { label: 'GitHub', href: links.github, note: 'Source code, issues and releases.', icon: 'github' },
+          { label: 'Discord', href: links.discord, note: 'Ask the people who build it.', icon: 'discord' },
+          { label: 'Contact', href: links.contact, note: 'Quotes, invoices and free LAN confirmations.', icon: 'contact' },
+        ],
+      },
+      {
+        heading: 'Your licenses',
+        items: [
+          { label: 'Console', href: links.account, note: 'Your licenses, team and invoices.', icon: 'console' },
           { label: 'License keys', href: links.license, note: 'Get your license key again.', icon: 'key' },
           { label: 'Check a license', href: links.verify, note: 'See whether a license id is valid.', icon: 'verify' },
-          { label: 'Contact', href: links.contact, note: 'Quotes, invoices and free LAN confirmations.', icon: 'contact' },
         ],
       },
     ],
   },
 ];
 
-/** Plain links in the bar, between the menus: Product ▾ · Pricing · Docs · Resources ▾. */
+/** Plain links in the bar: Product ▾ · Pricing · Resources ▾, then Install on the right. */
 export const barLinks = {
   pricing: { label: 'Pricing', href: links.pricing },
-  docs: { label: 'Docs', href: links.docs },
-  console: { label: 'Console', href: links.account },
   install: { label: 'Install', href: links.install },
 } as const;
 
