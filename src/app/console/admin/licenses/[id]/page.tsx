@@ -7,6 +7,7 @@ import { PageTitle, Panel } from '@/components/console/ConsoleShell';
 import { CodeBlock } from '@/components/CodeBlock';
 import { DetailList, PublicCheckLink } from '@/components/LicenseKeyView';
 import { AdminForm } from '@/components/admin/AdminClient';
+import { ApprovedForm } from '@/components/admin/Passkeys';
 import { Badge, DataTable, Muted } from '@/components/admin/AdminUi';
 import { TermsFields } from '@/components/admin/TermsFields';
 import { RefundForm } from '@/components/admin/RefundForm';
@@ -155,7 +156,7 @@ export default async function AdminLicense({ params }: { params: Promise<{ id: s
             Signs a new key with these terms and marks this one replaced. The old key keeps working offline; the public check shows it as replaced by the new
             id. Use it for corrected dates or licensee, or a pack upgrade after the buyer paid the difference.
           </Box>
-          <AdminForm action={reissueAction} submitLabel="Reissue" pendingLabel="Signing…" columns={2} confirm="Sign a new key and mark this one replaced?" testId="reissue-form">
+          <ApprovedForm action={reissueAction} approval={{ action: 'license.reissue', target: p.id }} submitLabel="Reissue" pendingLabel="Signing…" columns={2} confirm="Sign a new key and mark this one replaced?" testId="reissue-form">
             <input type="hidden" name="licenseId" value={p.id} />
             <TermsFields
               values={{
@@ -187,7 +188,7 @@ export default async function AdminLicense({ params }: { params: Promise<{ id: s
               slotProps={{ htmlInput: { maxLength: 254 } }}
               sx={{ gridColumn: '1 / -1' }}
             />
-          </AdminForm>
+          </ApprovedForm>
         </Panel>
       )}
 
@@ -238,14 +239,14 @@ export default async function AdminLicense({ params }: { params: Promise<{ id: s
             Marks the license refunded or revoked without moving any money; nothing is deleted. The public check then says revoked, and the console and
             /license stop showing the key. A refunded license no longer counts as revenue. To give the money back, use Refund above.
           </Box>
-          <AdminForm action={revokeAction} submitLabel="Mark it" tone="error" confirm="Mark this license refunded or revoked? This can't be undone here." testId="revoke-form">
+          <ApprovedForm action={revokeAction} approval={{ action: 'license.revoke', target: p.id }} submitLabel="Mark it" tone="error" confirm="Mark this license refunded or revoked? This can't be undone here." testId="revoke-form">
             <input type="hidden" name="licenseId" value={p.id} />
             <TextField select name="reason" label="What happened" defaultValue="refunded" slotProps={{ select: { native: true } }}>
               <option value="refunded">Refunded</option>
               <option value="revoked">Revoked (no refund)</option>
             </TextField>
             <TextField name="note" label="Note (optional)" multiline minRows={2} slotProps={{ htmlInput: { maxLength: 4000 } }} />
-          </AdminForm>
+          </ApprovedForm>
         </Panel>
       )}
 

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import { PageTitle, Panel } from '@/components/console/ConsoleShell';
-import { AdminForm } from '@/components/admin/AdminClient';
+import { ApprovedForm } from '@/components/admin/Passkeys';
 import { TermsFields } from '@/components/admin/TermsFields';
 import { db } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/admin/guard';
@@ -26,7 +26,7 @@ export default async function NewManualLicense({ searchParams }: { searchParams:
         New license
       </PageTitle>
       <Panel>
-        <AdminForm action={createManualAction} submitLabel="Create" pendingLabel="Creating…" columns={2} testId="manual-form">
+        <ApprovedForm action={createManualAction} approval={{ action: 'license.create', target: 'new' }} submitLabel="Create" pendingLabel="Creating…" columns={2} testId="manual-form">
           <TermsFields mode="new" values={{ licensee: lead?.organization ?? '' }} />
           <TextField
             select
@@ -67,7 +67,7 @@ export default async function NewManualLicense({ searchParams }: { searchParams:
             <option value="yes">Yes</option>
             <option value="no">No</option>
           </TextField>
-        </AdminForm>
+        </ApprovedForm>
       </Panel>
       <Box sx={{ mt: 2, fontSize: '0.875rem' }}>
         Founder places taken: {founder.taken} of {founder.limit} (unpaid founder orders hold a place).

@@ -4,6 +4,7 @@ import TextField from '@mui/material/TextField';
 import { PageTitle, Panel } from '@/components/console/ConsoleShell';
 import { DetailList } from '@/components/LicenseKeyView';
 import { AdminForm } from '@/components/admin/AdminClient';
+import { ApprovedForm } from '@/components/admin/Passkeys';
 import { Badge } from '@/components/admin/AdminUi';
 import { dayTime, money } from '@/components/admin/format';
 import { db } from '@/lib/db/client';
@@ -48,7 +49,7 @@ export default async function ManualOrderPage({ params }: { params: Promise<{ id
       {order.status === 'unpaid' && (
         <>
           <Panel title="Mark paid">
-            <AdminForm action={markPaidAction} submitLabel="Mark paid and issue the key" pendingLabel="Issuing…" columns={2} testId="mark-paid-form">
+            <ApprovedForm action={markPaidAction} approval={{ action: 'order.paid', target: order.id }} submitLabel="Mark paid and issue the key" pendingLabel="Issuing…" columns={2} testId="mark-paid-form">
               <input type="hidden" name="orderId" value={order.id} />
               <TextField name="paidOn" label="Paid on" type="date" helperText="Empty: today." slotProps={{ inputLabel: { shrink: true } }} />
               <TextField name="paymentRef" label="Payment reference" defaultValue={order.paymentRef ?? ''} slotProps={{ htmlInput: { maxLength: 200 } }} />
@@ -61,7 +62,7 @@ export default async function ManualOrderPage({ params }: { params: Promise<{ id
                 slotProps={{ htmlInput: { maxLength: 254 } }}
                 sx={{ gridColumn: '1 / -1' }}
               />
-            </AdminForm>
+            </ApprovedForm>
           </Panel>
           <Panel title="Cancel">
             <AdminForm action={cancelOrderAction} submitLabel="Cancel the order" tone="error" confirm="Cancel this order? A founder place it held is freed.">

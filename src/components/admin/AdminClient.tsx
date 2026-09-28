@@ -21,6 +21,7 @@ const sections: [string, string][] = [
   ['Leads', '/admin/leads'],
   ['Free LANs', '/admin/free-lans'],
   ['Audit log', '/admin/audit'],
+  ['Passkeys', '/admin/passkeys'],
 ];
 
 /** The admin sections. Wraps on narrow screens instead of scrolling sideways. */
