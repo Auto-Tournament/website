@@ -317,8 +317,8 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
                   </Box>
                 </Typography>
                 <Typography sx={{ mt: 2, maxWidth: '58ch', color: color.ink2, fontSize: { xs: '1rem', md: '1.125rem' } }}>
-                  Trying it is free: install it and run a tournament. No sign-up, no card, no time limit. Answer a few questions to see what you&apos;d pay, if
-                  anything.
+                  Free for non-profit events and for trying it out privately. The moment you earn money from it, you need a license. Answer a few questions
+                  to see if you need one, and which.
                 </Typography>
               </div>
               <PackFinder packs={packs} pricesAvailable={pricesAvailable} founderOpen={founderOpen} initial={initial} />
