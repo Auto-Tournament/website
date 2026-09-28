@@ -33,12 +33,12 @@ import Stripe from 'stripe';
  * shown when Stripe can't be read.
  */
 const PACKS = [
-  { id: 'servers-s', product: 'servers', size: 'S', maxServers: 6, prices: { event: 19, year: 49, founder: 149 } },
-  { id: 'servers-m', product: 'servers', size: 'M', maxServers: 20, prices: { event: 59, year: 149, founder: 449 } },
-  { id: 'servers-l', product: 'servers', size: 'L', maxServers: 40, prices: { event: 99, year: 279, founder: 849 } },
-  { id: 'platform-s', product: 'platform', size: 'S', maxServers: 6, prices: { event: 39, year: 99, founder: 299 } },
-  { id: 'platform-m', product: 'platform', size: 'M', maxServers: 20, prices: { event: 99, year: 249, founder: 749 } },
-  { id: 'platform-l', product: 'platform', size: 'L', maxServers: 40, prices: { event: 159, year: 429, founder: 1299 } },
+  { id: 'servers-s', product: 'servers', size: 'S', maxServers: 6, prices: { event: 19, year: 49, founder: 199 } },
+  { id: 'servers-m', product: 'servers', size: 'M', maxServers: 20, prices: { event: 59, year: 149, founder: 599 } },
+  { id: 'servers-l', product: 'servers', size: 'L', maxServers: 40, prices: { event: 99, year: 279, founder: 1099 } },
+  { id: 'platform-s', product: 'platform', size: 'S', maxServers: 6, prices: { event: 39, year: 99, founder: 399 } },
+  { id: 'platform-m', product: 'platform', size: 'M', maxServers: 20, prices: { event: 99, year: 249, founder: 999 } },
+  { id: 'platform-l', product: 'platform', size: 'L', maxServers: 40, prices: { event: 159, year: 429, founder: 1699 } },
 ];
 
 const PERIODS = ['event', 'year', 'founder'];
