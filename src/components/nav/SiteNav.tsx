@@ -587,6 +587,15 @@ export function SiteNav() {
             {barLinks.pricing.label}
           </Box>
           <CompatNavStatus status={status} />
+          <Button
+            variant="text"
+            size="small"
+            href={barLinks.console.href}
+            startIcon={<UserCircle size={16} aria-hidden />}
+            sx={{ display: { xs: 'none', md: 'inline-flex' }, whiteSpace: 'nowrap', color: color.ink, '& .MuiButton-startIcon': { mr: 0.5 } }}
+          >
+            {barLinks.console.label}
+          </Button>
           <Button variant="contained" size="small" href={barLinks.install.href} {...externalProps(barLinks.install.href)} endIcon={<ArrowUpRight size={12} weight="bold" aria-hidden />} sx={{ whiteSpace: 'nowrap', '& .MuiButton-endIcon': { ml: 0.5 } }}>
             {barLinks.install.label}
             <Box component="span" sx={visuallyHidden}>
@@ -724,7 +733,7 @@ export function SiteNav() {
         >
           <Box component="nav" aria-label="Menu" sx={{ maxWidth: '36rem', mx: 'auto', display: 'grid', gap: 3 }}>
             <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', borderBottom: `1px solid ${color.rule}` }}>
-              {[barLinks.pricing].map((l) => (
+              {[barLinks.pricing, barLinks.console].map((l) => (
                 <li key={l.label}>
                   <Box
                     component="a"
