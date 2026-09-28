@@ -17,6 +17,9 @@ import { siteUrl } from '@/lib/site';
 import { consoleEnabled } from '@/lib/console/auth';
 import { consoleUrl } from '@/lib/console/urls';
 import { licenseStore, type LicenseRecord } from '@/lib/license/store';
+import { sendConsoleLinkAction } from './actions';
+import { consoleLinkAvailable } from './available';
+import { ConsoleLinkButton } from './ConsoleLinkButton';
 
 const { color } = tokens;
 
@@ -87,21 +90,26 @@ export default async function Thanks({ searchParams }: { searchParams: Promise<R
                 invoice={state.record.invoice_number}
                 checkUrl={`${siteUrl() ?? ''}/verify/${state.record.payload.id}`}
               />
-              <Typography sx={{ mt: 3, maxWidth: '60ch', color: color.ink2 }}>
-                {consoleEnabled() ? (
-                  <>
-                    Lost it?{' '}
-                    <Box component="a" href={consoleUrl('/')} sx={link}>
-                      Sign in to the console
-                    </Box>{' '}
-                    with the email you paid with to see your licenses and keys any time.
-                  </>
-                ) : (
-                  <>
-                    Lost it? Email us with the order reference above (or the invoice number on your receipt) and we&apos;ll send it again.
-                  </>
-                )}
-              </Typography>
+              {consoleLinkAvailable() ? (
+                // Their organization and license are already in the console (created from checkout).
+                <ConsoleLinkButton action={sendConsoleLinkAction} sessionId={state.record.session_id} />
+              ) : (
+                <Typography sx={{ mt: 3, maxWidth: '60ch', color: color.ink2 }}>
+                  {consoleEnabled() ? (
+                    <>
+                      Lost it?{' '}
+                      <Box component="a" href={consoleUrl('/')} sx={link}>
+                        Sign in to the console
+                      </Box>{' '}
+                      with the email you paid with to see your licenses and keys any time.
+                    </>
+                  ) : (
+                    <>
+                      Lost it? Email us with the order reference above (or the invoice number on your receipt) and we&apos;ll send it again.
+                    </>
+                  )}
+                </Typography>
+              )}
             </>
           )}
 

@@ -6,6 +6,9 @@ export const limits = {
   signInIp: createRateLimiter({ limit: 10, windowMs: 10 * 60_000 }),
   /** Sign-in emails per address (by hash). Over it, nothing is sent, but the answer is the same. */
   signInEmail: createRateLimiter({ limit: 3, windowMs: 60 * 60_000 }),
+  /** "Go to your console" links from the thanks page, per checkout session and per IP (on top of signInEmail). */
+  checkoutLinkSession: createRateLimiter({ limit: 3, windowMs: 10 * 60_000 }),
+  checkoutLinkIp: createRateLimiter({ limit: 10, windowMs: 10 * 60_000 }),
   /** Invites sent, per user and per organization. */
   inviteUser: createRateLimiter({ limit: 20, windowMs: 60 * 60_000 }),
   inviteOrg: createRateLimiter({ limit: 50, windowMs: 24 * 60 * 60_000 }),
