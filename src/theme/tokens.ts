@@ -17,6 +17,7 @@ export const hex = {
   ink2: '#c4bcb9', // oklch(80% 0.010 38)
   muted: '#938a87', // oklch(64% 0.012 38)
   rule: '#322926', // oklch(29% 0.014 38)
+  fieldRule: '#736966', // oklch(52% 0.012 38): form field borders, ≥3:1 on paper/paper2/paper3 (WCAG 1.4.11)
   accent: '#ff6a3d', // brand orange, oklch(70% 0.19 38)
   accent2: '#fe8f5b', // oklch(76% 0.15 45), hover
   accentInk: '#140e0c', // text on accent

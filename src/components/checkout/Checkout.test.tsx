@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { StripeCheckoutAmount, StripeCheckoutTotalSummary } from '@stripe/stripe-js';
 import { CheckoutProvider, useCheckout, type BuyOutcome, type CheckoutOrder } from './Checkout';
+import { isFreeOrder, summaryOf, type SummarySession } from './StripeCheckoutForm';
+import { formatMoney } from './CheckoutForm';
 
 // The dialog with a mocked Stripe.js loader and a mocked custom-checkout
 // session (@stripe/react-stripe-js/checkout): no network, no real Stripe.
@@ -12,12 +15,27 @@ vi.mock('@stripe/stripe-js/pure', () => ({ loadStripe: (key: string) => loadStri
 
 type Result = { type: 'success'; session: unknown } | { type: 'error'; error: { message: string; code?: string | null } };
 const ok: Result = { type: 'success', session: {} };
-const session = {
+// Amounts in the real SDK shape (StripeCheckoutAmount / StripeCheckoutTotalSummary).
+const amt = (minorUnitsAmount: number): StripeCheckoutAmount => ({ minorUnitsAmount, amount: `€${(minorUnitsAmount / 100).toFixed(2)}` });
+function totals(subtotal: number, discount: number): StripeCheckoutTotalSummary {
+  return {
+    appliedBalance: amt(0),
+    balanceAppliedToNextInvoice: false,
+    discount: amt(discount),
+    shippingRate: amt(0),
+    subtotal: amt(subtotal),
+    surcharge: amt(0),
+    taxExclusive: amt(0),
+    taxInclusive: amt(0),
+    total: amt(subtotal - discount),
+  };
+}
+const session: SummarySession = {
   id: 'cs_test_1abcdefghijk',
   currency: 'eur',
-  email: null as string | null,
+  email: null,
   discountAmounts: null,
-  total: { subtotal: { minorUnitsAmount: 49900 }, discount: { minorUnitsAmount: 0 }, total: { minorUnitsAmount: 49900 } },
+  total: totals(49900, 0),
 };
 const actions = {
   applyPromotionCode: vi.fn(async (_code: string): Promise<Result> => ok),
@@ -106,7 +124,7 @@ describe('CheckoutProvider with a publishable key (Embedded Checkout)', () => {
     expect(loadStripe).toHaveBeenCalledWith('pk_test_unit');
     expect(providerOptions).toHaveBeenCalledWith(expect.objectContaining({ clientSecret: 'cs_test_1_secret_x', elementsOptions: expect.objectContaining({ appearance: expect.objectContaining({ theme: 'night' }) }) }));
     expect(screen.getByTestId('payment-element')).toBeTruthy();
-    expect(screen.getByTestId('checkout-order').textContent).toContain('up to 20 servers');
+    expect(screen.getByTestId('checkout-order').textContent).toContain('Up to 20 servers');
     expect(screen.getByTestId('checkout-total').textContent).toBe('€499');
     expect(screen.getByTestId('checkout-pay').textContent).toBe('Pay €499');
     expect(fetchMock).toHaveBeenCalledWith('/api/checkout', expect.objectContaining({ method: 'POST', body: JSON.stringify(order.payload) }));
@@ -204,7 +222,14 @@ describe('custom checkout form', () => {
   it('shows inline errors for every missing field and sends nothing to Stripe', async () => {
     await openForm();
     fireEvent.click(screen.getByTestId('checkout-pay'));
-    expect((await screen.findByTestId('checkout-form-error')).textContent).toContain('Check the highlighted fields');
+    const errorSummary = await screen.findByTestId('checkout-error-summary');
+    expect(errorSummary.textContent).toContain('9 fields need attention');
+    await waitFor(() => expect(document.activeElement).toBe(errorSummary));
+    // Each entry links to its field and moves focus there.
+    const link = screen.getByRole('link', { name: /^Company or organization:/ });
+    fireEvent.click(link);
+    expect(document.activeElement).toBe(screen.getByLabelText('Company or organization'));
+    expect(screen.getByTestId('checkout-pay').hasAttribute('disabled')).toBe(false);
     const form = screen.getByTestId('checkout-form').textContent ?? '';
     for (const msg of ['Enter the email address', 'Enter the company', 'Enter the event or client name', 'Enter the event date', 'Enter the street address', 'Enter the postal code', 'Enter the city', 'Confirm that you are buying for a business', 'Accept the terms']) {
       expect(form).toContain(msg);
@@ -285,7 +310,12 @@ describe('custom checkout form', () => {
   });
 
   it('at a total of 0 (full promo) hides the Payment Element and confirms without a payment method', async () => {
-    checkoutState = { type: 'success', checkout: { ...session, total: { subtotal: { minorUnitsAmount: 49900 }, discount: { minorUnitsAmount: 49900 }, total: { minorUnitsAmount: 0 } }, ...actions } };
+    const discounted: SummarySession = {
+      ...session,
+      total: totals(49900, 49900),
+      discountAmounts: [{ ...amt(49900), displayName: '100% off', promotionCode: 'FREE100', recurring: null, percentOff: 100 }],
+    };
+    checkoutState = { type: 'success', checkout: { ...discounted, ...actions } };
     const fetchMock = await openForm();
     expect(screen.queryByTestId('payment-element')).toBeNull();
     expect(screen.getByTestId('checkout-free').textContent).toBe('Nothing to pay: your promo code covers the full price.');
@@ -296,6 +326,17 @@ describe('custom checkout form', () => {
     expect(actions.runServerUpdate).toHaveBeenCalled();
     expect(fetchMock.mock.calls.some(([url]) => url === '/api/checkout/details')).toBe(true);
     expect(actions.confirm.mock.calls[0][0]).not.toHaveProperty('paymentMethod');
+  });
+
+  it('checks a field when the buyer leaves it, not before', async () => {
+    await openForm();
+    const email = screen.getByLabelText('Email');
+    fireEvent.blur(email);
+    expect(email.getAttribute('aria-invalid')).toBe('false');
+    type('Email', 'not-an-email');
+    fireEvent.blur(email);
+    expect(email.getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByText('Enter the email address the license and invoice go to.').closest('[id]')?.id).toBe(email.getAttribute('aria-describedby')?.split(' ')[0]);
   });
 
   it('with a nonzero total shows the Payment Element and the price on the button', async () => {
@@ -332,5 +373,27 @@ describe('custom checkout form', () => {
     fireEvent.click(screen.getByText('Buy'));
     await waitFor(() => expect(assign).toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/cs_test_2'));
     expect(fetchMock).toHaveBeenCalledWith('/api/checkout?mode=hosted', expect.objectContaining({ body: JSON.stringify(order.payload) }));
+  });
+});
+
+describe('free order detection on the real session shape', () => {
+  it('reads total.total (after discounts) from StripeCheckoutTotalSummary', () => {
+    expect(isFreeOrder({ total: totals(49900, 49900) })).toBe(true);
+    expect(isFreeOrder({ total: totals(49900, 4990) })).toBe(false);
+    const s = summaryOf({ ...session, total: totals(49900, 49900) });
+    expect(s).toMatchObject({ subtotal: 49900, discount: 49900, total: 0, free: true });
+  });
+
+  it('still sees a free order when the minor units cross the iframe as a string', () => {
+    const t = totals(49900, 49900);
+    const stringy = { ...t, total: { ...t.total, minorUnitsAmount: '0' as unknown as number } };
+    expect(isFreeOrder({ total: stringy })).toBe(true);
+    const missing = { ...t, total: { amount: '€0.00' } as unknown as StripeCheckoutAmount };
+    expect(isFreeOrder({ total: missing })).toBe(true);
+  });
+
+  it('never shows a sub-euro amount as "€0"', () => {
+    expect(formatMoney(40, 'eur')).toBe('€0.40');
+    expect(formatMoney(49900, 'eur')).toBe('€499');
   });
 });

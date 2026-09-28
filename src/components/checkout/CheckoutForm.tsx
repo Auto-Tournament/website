@@ -2,8 +2,8 @@
 
 /*
  * Hallmark · component: form (custom checkout) · genre: modern-minimal · theme: Auto Tournament system (tokens.ts)
- * states: default · hover · focus · active · disabled · loading (processing) · error (inline + form) · success (Stripe opens the thanks page)
- * contrast: pass (ink / ink2 / muted on paper2, ban on paper)
+ * states: default · hover · focus · active · disabled · loading (processing) · error (inline on blur/submit + summary) · success (Stripe opens the thanks page)
+ * contrast: pass (ink / ink2 / muted text on paper and paper2 ≥ 4.5:1; field border fieldRule ≥ 3:1; focus = accent)
  */
 
 /**
@@ -13,7 +13,7 @@
  * to Stripe itself: a `CheckoutAdapter` does (StripeCheckoutForm.tsx for the
  * real thing, a mock in the /dev/checkout preview).
  */
-import { useId, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -21,6 +21,7 @@ import Typography from '@mui/material/Typography';
 import { ArrowUpRight } from '@phosphor-icons/react/dist/csr/ArrowUpRight';
 import { Check } from '@phosphor-icons/react/dist/csr/Check';
 import { LockSimple } from '@phosphor-icons/react/dist/csr/LockSimple';
+import { CaretDown } from '@phosphor-icons/react/dist/csr/CaretDown';
 import { WarningCircle } from '@phosphor-icons/react/dist/csr/WarningCircle';
 import { tokens } from '@/theme/tokens';
 import { fontDisplay } from '@/theme/theme';
@@ -45,6 +46,8 @@ export type CheckoutSummary = {
   subtotal: number;
   discount: number;
   total: number;
+  /** Nothing to pay after discounts: no Payment Element, confirm without a payment method. */
+  free: boolean;
   /** The promotion code applied, if any. */
   promotionCode: string | null;
   /** Set when the session already has the buyer's email (signed in on the console): shown, not asked. */
@@ -84,7 +87,8 @@ function countryOptions(): { code: string; name: string }[] {
 }
 
 export function formatMoney(minor: number, currency: string): string {
-  if (currency.toLowerCase() === 'eur') return formatEuro(minor);
+  // Whole euros as "€499"; anything with cents keeps them, so €0.40 never reads as "€0".
+  if (currency.toLowerCase() === 'eur' && minor % 100 === 0) return formatEuro(minor);
   return new Intl.NumberFormat('en-IE', { style: 'currency', currency: currency.toUpperCase() }).format(minor / 100);
 }
 
@@ -145,6 +149,11 @@ const validSample = { company: 'Valid AS', eventName: 'Valid event', eventDates:
 
 /* ------------------------------------------------------------------ fields */
 
+const noMotion = { '@media (prefers-reduced-motion: reduce)': { transition: 'none' } } as const;
+
+const labelSx = { display: 'block', color: color.ink2, fontSize: '0.8125rem', fontWeight: 500, mb: 0.75 } as const;
+
+/** Our text field. Stripe's Payment Element copies these values (appearance.ts). */
 const inputSx = {
   width: '100%',
   minHeight: 44,
@@ -152,9 +161,10 @@ const inputSx = {
   py: 1.25,
   font: 'inherit',
   fontSize: '0.9375rem',
+  lineHeight: 1.4,
   color: color.ink,
   bgcolor: color.paper,
-  border: `1px solid ${color.rule}`,
+  border: `1px solid ${color.fieldRule}`,
   borderRadius: `${radius.sm}px`,
   outline: 'none',
   transition: 'border-color 150ms, box-shadow 150ms',
@@ -162,68 +172,44 @@ const inputSx = {
   '@media (hover: hover)': { '&:hover:not(:disabled)': { borderColor: color.muted } },
   '&:focus-visible': { borderColor: color.accent, boxShadow: `0 0 0 1px ${color.accent}` },
   '&[aria-invalid="true"]': { borderColor: color.ban },
+  '&[aria-invalid="true"]:focus-visible': { borderColor: color.ban, boxShadow: `0 0 0 1px ${color.ban}` },
   '&:disabled': { opacity: 0.6, cursor: 'not-allowed' },
+  ...noMotion,
 } as const;
+
+const srOnly = { position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' } as const;
 
 function FieldError({ id, children }: { id: string; children?: string }) {
   if (!children) return null;
   return (
-    <Box id={id} sx={{ display: 'flex', gap: 0.75, alignItems: 'flex-start', color: color.ban, fontSize: '0.8125rem', mt: 0.75 }}>
+    <Box id={id} sx={{ display: 'flex', gap: 0.75, alignItems: 'flex-start', color: color.ban, fontSize: '0.8125rem', lineHeight: 1.45, mt: 0.75 }}>
       <WarningCircle size={15} aria-hidden style={{ flex: 'none', marginTop: 2 }} />
       <span>{children}</span>
     </Box>
   );
 }
 
-function Field({
-  name,
-  label,
-  hint,
-  error,
-  children,
-}: {
-  name: string;
-  label: string;
-  hint?: string;
-  error?: string;
-  children: (props: { id: string; 'aria-invalid': boolean; 'aria-describedby'?: string }) => ReactNode;
-}) {
-  const uid = useId();
-  const id = `${uid}-${name}`;
-  const describedBy = [hint ? `${id}-hint` : '', error ? `${id}-error` : ''].filter(Boolean).join(' ') || undefined;
+type ControlProps = { id: string; 'aria-invalid': boolean; 'aria-describedby'?: string };
+
+function Field({ id, label, hint, error, children }: { id: string; label: string; hint?: string; error?: string; children: (props: ControlProps) => ReactNode }) {
+  const describedBy = [error ? `${id}-error` : '', hint ? `${id}-hint` : ''].filter(Boolean).join(' ') || undefined;
   return (
     <Box sx={{ minWidth: 0 }}>
-      <Box component="label" htmlFor={id} sx={{ display: 'block', color: color.ink2, fontSize: '0.8125rem', fontWeight: 500, mb: 0.75 }}>
+      <Box component="label" htmlFor={id} sx={labelSx}>
         {label}
       </Box>
       {children({ id, 'aria-invalid': Boolean(error), 'aria-describedby': describedBy })}
-      {hint && !error && (
-        <Box id={`${id}-hint`} sx={{ color: color.muted, fontSize: '0.8125rem', mt: 0.75 }}>
+      <FieldError id={`${id}-error`}>{error}</FieldError>
+      {hint && (
+        <Box id={`${id}-hint`} sx={{ color: color.muted, fontSize: '0.8125rem', lineHeight: 1.45, mt: 0.75 }}>
           {hint}
         </Box>
       )}
-      <FieldError id={`${id}-error`}>{error}</FieldError>
     </Box>
   );
 }
 
-function CheckRow({
-  name,
-  checked,
-  onChange,
-  error,
-  disabled,
-  children,
-}: {
-  name: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  error?: string;
-  disabled?: boolean;
-  children: ReactNode;
-}) {
-  const uid = useId();
-  const id = `${uid}-${name}`;
+function CheckRow({ id, checked, onChange, error, disabled, children }: { id: string; checked: boolean; onChange: (v: boolean) => void; error?: string; disabled?: boolean; children: ReactNode }) {
   return (
     <Box>
       <Box
@@ -231,21 +217,20 @@ function CheckRow({
         htmlFor={id}
         sx={{
           display: 'grid',
-          gridTemplateColumns: '20px minmax(0, 1fr)',
+          gridTemplateColumns: '24px minmax(0, 1fr)',
           gap: 1.25,
           alignItems: 'start',
           cursor: disabled ? 'not-allowed' : 'pointer',
           color: color.ink,
           fontSize: '0.9375rem',
-          lineHeight: 1.45,
+          lineHeight: 1.5,
         }}
       >
-        <Box sx={{ position: 'relative', width: 20, height: 20, mt: '1px' }}>
+        <Box sx={{ position: 'relative', width: 24, height: 24 }}>
           <Box
             component="input"
             type="checkbox"
             id={id}
-            name={name}
             checked={checked}
             disabled={disabled}
             onChange={(e) => onChange((e.target as HTMLInputElement).checked)}
@@ -261,12 +246,14 @@ function CheckRow({
               placeItems: 'center',
               width: 20,
               height: 20,
+              m: '2px',
               borderRadius: '5px',
               border: `1px solid ${error ? color.ban : checked ? color.accent : color.muted}`,
               bgcolor: checked ? color.accent : color.paper,
               color: color.accentInk,
               transition: 'background-color 150ms, border-color 150ms',
               pointerEvents: 'none',
+              ...noMotion,
             }}
           >
             {checked && <Check size={14} weight="bold" />}
@@ -274,7 +261,7 @@ function CheckRow({
         </Box>
         <span>{children}</span>
       </Box>
-      <Box sx={{ pl: '32px' }}>
+      <Box sx={{ pl: '34px' }}>
         <FieldError id={`${id}-error`}>{error}</FieldError>
       </Box>
     </Box>
@@ -300,11 +287,11 @@ function TermsLink({ href, children }: { href: string; children: ReactNode }) {
       target="_blank"
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
-      sx={{ position: 'relative', color: color.ink, textDecoration: 'underline', textDecorationColor: color.muted, textUnderlineOffset: '3px', whiteSpace: 'nowrap', '&:hover': { textDecorationColor: color.accent }, '&:focus-visible': { outline: `2px solid ${color.focus}`, outlineOffset: 2, borderRadius: '2px' } }}
+      sx={{ color: color.ink, textDecoration: 'underline', textDecorationColor: color.muted, textUnderlineOffset: '3px', '&:hover': { textDecorationColor: color.accent }, '&:focus-visible': { outline: `2px solid ${color.focus}`, outlineOffset: 2, borderRadius: '2px' } }}
     >
       {children}
       <ArrowUpRight size={13} aria-hidden style={{ marginLeft: 2, verticalAlign: '-1px' }} />
-      <Box component="span" sx={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' }}>
+      <Box component="span" sx={srOnly}>
         {' '}
         (opens in a new tab)
       </Box>
@@ -325,22 +312,20 @@ function Row({ label, value, strong = false, testId }: { label: ReactNode; value
   );
 }
 
-function PromoCode({ adapter, disabled }: { adapter: CheckoutAdapter; disabled: boolean }) {
+function PromoCode({ adapter, disabled, id }: { adapter: CheckoutAdapter; disabled: boolean; id: string }) {
   const { summary } = adapter;
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
-  const uid = useId();
 
   if (summary.promotionCode) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, fontSize: '0.875rem', color: color.ink2 }}>
-        <span>
-          Code <Box component="strong" sx={{ color: color.ink, fontWeight: 600 }}>{summary.promotionCode}</Box> applied
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, fontSize: '0.9375rem', color: color.ink2 }}>
+        <span role="status">
+          Promo code <Box component="strong" sx={{ color: color.ink, fontWeight: 600 }}>{summary.promotionCode}</Box> applied
         </span>
         <Button
-          size="small"
           variant="text"
           disabled={disabled || busy}
           onClick={async () => {
@@ -348,16 +333,22 @@ function PromoCode({ adapter, disabled }: { adapter: CheckoutAdapter; disabled: 
             await adapter.removePromotionCode();
             setBusy(false);
           }}
-          sx={{ color: color.ink2, minWidth: 0, textTransform: 'none' }}
+          sx={{ color: color.ink2, minWidth: 44, minHeight: 36, textTransform: 'none' }}
         >
-          Remove
+          Remove<Box component="span" sx={srOnly}> promo code</Box>
         </Button>
       </Box>
     );
   }
   if (!open) {
     return (
-      <Button size="small" variant="text" onClick={() => setOpen(true)} disabled={disabled} sx={{ justifySelf: 'start', px: 0, minWidth: 0, color: color.ink2, textTransform: 'none', '&:hover': { color: color.ink, bgcolor: 'transparent' } }}>
+      <Button
+        variant="text"
+        aria-expanded={false}
+        onClick={() => setOpen(true)}
+        disabled={disabled}
+        sx={{ justifySelf: 'start', px: 0, minWidth: 0, minHeight: 36, color: color.ink2, textTransform: 'none', textDecoration: 'underline', textDecorationColor: color.muted, textUnderlineOffset: '3px', '&:hover': { color: color.ink, bgcolor: 'transparent' } }}
+      >
         Add a promo code
       </Button>
     );
@@ -377,81 +368,143 @@ function PromoCode({ adapter, disabled }: { adapter: CheckoutAdapter; disabled: 
   };
   return (
     <Box>
-      <Box component="label" htmlFor={`${uid}-promo`} sx={{ display: 'block', color: color.ink2, fontSize: '0.8125rem', fontWeight: 500, mb: 0.75 }}>
+      <Box component="label" htmlFor={id} sx={labelSx}>
         Promo code
       </Box>
       <Box sx={{ display: 'flex', gap: 1 }}>
         <Box
           component="input"
-          id={`${uid}-promo`}
+          id={id}
           value={code}
+          autoFocus
           autoComplete="off"
           autoCapitalize="characters"
           spellCheck={false}
+          placeholder="LAN2026"
           disabled={disabled || busy}
           aria-invalid={Boolean(error)}
-          aria-describedby={error ? `${uid}-promo-error` : undefined}
-          onChange={(e) => setCode((e.target as HTMLInputElement).value)}
+          aria-describedby={error ? `${id}-error` : undefined}
+          onChange={(e) => {
+            setCode((e.target as HTMLInputElement).value);
+            if (error) setError(undefined);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
               void apply();
             }
           }}
-          sx={{ ...inputSx, flex: 1, minWidth: 0, textTransform: 'uppercase' }}
+          sx={{ ...inputSx, flex: 1, minWidth: 0, textTransform: 'uppercase', '&::placeholder': { color: color.muted, opacity: 1, textTransform: 'none' } }}
         />
-        <Button variant="outlined" onClick={apply} disabled={disabled || busy} sx={{ flex: 'none', minWidth: 76 }}>
+        <Button variant="outlined" onClick={apply} disabled={disabled || busy} sx={{ flex: 'none', minWidth: 80, minHeight: 44 }}>
           {busy ? <CircularProgress size={16} thickness={5} sx={{ color: color.ink2 }} aria-label="Applying" /> : 'Apply'}
         </Button>
       </Box>
-      <FieldError id={`${uid}-promo-error`}>{error}</FieldError>
+      <Box aria-live="polite">
+        <FieldError id={`${id}-error`}>{error}</FieldError>
+      </Box>
     </Box>
   );
 }
 
-function OrderSummary({ order, adapter, disabled }: { order: CheckoutFormOrder; adapter: CheckoutAdapter; disabled: boolean }) {
-  const { summary } = adapter;
+function OrderSummary({ order, summary }: { order: CheckoutFormOrder; summary: CheckoutSummary }) {
+  const [open, setOpen] = useState(false);
+  const uid = useId();
   const money = (n: number) => formatMoney(n, summary.currency);
+  const total = (
+    <>
+      Total{' '}
+      <Box component="span" sx={{ color: color.muted, fontWeight: 400, fontSize: '0.8125rem' }}>
+        {vatShort}
+      </Box>
+    </>
+  );
   return (
     <Box
-      component="aside"
-      aria-label="Order summary"
+      component="section"
+      aria-labelledby={`${uid}-title`}
       data-testid="checkout-order"
-      sx={{ display: 'grid', gap: 1.5, p: { xs: 2, sm: 2.5 }, bgcolor: color.paper, border: `1px solid ${color.rule}`, borderRadius: `${radius.md}px`, alignSelf: 'start' }}
+      sx={{ bgcolor: color.paper, border: `1px solid ${color.rule}`, borderRadius: `${radius.md}px`, alignSelf: 'start', overflow: 'hidden' }}
     >
-      <Typography component="h3" sx={{ fontFamily: fontDisplay, fontWeight: 600, fontSize: '1rem' }}>
-        Order summary
-      </Typography>
-      <Box sx={{ display: 'grid', gap: 0.5 }}>
-        <Box sx={{ color: color.ink, fontWeight: 600 }}>{order.packName} license</Box>
-        <Box sx={{ color: color.ink2, fontSize: '0.875rem' }}>
-          {periodLabels[order.period]} · up to {order.maxServers ?? order.servers} servers
+      {/* Phones: a collapsed bar with the total; the details open on demand. */}
+      <Box
+        component="button"
+        type="button"
+        aria-expanded={open}
+        aria-controls={`${uid}-body`}
+        onClick={() => setOpen((o) => !o)}
+        sx={{
+          display: { xs: 'flex', md: 'none' },
+          width: '100%',
+          minHeight: 52,
+          alignItems: 'center',
+          gap: 1,
+          px: 2,
+          py: 1.25,
+          font: 'inherit',
+          color: color.ink,
+          bgcolor: 'transparent',
+          border: 0,
+          cursor: 'pointer',
+          textAlign: 'left',
+          '&:focus-visible': { outline: `2px solid ${color.focus}`, outlineOffset: -2, borderRadius: `${radius.md}px` },
+        }}
+      >
+        <Box component="span" sx={{ flex: 1, fontWeight: 600, fontSize: '0.9375rem' }}>
+          {open ? 'Hide order summary' : 'Show order summary'}
         </Box>
+        <Box component="span" sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+          {money(summary.total)}
+        </Box>
+        <CaretDown size={16} aria-hidden style={{ transform: open ? 'rotate(180deg)' : 'none' }} />
       </Box>
-      <Box sx={{ height: '1px', bgcolor: color.rule }} />
-      <Row label="Price" value={money(summary.subtotal)} testId="checkout-subtotal" />
-      {summary.discount > 0 && <Row label="Promo discount" value={`−${money(summary.discount)}`} testId="checkout-discount" />}
-      <PromoCode adapter={adapter} disabled={disabled} />
-      <Box sx={{ height: '1px', bgcolor: color.rule }} />
-      <Row
-        strong
-        label={
-          <>
-            Total{' '}
-            <Box component="span" sx={{ color: color.muted, fontWeight: 400, fontSize: '0.8125rem' }}>
-              {vatShort}
-            </Box>
-          </>
-        }
-        value={money(summary.total)}
-        testId="checkout-total"
-      />
-      <Box sx={{ color: color.muted, fontSize: '0.8125rem', lineHeight: 1.45 }}>No VAT is added: the seller is not VAT-registered. You get an invoice by email.</Box>
+
+      <Box
+        id={`${uid}-body`}
+        sx={{ display: { xs: open ? 'grid' : 'none', md: 'grid' }, gap: 1.5, p: { xs: 2, sm: 2.5 }, pt: { xs: 0.5, md: 2.5 } }}
+      >
+        <Typography id={`${uid}-title`} component="h3" sx={{ ...srOnlyOnPhone, fontFamily: fontDisplay, fontWeight: 600, fontSize: '1rem' }}>
+          Order summary
+        </Typography>
+        <Box sx={{ display: 'grid', gap: 0.5 }}>
+          <Box sx={{ color: color.ink, fontWeight: 600 }}>{order.packName} license</Box>
+          <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 0.25, color: color.ink2, fontSize: '0.875rem', lineHeight: 1.5 }}>
+            <li>{periodLabels[order.period]}</li>
+            <li>Up to {order.maxServers ?? order.servers} servers</li>
+            <li>Commercial use</li>
+          </Box>
+        </Box>
+        <Box sx={{ height: '1px', bgcolor: color.rule }} />
+        <Row label="Price" value={money(summary.subtotal)} testId="checkout-subtotal" />
+        {summary.discount > 0 && <Row label={summary.promotionCode ? `Promo ${summary.promotionCode}` : 'Discount'} value={`−${money(summary.discount)}`} testId="checkout-discount" />}
+        <Box sx={{ height: '1px', bgcolor: color.rule }} />
+        <Row strong label={total} value={money(summary.total)} testId="checkout-total" />
+        <Box sx={{ color: color.muted, fontSize: '0.8125rem', lineHeight: 1.45 }}>No VAT is added: the seller is not VAT-registered. The invoice comes by email.</Box>
+      </Box>
     </Box>
   );
 }
 
+/** The summary's heading: the toggle names it on phones, so hide it there (still in the accessibility tree). */
+const srOnlyOnPhone = { '@media (max-width: 899.95px)': srOnly } as const;
+
 /* --------------------------------------------------------------------- form */
+
+const fieldOrder: FieldKey[] = ['email', 'company', 'vatId', 'business', 'eventName', 'eventDates', 'country', 'line1', 'postal_code', 'city', 'terms'];
+const fieldNames: Record<FieldKey, string> = {
+  email: 'Email',
+  company: 'Company or organization',
+  vatId: 'VAT ID',
+  business: 'Business purchase',
+  eventName: 'Event or client',
+  eventDates: 'Event date(s)',
+  country: 'Country',
+  line1: 'Street address',
+  postal_code: 'Postal code',
+  city: 'City',
+  terms: 'Terms',
+  promo: 'Promo code',
+};
 
 export function CheckoutForm({
   order,
@@ -465,20 +518,40 @@ export function CheckoutForm({
   const { summary } = adapter;
   const [values, setValues] = useState<Values>(empty);
   const [errors, setErrors] = useState<Errors>({});
+  const [showSummary, setShowSummary] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const countries = useMemo(countryOptions, []);
   const emailFixed = summary.email !== null;
+  const uid = useId();
+  const fid = (key: string) => `${uid}-${key}`;
+  const summaryRef = useRef<HTMLDivElement>(null);
+
+  const listed = fieldOrder.filter((k) => errors[k]);
 
   const set = <K extends keyof Values>(key: K) => (value: Values[K]) => {
     setValues((v) => ({ ...v, [key]: value }));
     if (errors[key as FieldKey]) setErrors((e) => ({ ...e, [key]: undefined }));
   };
+  // Check a field when the buyer leaves it, once there is something to check.
+  const blur = (key: keyof Values) => () => {
+    const v = values[key];
+    if (typeof v === 'string' && !v.trim() && !showSummary) return;
+    const found = validateForm(values, summary.sessionId, emailFixed);
+    setErrors((e) => ({ ...e, [key]: found[key as FieldKey] }));
+  };
   const text = (key: keyof Values) => ({
     value: values[key] as string,
     onChange: (e: { target: EventTarget }) => set(key)((e.target as HTMLInputElement).value as never),
+    onBlur: blur(key),
     disabled: processing,
   });
+
+  const focusField = (key: FieldKey) => {
+    const el = document.getElementById(fid(key));
+    el?.focus();
+    el?.scrollIntoView?.({ block: 'center' });
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -486,13 +559,13 @@ export function CheckoutForm({
     setFormError(null);
     const found = validateForm(values, summary.sessionId, emailFixed);
     setErrors(found);
-    const first = Object.keys(found)[0];
-    if (first) {
-      setFormError('Check the highlighted fields.');
-      // Move focus to the first field that needs fixing.
-      requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-field="${first}"] input, [data-field="${first}"] select`)?.focus());
+    if (Object.values(found).some(Boolean)) {
+      setShowSummary(true);
+      // The summary lists what to fix, with links to each field.
+      requestAnimationFrame(() => summaryRef.current?.focus());
       return;
     }
+    setShowSummary(false);
     setProcessing(true);
     onPaying?.(true);
     const r = await adapter.pay({
@@ -509,13 +582,16 @@ export function CheckoutForm({
     setProcessing(false);
     onPaying?.(false);
     setFormError(r.error);
-    if (r.field) setErrors((prev) => ({ ...prev, [r.field as FieldKey]: r.error }));
+    if (r.field) {
+      setErrors((prev) => ({ ...prev, [r.field as FieldKey]: r.error }));
+      requestAnimationFrame(() => focusField(r.field as FieldKey));
+    }
   };
 
   // A promo code that covers the whole price: Stripe needs no payment method
   // (the session completes with payment_status no_payment_required), so no
-  // Payment Element and no "Pay €0". Confirm still runs the same steps.
-  const free = summary.total === 0;
+  // Payment Element and no "Pay €0". Confirm runs the same steps without one.
+  const { free } = summary;
   const payLabel = free ? 'Get my license' : `Pay ${formatMoney(summary.total, summary.currency)}`;
 
   return (
@@ -528,98 +604,122 @@ export function CheckoutForm({
       sx={{
         display: 'grid',
         gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1fr) 300px' },
-        gap: { xs: 3, md: 4 },
+        gap: { xs: 3, md: 5 },
         alignItems: 'start',
         px: { xs: 2, sm: 3 },
-        py: { xs: 2.5, sm: 3 },
+        py: { xs: 2, sm: 3 },
       }}
     >
-      <Box sx={{ order: { xs: 0, md: 1 }, position: { md: 'sticky' }, top: { md: 0 } }}>
-        <OrderSummary order={order} adapter={adapter} disabled={processing} />
+      <Box sx={{ order: { xs: 0, md: 1 }, position: { md: 'sticky' }, top: { md: 0 }, minWidth: 0 }}>
+        <OrderSummary order={order} summary={summary} />
       </Box>
 
       <Box sx={{ display: 'grid', gap: 4, minWidth: 0, order: { xs: 1, md: 0 } }}>
-        <Section title="Your business">
+        {showSummary && listed.length > 0 && (
+          <Box
+            ref={summaryRef}
+            tabIndex={-1}
+            role="alert"
+            aria-labelledby={`${uid}-errors-title`}
+            data-testid="checkout-error-summary"
+            sx={{ p: 2, borderRadius: `${radius.sm}px`, border: `1px solid ${color.ban}`, bgcolor: color.paper, '&:focus-visible': { outline: `2px solid ${color.focus}`, outlineOffset: 2 } }}
+          >
+            <Box id={`${uid}-errors-title`} sx={{ display: 'flex', gap: 1, alignItems: 'center', fontWeight: 600, color: color.ink }}>
+              <WarningCircle size={18} aria-hidden style={{ flex: 'none', color: 'var(--at-ban)' }} />
+              {listed.length === 1 ? '1 field needs attention' : `${listed.length} fields need attention`}
+            </Box>
+            <Box component="ul" sx={{ m: 0, mt: 1, pl: 3.5, display: 'grid', gap: 0.5, fontSize: '0.9375rem' }}>
+              {listed.map((k) => (
+                <li key={k}>
+                  <Box
+                    component="a"
+                    href={`#${fid(k)}`}
+                    onClick={(ev) => {
+                      ev.preventDefault();
+                      focusField(k);
+                    }}
+                    sx={{ color: color.ink, textDecoration: 'underline', textDecorationColor: color.ban, textUnderlineOffset: '3px', display: 'inline-block', minHeight: 24, '&:focus-visible': { outline: `2px solid ${color.focus}`, outlineOffset: 2, borderRadius: '2px' } }}
+                  >
+                    {fieldNames[k]}: {errors[k]}
+                  </Box>
+                </li>
+              ))}
+            </Box>
+          </Box>
+        )}
+
+        <Section title="Contact">
           {emailFixed ? (
             <Box sx={{ color: color.ink2, fontSize: '0.9375rem' }}>
-              License and invoice go to <Box component="strong" sx={{ color: color.ink, fontWeight: 600 }}>{summary.email}</Box>
+              The license and invoice go to <Box component="strong" sx={{ color: color.ink, fontWeight: 600 }}>{summary.email}</Box>
             </Box>
           ) : (
-            <Box data-field="email">
-              <Field name="email" label="Email" hint="The license key and the invoice go here." error={errors.email}>
-                {(p) => <Box component="input" type="email" autoComplete="email" inputMode="email" {...p} {...text('email')} sx={inputSx} />}
-              </Field>
-            </Box>
+            <Field id={fid('email')} label="Email" hint="The license key and invoice go here." error={errors.email}>
+              {(p) => <Box component="input" type="email" autoComplete="email" inputMode="email" spellCheck={false} placeholder="you@company.com" {...p} {...text('email')} sx={inputSx} />}
+            </Field>
           )}
-          <Box data-field="company">
-            <Field name="company" label="Company or organization" hint="The licensee: shown on the license and the invoice." error={errors.company}>
-              {(p) => <Box component="input" autoComplete="organization" maxLength={detailLimits.company.max} {...p} {...text('company')} sx={inputSx} />}
-            </Field>
-          </Box>
-          <Box data-field="vatId">
-            <Field name="vatId" label="VAT ID (optional)" hint="Shown on the invoice. Norway: your org. number." error={errors.vatId}>
-              {(p) => <Box component="input" autoComplete="off" spellCheck={false} maxLength={detailLimits.vatId.max} {...p} {...text('vatId')} sx={{ ...inputSx, textTransform: 'uppercase' }} />}
-            </Field>
-          </Box>
-          <Box data-field="business">
-            <CheckRow name="business" checked={values.business} onChange={set('business')} error={errors.business} disabled={processing}>
-              I&apos;m buying for a business or organization, not as a consumer.
-            </CheckRow>
-          </Box>
         </Section>
 
-        <Section title="The event">
-          <Box data-field="eventName">
-            <Field name="eventName" label="Event or client name, and website" hint="Paid operators name the event or client they run it for." error={errors.eventName}>
-              {(p) => <Box component="input" maxLength={detailLimits.eventName.max} placeholder="Example LAN 2026, examplelan.no" {...p} {...text('eventName')} sx={inputSx} />}
-            </Field>
-          </Box>
-          <Box data-field="eventDates">
-            <Field name="eventDates" label="Event date(s)" hint="Yearly or founding supporter: the start date." error={errors.eventDates}>
-              {(p) => <Box component="input" maxLength={detailLimits.eventDates.max} placeholder="3–5 October 2026" {...p} {...text('eventDates')} sx={inputSx} />}
-            </Field>
-          </Box>
+        <Section title="Business details">
+          <Field id={fid('company')} label="Company or organization" hint="The licensee, as shown on the license and invoice." error={errors.company}>
+            {(p) => <Box component="input" autoComplete="organization" maxLength={detailLimits.company.max} placeholder="Northside LAN AS" {...p} {...text('company')} sx={inputSx} />}
+          </Field>
+          <Field id={fid('vatId')} label="VAT ID (optional)" hint="Printed on the invoice. Norway: your org. number." error={errors.vatId}>
+            {(p) => <Box component="input" autoComplete="off" spellCheck={false} maxLength={detailLimits.vatId.max} placeholder="NO 912 345 678 MVA" {...p} {...text('vatId')} sx={{ ...inputSx, textTransform: 'uppercase', '&::placeholder': { color: color.muted, opacity: 1, textTransform: 'none' } }} />}
+          </Field>
+          <CheckRow id={fid('business')} checked={values.business} onChange={set('business')} error={errors.business} disabled={processing}>
+            I&apos;m buying for a business or organization, not as a consumer.
+          </CheckRow>
+        </Section>
+
+        <Section title="Event">
+          <Field id={fid('eventName')} label="Event or client name, and website" hint="Running it for a client? Name the client." error={errors.eventName}>
+            {(p) => <Box component="input" autoComplete="off" maxLength={detailLimits.eventName.max} placeholder="Northside LAN 2026, northsidelan.no" {...p} {...text('eventName')} sx={inputSx} />}
+          </Field>
+          <Field id={fid('eventDates')} label="Event date(s)" hint="Yearly or founding supporter: the start date." error={errors.eventDates}>
+            {(p) => <Box component="input" autoComplete="off" maxLength={detailLimits.eventDates.max} placeholder="3–5 Oct 2026" {...p} {...text('eventDates')} sx={inputSx} />}
+          </Field>
         </Section>
 
         <Section title="Billing address">
-          <Box data-field="country">
-            <Field name="country" label="Country" error={errors.country}>
-              {(p) => (
-                <Box component="select" autoComplete="country" {...p} {...text('country')} sx={{ ...inputSx, appearance: 'none', cursor: 'pointer', backgroundImage: `linear-gradient(45deg, transparent 50%, ${'currentColor'} 50%), linear-gradient(135deg, currentColor 50%, transparent 50%)`, backgroundPosition: 'calc(100% - 18px) 50%, calc(100% - 13px) 50%', backgroundSize: '5px 5px', backgroundRepeat: 'no-repeat', pr: 5 }}>
-                  {countries.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.name}
-                    </option>
-                  ))}
-                </Box>
-              )}
-            </Field>
-          </Box>
-          <Box data-field="line1">
-            <Field name="line1" label="Street address" error={errors.line1}>
-              {(p) => <Box component="input" autoComplete="address-line1" {...p} {...text('line1')} sx={inputSx} />}
-            </Field>
-          </Box>
-          <Field name="line2" label="Address line 2 (optional)">
-            {(p) => <Box component="input" autoComplete="address-line2" {...p} {...text('line2')} sx={inputSx} />}
+          <Field id={fid('country')} label="Country" error={errors.country}>
+            {(p) => (
+              <Box
+                component="select"
+                autoComplete="country"
+                {...p}
+                {...text('country')}
+                sx={{ ...inputSx, appearance: 'none', cursor: 'pointer', backgroundImage: 'linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%)', backgroundPosition: 'calc(100% - 18px) 50%, calc(100% - 13px) 50%', backgroundSize: '5px 5px', backgroundRepeat: 'no-repeat', pr: 5 }}
+              >
+                {countries.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </Box>
+            )}
+          </Field>
+          <Field id={fid('line1')} label="Street address" error={errors.line1}>
+            {(p) => <Box component="input" autoComplete="address-line1" placeholder="Storgata 1" {...p} {...text('line1')} sx={inputSx} />}
+          </Field>
+          <Field id={fid('line2')} label="Address line 2 (optional)">
+            {(p) => <Box component="input" autoComplete="address-line2" placeholder="Floor, suite or c/o" {...p} {...text('line2')} sx={inputSx} />}
           </Field>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '160px minmax(0, 1fr)' }, gap: 2 }}>
-            <Box data-field="postal_code">
-              <Field name="postal_code" label="Postal code" error={errors.postal_code}>
-                {(p) => <Box component="input" autoComplete="postal-code" {...p} {...text('postal_code')} sx={inputSx} />}
-              </Field>
-            </Box>
-            <Box data-field="city">
-              <Field name="city" label="City" error={errors.city}>
-                {(p) => <Box component="input" autoComplete="address-level2" {...p} {...text('city')} sx={inputSx} />}
-              </Field>
-            </Box>
+            <Field id={fid('postal_code')} label="Postal code" error={errors.postal_code}>
+              {(p) => <Box component="input" autoComplete="postal-code" autoCapitalize="characters" spellCheck={false} placeholder="0155" {...p} {...text('postal_code')} sx={inputSx} />}
+            </Field>
+            <Field id={fid('city')} label="City" error={errors.city}>
+              {(p) => <Box component="input" autoComplete="address-level2" placeholder="Oslo" {...p} {...text('city')} sx={inputSx} />}
+            </Field>
           </Box>
         </Section>
 
+        <PromoCode adapter={adapter} disabled={processing} id={fid('promo')} />
+
         <Section title="Payment">
           {free ? (
-            <Box data-testid="checkout-free" sx={{ color: color.ink2, fontSize: '0.9375rem' }}>
+            <Box data-testid="checkout-free" role="status" sx={{ color: color.ink2, fontSize: '0.9375rem', p: 2, border: `1px solid ${color.rule}`, borderRadius: `${radius.sm}px`, bgcolor: color.paper }}>
               Nothing to pay: your promo code covers the full price.
             </Box>
           ) : (
@@ -630,11 +730,9 @@ export function CheckoutForm({
         </Section>
 
         <Box sx={{ display: 'grid', gap: 2 }}>
-          <Box data-field="terms">
-            <CheckRow name="terms" checked={values.terms} onChange={set('terms')} error={errors.terms} disabled={processing}>
-              I accept the <TermsLink href="/terms">Commercial License Terms</TermsLink> and the <TermsLink href="/terms-of-sale">Terms of Sale</TermsLink>.
-            </CheckRow>
-          </Box>
+          <CheckRow id={fid('terms')} checked={values.terms} onChange={set('terms')} error={errors.terms} disabled={processing}>
+            I accept the <TermsLink href="/terms">Commercial License Terms</TermsLink> and the <TermsLink href="/terms-of-sale">Terms of Sale</TermsLink>.
+          </CheckRow>
 
           {formError && (
             <Box role="alert" data-testid="checkout-form-error" sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', p: 1.5, borderRadius: `${radius.sm}px`, border: `1px solid ${color.ban}`, color: color.ink, fontSize: '0.9375rem' }}>
@@ -660,8 +758,8 @@ export function CheckoutForm({
               payLabel
             )}
           </Button>
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'center', color: color.muted, fontSize: '0.8125rem' }}>
-            <LockSimple size={14} aria-hidden />
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: color.muted, fontSize: '0.8125rem' }}>
+            <LockSimple size={14} aria-hidden style={{ flex: 'none' }} />
             <span>{free ? 'Order handled by Stripe.' : 'Payment by Stripe. Card details go straight to Stripe, never to us.'}</span>
           </Box>
         </Box>

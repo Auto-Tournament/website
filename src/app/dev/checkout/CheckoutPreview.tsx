@@ -5,7 +5,8 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
-import type { Stripe } from '@stripe/stripe-js';
+import type { Stripe, StripeCheckoutAmount, StripeCheckoutTotalSummary } from '@stripe/stripe-js';
+import { summaryOf, type SummarySession } from '@/components/checkout/StripeCheckoutForm';
 import { CheckoutForm, type CheckoutAdapter } from '@/components/checkout/CheckoutForm';
 import { tokens } from '@/theme/tokens';
 import { formatEuro, type Pack, type Period } from '@/components/pricing';
@@ -47,16 +48,45 @@ function MockPaymentElement() {
 
 type PayMode = 'succeed' | 'decline' | 'badVat';
 
-/** The adapter the real form gets from Stripe, mocked: promo code PREVIEW10 takes 10 % off; Pay waits, then does what the toggle says. */
+/** A Stripe amount exactly as the SDK gives it (StripeCheckoutAmount). */
+const amount = (minorUnitsAmount: number): StripeCheckoutAmount => ({ minorUnitsAmount, amount: new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR' }).format(minorUnitsAmount / 100) });
+
+const previewCodes: Record<string, number> = { PREVIEW10: 10, PREVIEW100: 100 };
+
+/** The session fields the form reads, in the real SDK shape (StripeCheckoutSession), so summaryOf runs as in production. */
+export function mockSession(price: number, promo: string | null): SummarySession {
+  const off = promo ? Math.round((price * (previewCodes[promo] ?? 0)) / 100) : 0;
+  const zero = amount(0);
+  const total: StripeCheckoutTotalSummary = {
+    appliedBalance: zero,
+    balanceAppliedToNextInvoice: false,
+    discount: amount(off),
+    shippingRate: zero,
+    subtotal: amount(price),
+    surcharge: zero,
+    taxExclusive: zero,
+    taxInclusive: zero,
+    total: amount(price - off),
+  };
+  return {
+    id: 'cs_test_devPreview0000',
+    currency: 'eur',
+    email: null,
+    discountAmounts: promo ? [{ ...amount(off), displayName: `${previewCodes[promo]}% off`, promotionCode: promo, recurring: null, percentOff: previewCodes[promo] ?? null }] : null,
+    total,
+  };
+}
+
+/** The adapter the real form gets from Stripe, mocked: promo code PREVIEW10 takes 10 % off, PREVIEW100 the full price (the free order); Pay waits, then does what the toggle says. */
 function MockForm({ order, payMode }: { order: CheckoutOrder; payMode: PayMode }) {
   const [promo, setPromo] = useState<string | null>(null);
-  const discount = promo ? Math.round(order.price / 10) : 0;
   const adapter: CheckoutAdapter = {
-    summary: { sessionId: 'cs_test_devPreview0000', currency: 'eur', subtotal: order.price, discount, total: order.price - discount, promotionCode: promo, email: null },
+    summary: summaryOf(mockSession(order.price, promo)),
     applyPromotionCode: async (code) => {
       await new Promise((r) => setTimeout(r, 400));
-      if (code.toUpperCase() !== 'PREVIEW10') return { ok: false, error: "This code isn't valid." };
-      setPromo('PREVIEW10');
+      const c = code.toUpperCase();
+      if (!(c in previewCodes)) return { ok: false, error: "This code isn't valid." };
+      setPromo(c);
       return { ok: true };
     },
     removePromotionCode: async () => setPromo(null),
@@ -141,7 +171,7 @@ export function CheckoutPreview({ packs }: { packs: Pack[] }) {
           Checkout dialog preview
         </Typography>
         <Typography sx={{ color: color.ink2, mt: 1, maxWidth: '60ch' }}>
-          Development only. Every state of the checkout dialog: our own form, with a mock in place of Stripe&apos;s Payment Element and session. Try promo code PREVIEW10. Resize the window below 600 px for the phone
+          Development only. Every state of the checkout dialog: our own form, with a mock in place of Stripe&apos;s Payment Element and session. Try promo code PREVIEW10 (10 % off) or PREVIEW100 (free order: no card form). Resize the window below 600 px for the phone
           (full-screen) layout.
         </Typography>
       </div>

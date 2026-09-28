@@ -129,6 +129,7 @@ export function deriveTheme(colors: string[], options: DeriveOptions = {}): Them
     ink2: neutral(0.8, Math.min(chroma, 0.016)),
     muted: neutral(0.64, Math.min(chroma, 0.02)),
     rule: neutral(0.29),
+    fieldRule: neutral(0.52, Math.min(chroma, 0.016)),
     accent: accent.value,
     accent2,
     accentInk,
