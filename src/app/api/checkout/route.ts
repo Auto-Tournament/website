@@ -127,7 +127,8 @@ export async function POST(request: Request) {
   const description = describeLicense(pack, order.period);
   // Founder orders carry founder=true. The first-25 / 31 March 2027 limit is not
   // enforced in code: the owner checks it by hand before sending the license.
-  const metadata = licenseMetadata(order);
+  // max_servers: the limit paid for, which goes into the license key (lib/license).
+  const metadata = { ...licenseMetadata(order), max_servers: String(pack.maxServers) };
 
   try {
     const session = await stripe.checkout.sessions.create({

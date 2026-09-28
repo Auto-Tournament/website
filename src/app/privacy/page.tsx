@@ -37,6 +37,13 @@ export default function Privacy() {
         </li>
         <li>what you write to us</li>
       </ul>
+      <p id="license-key">
+        <strong>Your license key.</strong> When you pay by card, we issue a signed license key that you paste into the software. It contains a license id, your
+        Stripe customer id, the business name you gave at checkout, the product, pack and server limit, the period, when it was issued, how long updates run
+        and, for one event, the event dates. It doesn&apos;t contain your email, name or address, but anyone you give the key to can read what it contains. We
+        keep the issued keys on our server with a one-way hash of your email (not the email itself), so you can <a href="/license">get your key again</a>. The
+        software checks the key offline and sends nothing to us.
+      </p>
       <p>
         The website uses no analytics and no tracking cookies. It remembers your colour theme in your own browser. To limit abuse, the checkout keeps your IP
         address in memory for about a minute.

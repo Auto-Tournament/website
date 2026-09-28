@@ -6,7 +6,8 @@ services:
         # Set by scripts/auto_update.sh at deploy time.
         GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:-dev}
     container_name: autotournament-website
-    # Server-side secrets (STRIPE_SECRET_KEY, SITE_URL, COMPAT_INGEST_TOKEN)
+    # Server-side secrets (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SITE_URL,
+    # COMPAT_INGEST_TOKEN, LICENSE_SIGNING_KEY)
     # live in .env next to this file, read at runtime and never baked into the
     # image. Optional: without it card checkout is off and the calculator
     # falls back to the email request. Needs Docker Compose 2.24 or newer.
@@ -19,7 +20,8 @@ services:
       # Its connectors run on several LAN hosts, so bind on all interfaces.
       - "0.0.0.0:31236:3000"
     volumes:
-      # Ready Up compatibility runs (/compatibility), kept across rebuilds.
+      # Ready Up compatibility runs (/compatibility) and issued license keys
+      # (data/licenses), kept across rebuilds.
       - compat-data:/app/data
 
 volumes:
