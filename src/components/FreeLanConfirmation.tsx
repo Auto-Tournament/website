@@ -1,8 +1,7 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
-import { freeLanMailto } from '@/components/pricing';
-import { seller } from '@/components/seller';
+import { links } from '@/components/links';
 
 const { color, radius } = tokens;
 
@@ -37,7 +36,7 @@ export function FreeLanConfirmation({ compact = false }: { compact?: boolean }) 
       </Typography>
       <Box
         component="a"
-        href={freeLanMailto(seller.email)}
+        href={`${links.contact}?topic=free-lan`}
         sx={{ color: color.ink, fontWeight: 600, fontSize: '0.9375rem', textDecoration: 'underline', textDecorationColor: color.rule, justifySelf: 'start' }}
       >
         Ask for a free confirmation

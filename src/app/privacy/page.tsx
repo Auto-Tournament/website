@@ -60,9 +60,15 @@ export default function Privacy() {
         is valid. It never shows the key, your email, your Stripe customer id or the order reference. Share the id only with people who need to check your
         license, such as an event or a client.
       </p>
+      <p id="contact-form">
+        <strong>The contact form.</strong> On <a href="/contact">/contact</a> we collect your name, email, organization (if you give one) and message, and
+        send them to us by email through Postmark (see section 5). We keep the email in our mailbox for as long as we need it for the conversation, then
+        delete it.
+      </p>
       <p>
         The website uses no analytics and no tracking cookies. It remembers your colour theme in your own browser, and sets one cookie only when you sign in
-        to your licenses. To limit abuse, the checkout, the license and sign-in pages and the license check keep your IP address in memory for up to an hour.
+        to your licenses. To limit abuse, the checkout, the license, sign-in and contact pages and the license check keep your IP address in memory for up to
+        an hour.
       </p>
 
       <H2 id="why">3. Why, and on what legal basis</H2>

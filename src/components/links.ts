@@ -11,6 +11,7 @@ export const links = {
   discord: 'https://discord.gg/n7gHYau7aW',
   licensing: 'https://docs.autotournament.gg/reference/licensing',
   pricing: '/pricing',
+  contact: '/contact',
   compatibility: '/compatibility',
   terms: '/terms',
   license: '/license',
