@@ -311,9 +311,12 @@ function GamesStep({ draft, setDraft }: { draft: Answers; setDraft: (a: Answers)
 }
 
 const jobCopy: Record<Job, { title: string; line: string }> = {
-  plugin: { title: 'Just run my CS2 matches', line: 'Ready-up, pauses, demos and results on servers you already run.' },
-  servers: { title: 'Set up and run my CS2 game servers', line: 'Install, update and run many CS2 servers from one machine, with a match plugin on each.' },
-  platform: { title: 'Run the whole tournament', line: 'Sign-ups, brackets, map veto, live scores, and the servers too.' },
+  platform: { title: 'Here, on Auto Tournament', line: 'Sign-ups, brackets, map veto and live scores here, and it runs your CS2 servers too.' },
+  servers: {
+    title: 'On another site, with our CS2 servers',
+    line: 'Brackets on start.gg, FACEIT, Challengermode or Discord. We set up, update and run the CS2 servers.',
+  },
+  plugin: { title: 'I only want the match plugin', line: 'You run your own servers and tournament site. Ready-up, pauses, demos and results.' },
 };
 
 function JobStep({ draft, setDraft }: { draft: Answers; setDraft: (a: Answers) => void }) {
