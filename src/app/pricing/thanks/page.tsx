@@ -6,6 +6,7 @@ import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
 import { Footer, Nav } from '@/components/sections';
+import { links } from '@/components/links';
 import { LicenseKeyView } from '@/components/LicenseKeyView';
 import { clientIp, createRateLimiter } from '@/lib/checkout';
 import { CHECKOUT_SESSION_ID } from '@/lib/license/format';
@@ -114,7 +115,11 @@ export default async function Thanks({ searchParams }: { searchParams: Promise<R
 
           {state.kind === 'none' && (
             <Typography sx={{ mt: 3, maxWidth: '52ch', color: color.ink2, fontSize: '1.125rem' }}>
-              Your license key appears here once your payment is confirmed. If it doesn&apos;t, email us with your order reference and we&apos;ll send it.
+              Your license key appears here once your payment is confirmed. If it doesn&apos;t,{' '}
+              <Box component="a" href={`${links.contact}?topic=license`} sx={link}>
+                contact us
+              </Box>{' '}
+              with your order reference and we&apos;ll send it.
             </Typography>
           )}
 

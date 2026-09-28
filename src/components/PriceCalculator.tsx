@@ -185,33 +185,6 @@ export function PriceCalculator({ packs, pricesAvailable = true }: { packs: read
     return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
   }, [quote, tools, useType, period, servers, price]);
 
-  // "Need help?" mail: works in every state, pre-filled with what's chosen so far.
-  const helpHref = useMemo(() => {
-    const chosenTools = toolOrder.filter((t) => tools.has(t)).map((t) => toolLabels[t]);
-    const detail =
-      quote.kind === 'price'
-        ? `${quote.pack.name}, ${periodLabels[period]}`
-        : quote.kind === 'contact'
-          ? `${servers} servers, custom quote`
-          : serversValid && chosenTools.length > 0
-            ? `${servers} servers`
-            : '';
-    const subject = detail ? `Help with a license: ${detail}` : 'Help with a license';
-    const useLabel = useTypeLabels[useType];
-    const lines = [
-      "Hi, I'd like help working out the right license for my setup.",
-      '',
-      'Event (name, dates, website): ',
-      `Servers, spares included: ${serversValid ? servers : ''}`,
-      `Tools (MatchZy Enhanced, CS2 Server Manager, Ready Up, platform): ${chosenTools.join(', ')}`,
-      `Use: ${useLabel}`,
-      'Company name: ',
-      'Org number / VAT ID: ',
-      'Billing address: ',
-    ];
-    return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
-  }, [quote, tools, useType, period, servers, serversValid]);
-
   return (
     <Box
       id="calculator"
@@ -372,7 +345,11 @@ export function PriceCalculator({ packs, pricesAvailable = true }: { packs: read
               Contact us
             </Typography>
             <Typography sx={{ color: color.ink2 }}>
-              More than {maxPackServers(packs)} servers is a custom quote. Email us about your setup and we&apos;ll price it with you.
+              More than {maxPackServers(packs)} servers is a custom quote.{' '}
+              <Box component="a" href={`${links.contact}?topic=quote`} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
+                Contact us
+              </Box>{' '}
+              about your setup and we&apos;ll price it with you.
             </Typography>
           </>
         )}
@@ -425,7 +402,7 @@ export function PriceCalculator({ packs, pricesAvailable = true }: { packs: read
         )}
 
         {quote.kind === 'contact' && (
-          <Button variant="contained" href={helpHref} data-testid="contact-us">
+          <Button variant="contained" href={`${links.contact}?topic=quote`} data-testid="contact-us">
             Contact us for a quote
           </Button>
         )}
@@ -449,8 +426,8 @@ export function PriceCalculator({ packs, pricesAvailable = true }: { packs: read
         {quote.kind === 'nonprofit-free' && (
           <Typography sx={{ color: color.ink2 }}>
             Free. If you&apos;d like written confirmation,{' '}
-            <Box component="a" href={`mailto:${email}`} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
-              email us
+            <Box component="a" href={`${links.contact}?topic=other`} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
+              contact us
             </Box>
             .
           </Typography>
@@ -485,8 +462,8 @@ export function PriceCalculator({ packs, pricesAvailable = true }: { packs: read
           Tell us about your setup (the event, how many servers, which tools) and we&apos;ll work out the price with you and send you an invoice instead of
           card payment.
         </Typography>
-        <Button variant="outlined" href={helpHref} sx={{ mt: 0.5 }}>
-          Email us about your setup
+        <Button variant="outlined" href={`${links.contact}?topic=invoice`} sx={{ mt: 0.5 }}>
+          Contact us about your setup
         </Button>
       </Box>
     </Box>

@@ -182,7 +182,15 @@ function faqFor(packs: readonly Pack[]): { q: string; a: React.ReactNode }[] {
     },
     {
       q: 'We need more servers than we planned. What now?',
-      a: `Email us before you set them up. You upgrade to the next size and pay the difference, and we send an updated license confirmation. Above ${max} servers, we work out a custom quote with you.`,
+      a: (
+        <>
+          <Box component="a" href={`${links.contact}?topic=quote`} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
+            Contact us
+          </Box>{' '}
+          before you set them up. You upgrade to the next size and pay the difference, and we send an updated license confirmation. Above {max} servers, we
+          work out a custom quote with you.
+        </>
+      ),
     },
     {
       q: 'What happens when a yearly pack ends?',
@@ -264,7 +272,11 @@ export default async function Pricing() {
               One fixed price per event, per year, or once as a founding supporter. The pack size is the most game servers you set up at a time.
             </Typography>
             <Typography sx={{ mt: 2, maxWidth: '56ch', color: color.muted, fontSize: '0.9375rem' }}>
-              {pricingVersion}. Prices in EUR. {vatNote}. If a price doesn&apos;t fit your case, email us and we&apos;ll work it out.
+              {pricingVersion}. Prices in EUR. {vatNote}. If a price doesn&apos;t fit your case,{' '}
+              <Box component="a" href={`${links.contact}?topic=quote`} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
+                contact us
+              </Box>{' '}
+              and we&apos;ll work it out.
             </Typography>
           </Container>
         </Box>

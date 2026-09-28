@@ -154,8 +154,8 @@ export default async function Terms() {
 
       <H2 id="upgrades">9. Upgrades</H2>
       <p>
-        Need more servers during the period? Email us before you set them up. You upgrade to the next pack size and pay the price difference, and we send an
-        updated license confirmation. Founding supporter packs follow section 6.
+        Need more servers during the period? <a href={`${links.contact}?topic=quote`}>Contact us</a> before you set them up. You upgrade to the next pack size
+        and pay the price difference, and we send an updated license confirmation. Founding supporter packs follow section 6.
       </p>
 
       <H2 id="start">10. When the license starts</H2>

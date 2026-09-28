@@ -94,10 +94,15 @@ export default function Privacy() {
         is valid. It never shows the key, your email, your Stripe customer id or the order reference. Share the id only with people who need to check your
         license, such as an event or a client.
       </p>
+      <p id="contact-form">
+        <strong>The contact form.</strong> On <a href="/contact">/contact</a> we collect your name, email, organization (if you give one) and message, and
+        send them to us by email through Postmark (see section 5). We keep the email in our mailbox for as long as we need it for the conversation, then
+        delete it.
+      </p>
       <p>
         The website uses no analytics and no tracking cookies. It remembers your colour theme in your own browser, and sets cookies only when you sign in to
-        the console (see above). To limit abuse, the checkout, the license and sign-in pages, the console and the license check keep your IP address in
-        memory for up to an hour.
+        the console (see above). To limit abuse, the checkout, the license, sign-in and contact pages, the console and the license check keep your IP address
+        in memory for up to an hour.
       </p>
 
       <H2 id="why">3. Why, and on what legal basis</H2>
@@ -133,7 +138,7 @@ export default function Privacy() {
           and Stripe&apos;s standard contractual clauses. See <a href={links.stripePrivacy} target="_blank" rel="noopener noreferrer">Stripe&apos;s privacy policy</a>.
         </li>
         <li>
-          <strong>Postmark</strong> (ActiveCampaign, LLC, USA) sends the license email, the sign-in link and invites for us, as our processor. It gets the
+          <strong>Postmark</strong> (ActiveCampaign, LLC, USA) sends the license email, the sign-in link, invites and contact form messages for us, as our processor. It gets the
           recipient&apos;s email address and the content of those emails. Transfers to the United States are covered by the EU standard contractual clauses. We turn off open and click tracking.
         </li>
         <li>

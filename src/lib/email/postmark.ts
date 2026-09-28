@@ -36,6 +36,8 @@ export type OutgoingEmail = {
   html: string;
   /** Postmark tag, for filtering in its activity log. */
   tag?: string;
+  /** Defaults to REPLY_TO. The caller is responsible for stripping CR/LF from it. */
+  replyTo?: string;
 };
 
 export type SendResult = { ok: true; messageId: string } | { ok: false; error: string };
@@ -55,7 +57,7 @@ export async function sendEmail(mail: OutgoingEmail, config: EmailConfig, fetchI
       body: JSON.stringify({
         From: config.from,
         To: mail.to,
-        ReplyTo: REPLY_TO,
+        ReplyTo: mail.replyTo || REPLY_TO,
         Subject: mail.subject,
         TextBody: mail.text,
         HtmlBody: mail.html,

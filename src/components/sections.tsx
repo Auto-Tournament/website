@@ -88,6 +88,7 @@ export function Nav() {
             ['Pricing', links.pricing],
             ['Docs', links.docs],
             ['GitHub', links.github],
+            ['Contact', links.contact],
           ].map(([label, href]) => (
             <Box key={label} component="a" href={href} sx={{ color: color.ink2, textDecoration: 'none', whiteSpace: 'nowrap', '&:hover': { color: color.ink } }}>
               {label}
@@ -97,6 +98,13 @@ export function Nav() {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2 } }}>
           <Box component="a" href={links.pricing} sx={{ display: { xs: 'inline', md: 'none' }, color: color.ink2, textDecoration: 'none', fontSize: '0.875rem', whiteSpace: 'nowrap', '&:hover': { color: color.ink } }}>
             Pricing
+          </Box>
+          <Box
+            component="a"
+            href={links.contact}
+            sx={{ display: { xs: 'inline', md: 'none' }, color: color.ink2, textDecoration: 'none', fontSize: '0.875rem', whiteSpace: 'nowrap', '&:hover': { color: color.ink } }}
+          >
+            Contact
           </Box>
           <CompatNavStatus />
           <Button variant="contained" size="small" href={links.install}>
@@ -340,6 +348,7 @@ export function Footer() {
             ['CS2 compatibility', links.compatibility],
             ['License keys', links.license],
             ['Console', links.account],
+            ['Contact', links.contact],
             ['Docs', links.docs],
             ['GitHub', links.github],
             ['Discord', links.discord],

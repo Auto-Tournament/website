@@ -26,6 +26,7 @@ import {
   type PackProduct,
   type Period,
 } from '@/components/pricing';
+import { links } from '@/components/links';
 import { checkoutToolFor, type CheckoutRequest, type CheckoutTool } from '@/lib/checkout';
 import { startCheckout } from '@/lib/startCheckout';
 import { seller } from '@/components/seller';
@@ -280,7 +281,11 @@ export function PackPricing({
       </Box>
 
       <Typography sx={{ color: color.muted, fontSize: '0.875rem', mt: -1 }}>
-        Spares count toward the servers. More than {maxPackServers(allPacks)} servers? Contact us for a quote. Prices in EUR. {vatNote}
+        Spares count toward the servers. More than {maxPackServers(allPacks)} servers?{' '}
+        <Box component="a" href={`${links.contact}?topic=quote`} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
+          Contact us
+        </Box>{' '}
+        for a quote. Prices in EUR. {vatNote}
       </Typography>
 
       <Box
