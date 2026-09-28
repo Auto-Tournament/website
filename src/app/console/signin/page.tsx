@@ -52,7 +52,7 @@ export default async function SignIn({ searchParams }: { searchParams: Promise<R
           {email && <EmailSignInForm action={signInWithEmail} />}
           {google && <GoogleSignInButton action={signInWithGoogle} />}
           <Typography sx={{ fontSize: '0.9375rem', maxWidth: '62ch' }}>
-            Bought a license? Sign in with the email you paid with to see it. Licenses bought with a verified email show up for whoever signs in with it.
+            Bought a license? Sign in with the email you paid with: your organization, made from the details you gave at checkout, is waiting with the license in it.
           </Typography>
         </Box>
       )}

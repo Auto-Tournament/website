@@ -59,7 +59,8 @@ describe('issuing against the database', () => {
     const stored = await licenseStore().bySession('cs_live_one');
     expect(stored?.token).toBe(a.record.token);
     expect(stored?.email_sha256).toBe(emailHash('buyer@example.com'));
-    expect(stored?.org_id).toBeNull();
+    // Not from the console: in the organization made from the checkout details (src/lib/console/checkoutOrg.test.ts).
+    expect(stored?.org_id).toEqual(expect.any(String));
     const check = publicCheck(await licenseStore().byLicenseId(a.record.payload.id), '2026-10-01');
     expect(check.status).toBe('valid');
     expect(await licenseStore().founderCount()).toBe(0);
@@ -73,9 +74,11 @@ describe('issuing against the database', () => {
     expect(result.status).toBe('issued');
     expect((await licensesForOrg(t.db, user.id, orgId)).map((l) => l.session_id)).toEqual(['cs_live_org']);
     expect((await getOrg(t.db, user.id, orgId))?.stripeCustomerId).toBe('cus_BUYER12345');
-    // An org id that doesn't exist (deleted since) is ignored: the license is issued unassigned.
+    // An org id that doesn't exist (deleted since) is ignored: the license goes where a guest's would.
     await issueForSession(session('cs_live_gone', { org_id: '00000000-0000-4000-8000-000000000000' }));
-    expect((await licenseStore().bySession('cs_live_gone'))?.org_id).toBeNull();
+    const gone = (await licenseStore().bySession('cs_live_gone'))?.org_id;
+    expect(gone).not.toBe('00000000-0000-4000-8000-000000000000');
+    expect(gone).not.toBeNull();
   });
 
   it('refuses unpaid and foreign sessions', async () => {

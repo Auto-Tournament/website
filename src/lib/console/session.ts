@@ -4,7 +4,8 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db/client';
 import { auth, consoleEnabled } from './auth';
-import { getOrg, listOrgs, type ConsoleUser, type Org, type OrgSummary } from './orgs';
+import { orgsWithPendingClaimed } from './checkoutOrg';
+import { getOrg, type ConsoleUser, type Org, type OrgSummary } from './orgs';
 import type { Role } from '@/lib/db/schema';
 import { consoleHref, consoleOrigin } from './urls';
 
@@ -48,7 +49,7 @@ export type CurrentOrg = { org: Org & { role: Role }; orgs: OrgSummary[] };
 
 /** The organization chosen in the switcher (or the first), with every organization the user is in. Null when they have none. */
 export async function currentOrg(user: ConsoleUser): Promise<CurrentOrg | null> {
-  const orgs = await listOrgs(db(), user.id);
+  const orgs = await orgsWithPendingClaimed(db(), user);
   if (orgs.length === 0) return null;
   const wanted = (await cookies()).get(orgCookieName())?.value;
   const pick = orgs.find((o) => o.id === wanted) ?? orgs[0];

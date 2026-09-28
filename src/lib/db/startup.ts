@@ -8,6 +8,9 @@ import { pruneExpired } from './prune';
 import { dbError } from './errors';
 import { syncAllAdmins } from '../admin/access';
 import { checkVatThreshold } from '../vat/threshold';
+import { backfillCheckoutOrgs } from '../console/checkoutOrg';
+import { stripeServer } from '../license/issue';
+import { stripeLivemode } from '../stripeMode';
 
 /**
  * Runs at server start (src/instrumentation.ts): applies pending migrations
@@ -16,7 +19,9 @@ import { checkVatThreshold } from '../vat/threshold';
  * file is left as it is, as a backup), then deletes expired rows (and daily
  * after that, src/lib/db/prune.ts), then checks the VAT threshold (and daily
  * after that; it also runs after every issued live-mode license,
- * src/lib/license/issue.ts). Never throws: a failure is logged, and the
+ * src/lib/license/issue.ts), then (in the background) puts older card
+ * licenses into organizations from their checkout details, once per license
+ * (src/lib/console/checkoutOrg.ts). Never throws: a failure is logged, and the
  * marketing pages keep working while license issuing answers 500 (Stripe
  * retries) until the next start.
  */
@@ -46,6 +51,15 @@ export async function startDatabase(): Promise<void> {
     if (changed.granted + changed.revoked > 0) console.info('[admin] ADMIN_EMAILS applied', changed);
   } catch (err) {
     console.error('[admin] ADMIN_EMAILS sync failed', dbError(err));
+  }
+  // In the background: it asks Stripe once per older license, and must not hold up the start.
+  const stripe = stripeServer();
+  if (stripe) {
+    backfillCheckoutOrgs(db(), { retrieve: (id) => stripe.checkout.sessions.retrieve(id), stripeLivemode: stripeLivemode() })
+      .then((r) => {
+        if (r.checked > 0) console.info('[license] organizations from checkout (older licenses)', r);
+      })
+      .catch((err) => console.error('[license] organizations from checkout failed', dbError(err)));
   }
   const prune = () =>
     pruneExpired(db())

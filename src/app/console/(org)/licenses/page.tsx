@@ -85,8 +85,8 @@ export default async function Licenses() {
 
       {records.length === 0 && mine.length === 0 && (
         <Typography sx={{ maxWidth: '62ch' }}>
-          Licenses bought from the <a href={consoleHref('/buy')}>Buy</a> page land here. Bought one as a guest? Sign in with the email you paid with, and it shows up
-          here to add.
+          Licenses bought from the <a href={consoleHref('/buy')}>Buy</a> page land here. Bought one on the website? It is in the organization made from your
+          checkout, which you own once you sign in with the email you paid with.
         </Typography>
       )}
 

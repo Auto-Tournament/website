@@ -70,14 +70,21 @@ export default function Privacy() {
           which of your organizations you last opened. Both are needed for the console and aren&apos;t used for anything else.
         </p>
         <p id="organizations">
-          <strong>Organizations.</strong> In the console you add the organization you buy for: its name, organization number, VAT ID, country and billing
-          address, and its Stripe customer id once it has bought something. Its members see its licenses and keys, and each other&apos;s names and email
+          <strong>Organizations.</strong> An organization in the console is the company you buy for: its name, organization number, VAT ID, country and
+          billing address, and its Stripe customer id once it has bought something. It is created from your checkout (see below), or you add it yourself. Its members see its licenses and keys, and each other&apos;s names and email
           addresses. When you invite someone, we email them a link through Postmark, and keep their email address, the role and a one-way hash of the
           link. The link works once, for 7 days; the invite is deleted 30 days after it is used, withdrawn or expired.
         </p>
+        <p id="organization-from-checkout">
+          <strong>The organization from your checkout.</strong> When you buy a license by card, we create the organization in the console from the
+          details you entered at checkout: the company name, VAT or organization number, country and billing address, and the Stripe customer id. If you
+          bought from the console for one of your organizations, or you already belong to an organization with the same VAT or organization number, the
+          license goes there instead. Until you sign in, the organization is linked to the email you paid with only as a one-way hash (the same one as
+          above), not the address. When you sign in with that address, verified, you become the organization&apos;s owner and the hash is deleted.
+        </p>
         <p id="your-licenses">
           <strong>Licenses bought with your email.</strong> When you sign in with an address that is verified, the console shows the licenses bought with
-          that address (we match the one-way hash described above), so you can add them to your organization.
+          that address (we match the one-way hash described above) that aren&apos;t in an organization yet, so you can add them to yours.
         </p>
         <p id="audit-log">
           <strong>Activity log.</strong> To keep the console secure and to answer questions about changes, we log sign-ins and every change made in the
