@@ -6,65 +6,75 @@ import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import type { Stripe } from '@stripe/stripe-js';
+import { CheckoutForm, type CheckoutAdapter } from '@/components/checkout/CheckoutForm';
 import { tokens } from '@/theme/tokens';
 import { formatEuro, type Pack, type Period } from '@/components/pricing';
 import { CheckoutDialog, CheckoutProvider, useCheckout, type CheckoutOrder, type CheckoutView } from '@/components/checkout/Checkout';
 
 const { color } = tokens;
 
-/** A stand-in for Stripe's form: roughly its fields, in an iframe, so the dialog can be judged without keys. */
-const mockForm = `<!doctype html><html><head><style>
-  body{margin:0;font:15px/1.4 -apple-system,system-ui,sans-serif;color:#30313d;background:#fff}
-  .wrap{max-width:440px;margin:0 auto;padding:28px 20px 40px}
-  .note{background:#fff4e5;border:1px solid #f5c98a;border-radius:6px;padding:8px 10px;font-size:13px;margin-bottom:20px}
-  label{display:block;font-size:13px;margin:16px 0 6px;color:#6d6e78}
-  .f{border:1px solid #e0e0e6;border-radius:6px;height:42px;box-shadow:0 1px 1px rgba(0,0,0,.03)}
-  .tall{height:84px}.pay{margin-top:24px;height:46px;border-radius:6px;background:#0570de;color:#fff;display:grid;place-items:center;font-weight:600}
-  .chk{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin-top:16px}.box{width:16px;height:16px;border:1px solid #c0c0c8;border-radius:4px;flex:none}
-</style></head><body><div class="wrap">
-  <div class="note">Mock of Stripe's embedded form (dev preview). The real one comes from Stripe.</div>
-  <label>Email</label><div class="f"></div>
-  <label>Card information</label><div class="f tall"></div>
-  <label>Business name</label><div class="f"></div>
-  <label>I'm buying for a business, not as a consumer</label><div class="f"></div>
-  <label>Event date(s), or start date if yearly or founder</label><div class="f"></div>
-  <label>Event or client name, and website</label><div class="f"></div>
-  <label>Billing address</label><div class="f tall"></div>
-  <div class="chk"><div class="box"></div><div>I accept the Commercial License Terms and the Terms of Sale.</div></div>
-  <div class="pay">Pay</div>
-</div></body></html>`;
+/** Stand-in for Stripe's Payment Element (an iframe from js.stripe.com in the real form), styled like our appearance. */
+function MockPaymentElement() {
+  const box = { border: `1px solid ${color.rule}`, borderRadius: '8px', bgcolor: color.paper, px: 1.5, py: 1.25, color: color.muted, fontSize: '0.9375rem', minHeight: 44 } as const;
+  const label = { color: color.ink2, fontSize: '0.8125rem', fontWeight: 500, mb: 0.75 } as const;
+  return (
+    <Box data-testid="mock-payment-element" sx={{ display: 'grid', gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1 }}>
+        {['Card', 'Apple Pay', 'Google Pay'].map((t, i) => (
+          <Box key={t} sx={{ ...box, fontSize: '0.8125rem', color: i === 0 ? color.ink : color.ink2, borderColor: i === 0 ? color.accent : color.rule, boxShadow: i === 0 ? `0 0 0 1px ${color.accent}` : 'none' }}>
+            {t}
+          </Box>
+        ))}
+      </Box>
+      <div>
+        <Box sx={label}>Card number</Box>
+        <Box sx={box}>1234 1234 1234 1234</Box>
+      </div>
+      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+        <div>
+          <Box sx={label}>Expiration date</Box>
+          <Box sx={box}>MM / YY</Box>
+        </div>
+        <div>
+          <Box sx={label}>Security code</Box>
+          <Box sx={box}>CVC</Box>
+        </div>
+      </Box>
+      <Box sx={{ color: color.muted, fontSize: '0.75rem' }}>Mock of Stripe&apos;s Payment Element (dev preview). The real one loads from Stripe.</Box>
+    </Box>
+  );
+}
 
-function mockStripe(): Stripe {
-  const fn = () => undefined;
-  return {
-    elements: fn,
-    createToken: fn,
-    createPaymentMethod: fn,
-    confirmCardPayment: fn,
-    createEmbeddedCheckoutPage: async () => {
-      let frame: HTMLIFrameElement | null = null;
-      return {
-        mount(el: HTMLElement) {
-          frame = document.createElement('iframe');
-          frame.title = 'Mock payment form';
-          frame.srcdoc = mockForm;
-          frame.style.cssText = 'display:block;width:100%;height:860px;border:0;border-radius:12px;background:#fff';
-          el.appendChild(frame);
-        },
-        unmount() {
-          frame?.remove();
-        },
-        destroy() {
-          frame?.remove();
-        },
-      };
+type PayMode = 'succeed' | 'decline' | 'badVat';
+
+/** The adapter the real form gets from Stripe, mocked: promo code PREVIEW10 takes 10 % off; Pay waits, then does what the toggle says. */
+function MockForm({ order, payMode }: { order: CheckoutOrder; payMode: PayMode }) {
+  const [promo, setPromo] = useState<string | null>(null);
+  const discount = promo ? Math.round(order.price / 10) : 0;
+  const adapter: CheckoutAdapter = {
+    summary: { sessionId: 'cs_test_devPreview0000', currency: 'eur', subtotal: order.price, discount, total: order.price - discount, promotionCode: promo, email: null },
+    applyPromotionCode: async (code) => {
+      await new Promise((r) => setTimeout(r, 400));
+      if (code.toUpperCase() !== 'PREVIEW10') return { ok: false, error: "This code isn't valid." };
+      setPromo('PREVIEW10');
+      return { ok: true };
     },
-  } as unknown as Stripe;
+    removePromotionCode: async () => setPromo(null),
+    pay: async () => {
+      await new Promise((r) => setTimeout(r, 1200));
+      if (payMode === 'decline') return { ok: false, error: 'Your card was declined. Try another card.' };
+      if (payMode === 'badVat') return { ok: false, field: 'vatId', error: 'Stripe says this VAT ID is not valid for the chosen country.' };
+      window.alert('Preview: Stripe would now open the thanks page.');
+      return { ok: false, error: 'Preview only: no payment was made.' };
+    },
+    payment: <MockPaymentElement />,
+  };
+  return <CheckoutForm order={{ packName: order.packName, period: order.period, maxServers: order.maxServers, servers: order.payload.servers }} adapter={adapter} />;
 }
 
 type State = CheckoutView['phase'] | 'failed-error' | 'failed-cardOff' | 'failed-blocked';
 const states: { id: State; label: string }[] = [
-  { id: 'ready', label: 'Form (mock)' },
+  { id: 'ready', label: 'Form (mock Stripe)' },
   { id: 'loading', label: 'Loading' },
   { id: 'failed-error', label: 'Error' },
   { id: 'failed-cardOff', label: 'Card payment off' },
@@ -86,10 +96,12 @@ export function CheckoutPreview({ packs }: { packs: Pack[] }) {
   const [period, setPeriod] = useState<Period>('event');
   const [state, setState] = useState<State | 'closed'>('closed');
   const pack = packs.find((p) => p.id === packId) ?? packs[0];
-  const stripe = useMemo(mockStripe, []);
+  const stripe = useMemo(() => ({}) as Stripe, []);
+  const [payMode, setPayMode] = useState<PayMode>('decline');
   const order: CheckoutOrder = {
     payload: { pack: pack.id, period, servers: pack.maxServers, tools: [pack.product === 'platform' ? 'platform' : 'csm'], use: 'commercial' },
     packName: pack.name,
+    maxServers: pack.maxServers,
     period,
     price: pack.prices[period],
   };
@@ -129,7 +141,7 @@ export function CheckoutPreview({ packs }: { packs: Pack[] }) {
           Checkout dialog preview
         </Typography>
         <Typography sx={{ color: color.ink2, mt: 1, maxWidth: '60ch' }}>
-          Development only. Every state of the embedded checkout dialog; the form is a mock of Stripe&apos;s. Resize the window below 600 px for the phone
+          Development only. Every state of the checkout dialog: our own form, with a mock in place of Stripe&apos;s Payment Element and session. Try promo code PREVIEW10. Resize the window below 600 px for the phone
           (full-screen) layout.
         </Typography>
       </div>
@@ -180,7 +192,30 @@ export function CheckoutPreview({ packs }: { packs: Pack[] }) {
         </Box>
       </Box>
 
-      <CheckoutDialog view={view} onClose={() => setState('closed')} onRetry={() => setState('loading')} onPaying={() => undefined} />
+      <Box sx={{ display: 'grid', gap: 1.5 }}>
+        <Typography sx={{ fontWeight: 600 }}>What Pay does in the mock</Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          {(
+            [
+              ['decline', 'Card declined'],
+              ['badVat', 'VAT ID rejected'],
+              ['succeed', 'Succeeds'],
+            ] as const
+          ).map(([id, label]) => (
+            <Button key={id} size="small" variant="outlined" onClick={() => setPayMode(id)} sx={chip(id === payMode)} aria-pressed={id === payMode}>
+              {label}
+            </Button>
+          ))}
+        </Box>
+      </Box>
+
+      <CheckoutDialog
+        view={view}
+        onClose={() => setState('closed')}
+        onRetry={() => setState('loading')}
+        onPaying={() => undefined}
+        renderForm={(v) => <MockForm key={v.clientSecret} order={v.order} payMode={payMode} />}
+      />
     </Container>
   );
 }

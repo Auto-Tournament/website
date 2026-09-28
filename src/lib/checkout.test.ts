@@ -5,6 +5,11 @@ import {
   checkoutFormParams,
   checkoutPeriods,
   checkoutSessionParams,
+  checkoutDetailsMetadata,
+  protectedMetadataKeys,
+  sessionTakesDetails,
+  stripeTaxId,
+  validateCheckoutDetails,
   invoiceFooter,
   clientIp,
   createRateLimiter,
@@ -266,40 +271,151 @@ describe('checkoutSessionParams', () => {
   const base = 'https://autotournament.gg';
   const args = { base, priceId: 'price_1', description: 'Auto Tournament x', metadata: { pack: 'servers-m' }, buyer: { customer_creation: 'always' as const } };
 
-  it('embedded: ui_mode embedded_page and one return_url to the thanks page, no success/cancel URL', () => {
-    const p = checkoutSessionParams({ ...args, embedded: true });
-    expect(p).toMatchObject({ ui_mode: 'embedded_page', return_url: `${base}/pricing/thanks?session_id={CHECKOUT_SESSION_ID}` });
+  it('custom: ui_mode elements and one return_url to the thanks page, no success/cancel URL', () => {
+    const p = checkoutSessionParams({ ...args, mode: 'custom' });
+    expect(p).toMatchObject({ ui_mode: 'elements', return_url: `${base}/pricing/thanks?session_id={CHECKOUT_SESSION_ID}` });
     expect(p).not.toHaveProperty('success_url');
     expect(p).not.toHaveProperty('cancel_url');
   });
 
-  it('hosted: success and cancel URLs as before, no ui_mode', () => {
-    const p = checkoutSessionParams({ ...args, embedded: false });
-    expect(p).toMatchObject({ success_url: `${base}/pricing/thanks?session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${base}/pricing#guide` });
+  it('custom: no Stripe-UI-only fields (custom_fields, custom_text, consent, name_collection); our form collects those', () => {
+    const p = checkoutSessionParams({ ...args, mode: 'custom' });
+    for (const key of ['custom_fields', 'custom_text', 'consent_collection', 'name_collection']) expect(p).not.toHaveProperty(key);
+    expect(p).toMatchObject({ billing_address_collection: 'required', tax_id_collection: { enabled: true } });
+  });
+
+  it('hosted: success and cancel URLs and all of Stripe\'s form fields, as before', () => {
+    const p = checkoutSessionParams({ ...args, mode: 'hosted' });
+    expect(p).toMatchObject({ success_url: `${base}/pricing/thanks?session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${base}/pricing#guide`, ...checkoutFormParams(base) });
     expect(p).not.toHaveProperty('ui_mode');
     expect(p).not.toHaveProperty('return_url');
   });
 
-  it('keeps every other field the same in both modes', () => {
-    const strip = ({ ui_mode, return_url, success_url, cancel_url, ...rest }: Record<string, unknown>) => rest;
-    const embedded = strip(checkoutSessionParams({ ...args, embedded: true }));
-    const hosted = strip(checkoutSessionParams({ ...args, embedded: false }));
-    expect(embedded).toEqual(hosted);
-    expect(embedded).toMatchObject({
+  it('keeps every business rule the same in both modes: price, customer, metadata, invoice and footer, promo codes', () => {
+    const rules = {
       mode: 'payment',
       line_items: [{ price: 'price_1', quantity: 1 }],
       customer_creation: 'always',
-      ...checkoutFormParams(base),
+      billing_address_collection: 'required',
+      tax_id_collection: { enabled: true },
       metadata: { pack: 'servers-m' },
       payment_intent_data: { description: 'Auto Tournament x', metadata: { pack: 'servers-m' } },
       invoice_creation: { enabled: true, invoice_data: { description: 'Auto Tournament x', metadata: { pack: 'servers-m' }, footer: invoiceFooter } },
       allow_promotion_codes: true,
-    });
+    };
+    expect(checkoutSessionParams({ ...args, mode: 'custom' })).toMatchObject(rules);
+    expect(checkoutSessionParams({ ...args, mode: 'hosted' })).toMatchObject(rules);
   });
 
   it('uses the console customer when there is one', () => {
-    const p = checkoutSessionParams({ ...args, buyer: { customer: 'cus_1', customer_update: { name: 'auto', address: 'auto' } }, embedded: true });
+    const p = checkoutSessionParams({ ...args, buyer: { customer: 'cus_1', customer_update: { name: 'auto', address: 'auto' } }, mode: 'custom' });
     expect(p).toMatchObject({ customer: 'cus_1', customer_update: { name: 'auto', address: 'auto' } });
     expect(p).not.toHaveProperty('customer_creation');
+  });
+});
+
+describe('validateCheckoutDetails (our custom form)', () => {
+  const good = {
+    sessionId: 'cs_test_a1b2c3d4e5f6g7h8',
+    company: '  Example   LAN AS ',
+    eventName: 'Example LAN, example.no',
+    eventDates: '3-5 October 2026',
+    vatId: 'no 123456789 mva',
+    business: true,
+    terms: true,
+  };
+
+  it('accepts a full form, trimming and collapsing spaces, upper-casing the VAT ID', () => {
+    expect(validateCheckoutDetails(good)).toEqual({
+      ok: true,
+      value: { ...good, company: 'Example LAN AS', vatId: 'NO 123456789 MVA' },
+    });
+    expect(validateCheckoutDetails({ ...good, vatId: '' })).toMatchObject({ ok: true, value: { vatId: '' } });
+  });
+
+  it('names the field that is wrong', () => {
+    const field = (over: Record<string, unknown>) => {
+      const r = validateCheckoutDetails({ ...good, ...over });
+      return r.ok ? null : r.field;
+    };
+    expect(field({ company: ' ' })).toBe('company');
+    expect(field({ company: 'x'.repeat(121) })).toBe('company');
+    expect(field({ eventName: '' })).toBe('eventName');
+    expect(field({ eventDates: 'no' })).toBe('eventDates');
+    expect(field({ vatId: 'NO<script>' })).toBe('vatId');
+    expect(field({ business: false })).toBe('business');
+    expect(field({ terms: 'yes' })).toBe('terms');
+    expect(field({ sessionId: 'pi_123' })).toBe('sessionId');
+    expect(field({ company: 'Evil\u0000Co' })).toBe('company');
+  });
+
+  it('rejects extra or missing keys', () => {
+    expect(validateCheckoutDetails({ ...good, pack: 'platform-xl' }).ok).toBe(false);
+    const { terms: _t, ...missing } = good;
+    expect(validateCheckoutDetails(missing).ok).toBe(false);
+    expect(validateCheckoutDetails(null).ok).toBe(false);
+  });
+});
+
+describe('checkoutDetailsMetadata', () => {
+  const details = {
+    sessionId: 'cs_test_a1b2c3d4e5f6g7h8',
+    company: 'Example LAN AS',
+    eventName: 'Example LAN',
+    eventDates: '3-5 October 2026',
+    vatId: 'NO123456789MVA',
+    business: true as const,
+    terms: true as const,
+  };
+  const at = new Date('2026-09-29T12:00:00.000Z');
+
+  it('writes the hosted custom-field keys, the VAT ID and the server time of acceptance', () => {
+    expect(checkoutDetailsMetadata(details, at)).toEqual({
+      company: 'Example LAN AS',
+      eventname: 'Example LAN',
+      eventdates: '3-5 October 2026',
+      buyertype: 'business',
+      vat_id: 'NO123456789MVA',
+      terms_accepted_at: '2026-09-29T12:00:00.000Z',
+    });
+    expect(checkoutDetailsMetadata({ ...details, vatId: '' }, at)).not.toHaveProperty('vat_id');
+  });
+
+  it('never writes the keys set at session creation (pack, period, max_servers, founder…)', () => {
+    const keys = Object.keys(checkoutDetailsMetadata(details, at));
+    for (const k of protectedMetadataKeys) expect(keys).not.toContain(k);
+  });
+
+  it('stays within Stripe metadata limits (40-char keys, 500-char values)', () => {
+    const long = { ...details, company: 'c'.repeat(120), eventName: 'e'.repeat(200), eventDates: 'd'.repeat(100), vatId: 'V'.repeat(40) };
+    for (const [k, v] of Object.entries(checkoutDetailsMetadata(long, at))) {
+      expect(k.length).toBeLessThanOrEqual(40);
+      expect(v.length).toBeLessThanOrEqual(500);
+    }
+  });
+});
+
+describe('sessionTakesDetails', () => {
+  const s = { status: 'open', ui_mode: 'elements', metadata: { pack: 'platform-m' } };
+  it('only an open custom-mode session from /api/checkout', () => {
+    expect(sessionTakesDetails(s)).toBe(true);
+    expect(sessionTakesDetails({ ...s, status: 'complete' })).toBe(false);
+    expect(sessionTakesDetails({ ...s, status: 'expired' })).toBe(false);
+    expect(sessionTakesDetails({ ...s, ui_mode: 'hosted_page' })).toBe(false);
+    expect(sessionTakesDetails({ ...s, metadata: {} })).toBe(false);
+    expect(sessionTakesDetails({ ...s, metadata: null })).toBe(false);
+  });
+});
+
+describe('stripeTaxId', () => {
+  it('maps the VAT number to Stripe\'s type by billing country', () => {
+    expect(stripeTaxId('NO', '123 456 789')).toEqual({ type: 'no_vat', value: '123456789MVA' });
+    expect(stripeTaxId('NO', 'NO123456789MVA')).toEqual({ type: 'no_vat', value: '123456789MVA' });
+    expect(stripeTaxId('DE', '123456789')).toEqual({ type: 'eu_vat', value: 'DE123456789' });
+    expect(stripeTaxId('GR', '123456789')).toEqual({ type: 'eu_vat', value: 'EL123456789' });
+    expect(stripeTaxId('SE', 'SE123456789101')).toEqual({ type: 'eu_vat', value: 'SE123456789101' });
+    expect(stripeTaxId('GB', '123456789')).toEqual({ type: 'gb_vat', value: 'GB123456789' });
+    expect(stripeTaxId('US', '12-3456789')).toBeNull();
+    expect(stripeTaxId('DE', '')).toBeNull();
   });
 });

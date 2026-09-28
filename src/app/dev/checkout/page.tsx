@@ -3,8 +3,8 @@ import { notFound } from 'next/navigation';
 import { getPacks } from '@/lib/stripePrices';
 import { CheckoutPreview } from './CheckoutPreview';
 
-// Development only: the checkout dialog in every state, with a mock of
-// Stripe's form, so the design can be checked without Stripe keys. 404 in
+// Development only: the checkout dialog in every state, our own form with a
+// mocked Stripe session and Payment Element, so it can be checked without Stripe keys. 404 in
 // production builds.
 export const metadata: Metadata = { title: 'Checkout preview', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';

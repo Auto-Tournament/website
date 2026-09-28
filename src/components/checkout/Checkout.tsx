@@ -12,12 +12,14 @@
  * console's Buy page) calls `useCheckout().buy(order)`.
  *
  * With a publishable key (STRIPE_PUBLISHABLE_KEY, passed down by the page's
- * server component) the buyer stays on our site: a dialog opens with the pack,
- * period and price, and Stripe Embedded Checkout loads inside it. After paying,
- * Stripe opens the session's return_url, the thanks page with the key.
+ * server component) the buyer stays on our site: a dialog opens with our own
+ * checkout form (CheckoutForm.tsx) on a custom-UI Checkout Session, with
+ * Stripe's Payment Element for the card. After paying, Stripe.js opens the
+ * session's return_url, the thanks page with the key.
  *
- * Without one, or outside a CheckoutProvider, it is hosted Checkout as before:
- * the browser goes to checkout.stripe.com.
+ * Without one, outside a CheckoutProvider, or when the custom form can't start
+ * in this browser, it is hosted Checkout as before: the browser goes to
+ * checkout.stripe.com.
  *
  * Stripe.js is only loaded when someone clicks Buy (the `pure` entry point
  * doesn't load it on import).
@@ -38,8 +40,8 @@ import { ShieldWarning } from '@phosphor-icons/react/dist/csr/ShieldWarning';
 import { WarningCircle } from '@phosphor-icons/react/dist/csr/WarningCircle';
 import { X } from '@phosphor-icons/react/dist/csr/X';
 import { loadStripe } from '@stripe/stripe-js/pure';
-import type { Stripe, StripeEmbeddedCheckoutOptions } from '@stripe/stripe-js';
-import { EmbeddedCheckout, EmbeddedCheckoutProvider } from '@stripe/react-stripe-js';
+import type { Stripe } from '@stripe/stripe-js';
+import { StripeCheckoutForm } from './StripeCheckoutForm';
 import { tokens } from '@/theme/tokens';
 import { fontDisplay } from '@/theme/theme';
 import { formatEuro, periodLabels, vatShort, type Period } from '@/components/pricing';
@@ -53,6 +55,8 @@ const { color, radius } = tokens;
 export type CheckoutOrder = {
   payload: CheckoutRequest;
   packName: string;
+  /** The pack's server limit, shown in the order summary. */
+  maxServers?: number;
   period: Period;
   /** Cents, as shown on the button. Display only: Stripe charges its own price. */
   price: number;
@@ -151,11 +155,25 @@ export function CheckoutProvider({ publishableKey, children }: { publishableKey:
     [publishableKey],
   );
 
+  /** The custom form couldn't start (Stripe.js refused the session): hosted Checkout instead. */
+  const fallBackToHosted = useCallback(async (order: CheckoutOrder) => {
+    const mine = ++attempt.current;
+    setView({ phase: 'redirecting', order });
+    const answer = await requestCheckout(order.payload, fetch, true);
+    if (mine !== attempt.current) return;
+    if (answer.kind === 'redirect') {
+      window.location.assign(answer.url);
+      return;
+    }
+    const error = answer.kind === 'failed' ? answer.error : reloadError;
+    setView({ phase: 'failed', order, reason: answer.kind === 'failed' && answer.cardOff ? 'cardOff' : 'error', error });
+  }, []);
+
   const close = useCallback(() => {
     if (paying && !window.confirm('Your payment may still be going through. Close checkout anyway?')) return;
     attempt.current++;
     setPaying(false);
-    // Unmounting EmbeddedCheckoutProvider destroys the Stripe instance.
+    // Unmounting CheckoutElementsProvider drops the session's elements.
     setView({ phase: 'closed' });
   }, [paying]);
 
@@ -164,7 +182,7 @@ export function CheckoutProvider({ publishableKey, children }: { publishableKey:
   return (
     <CheckoutContext.Provider value={api}>
       {children}
-      {publishableKey && <CheckoutDialog view={view} onClose={close} onRetry={buyEmbedded} onPaying={setPaying} />}
+      {publishableKey && <CheckoutDialog view={view} onClose={close} onRetry={buyEmbedded} onPaying={setPaying} onInitFailed={fallBackToHosted} />}
     </CheckoutContext.Provider>
   );
 }
@@ -222,11 +240,16 @@ export function CheckoutDialog({
   onClose,
   onRetry,
   onPaying,
+  onInitFailed,
+  renderForm,
 }: {
   view: CheckoutView;
   onClose: () => void;
   onRetry: (order: CheckoutOrder) => void;
   onPaying: (paying: boolean) => void;
+  onInitFailed?: (order: CheckoutOrder) => void;
+  /** The /dev/checkout preview's form on a mocked Stripe; the real dialog leaves it out. */
+  renderForm?: (view: Extract<CheckoutView, { phase: 'ready' }>) => ReactNode;
 }) {
   const theme = useTheme();
   const phone = useMediaQuery(theme.breakpoints.down('sm'));
@@ -235,21 +258,6 @@ export function CheckoutDialog({
   const lastOrder = useRef<CheckoutOrder | null>(null);
   if (view.phase !== 'closed') lastOrder.current = view.order;
   const order = lastOrder.current;
-
-  const clientSecret = view.phase === 'ready' ? view.clientSecret : null;
-  const options = useMemo<StripeEmbeddedCheckoutOptions | null>(
-    () =>
-      clientSecret
-        ? {
-            clientSecret,
-            onAnalyticsEvent: (event) => {
-              if (event.eventType === 'checkoutSubmitted') onPaying(true);
-              if (event.eventType === 'checkoutSubmitFailed') onPaying(false);
-            },
-          }
-        : null,
-    [clientSecret, onPaying],
-  );
 
   return (
     <Dialog
@@ -287,7 +295,7 @@ export function CheckoutDialog({
         component="header"
         sx={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) auto auto',
+          gridTemplateColumns: view.phase === 'ready' ? 'minmax(0, 1fr) auto' : 'minmax(0, 1fr) auto auto',
           columnGap: { xs: 1.5, sm: 2.5 },
           alignItems: 'center',
           px: { xs: 2, sm: 3 },
@@ -308,13 +316,13 @@ export function CheckoutDialog({
           {order && (
             <Typography id="checkout-summary" data-testid="checkout-summary" sx={{ color: color.ink2, fontSize: { xs: '0.8125rem', sm: '0.9375rem' }, mt: 0.25 }}>
               {periodLabels[order.period]}
-              <Box component="span" sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+              <Box component="span" sx={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' }}>
                 , {formatEuro(order.price)} {vatShort}
               </Box>
             </Typography>
           )}
         </Box>
-        {order && (
+        {order && view.phase !== 'ready' && (
           <Box aria-hidden sx={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
             <Box sx={{ fontFamily: fontDisplay, fontWeight: 700, fontSize: { xs: '1.25rem', sm: '1.5rem' }, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
               {formatEuro(order.price)}
@@ -359,12 +367,21 @@ export function CheckoutDialog({
           <FailedState view={view} onRetry={() => onRetry(view.order)} onClose={onClose} />
         )}
 
-        {view.phase === 'ready' && options && (
-          <Box data-testid="checkout-embed" sx={{ flex: '1 0 auto', minHeight: 560, p: { xs: 0, sm: 1.5 } }}>
-            {/* key: a new session is a new instance; unmounting destroys the old one. */}
-            <EmbeddedCheckoutProvider key={view.clientSecret} stripe={view.stripe} options={options}>
-              <EmbeddedCheckout />
-            </EmbeddedCheckoutProvider>
+        {view.phase === 'ready' && (
+          <Box data-testid="checkout-embed" sx={{ flex: '1 0 auto' }}>
+            {renderForm ? (
+              renderForm(view)
+            ) : (
+              // key: a new session is a new provider; unmounting drops the old one.
+              <StripeCheckoutForm
+                key={view.clientSecret}
+                stripe={view.stripe}
+                clientSecret={view.clientSecret}
+                order={{ packName: view.order.packName, period: view.order.period, maxServers: view.order.maxServers, servers: view.order.payload.servers }}
+                onPaying={onPaying}
+                onInitFailed={() => onInitFailed?.(view.order)}
+              />
+            )}
           </Box>
         )}
       </Box>

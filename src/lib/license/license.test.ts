@@ -143,6 +143,31 @@ describe('checkout session → payload', () => {
     expect(JSON.stringify(p)).not.toContain('@');
   });
 
+  it('custom checkout form: reads the event dates and the licensee from the metadata it wrote', () => {
+    const custom = session({
+      customer_details: { email: 'buyer@example.com', business_name: null },
+      collected_information: null,
+      custom_fields: [],
+      metadata: {
+        pack: 'platform-l', period: 'event', servers: '34', tools: 'platform', max_servers: '40',
+        company: 'Example LAN AS', eventname: 'Example LAN', eventdates: '3-5 October 2026', buyertype: 'business', terms_accepted_at: '2026-09-28T10:00:00.000Z',
+      },
+    });
+    const { payload: p, datesFromForm } = payloadForSession(custom, {
+      kid: key.kid, id: 'L-3', packId: 'platform-l', kind: 'event', maxServers: 40, now: new Date('2026-09-28T10:11:12.345Z'),
+    });
+    expect(datesFromForm).toBe(true);
+    expect(p).toMatchObject({ licensee: 'Example LAN AS', valid_from: '2026-10-03', valid_to: '2026-10-05' });
+  });
+
+  it('prefers the hosted form fields over metadata of the same name', () => {
+    const both = session({ metadata: { ...session().metadata, eventdates: '1-2 January 2027', company: 'Other AS' } });
+    const { payload: p } = payloadForSession(both, {
+      kid: key.kid, id: 'L-4', packId: 'platform-l', kind: 'event', maxServers: 40, now: new Date('2026-09-28T10:11:12.345Z'),
+    });
+    expect(p).toMatchObject({ licensee: 'Example LAN AS', valid_from: '2026-10-03' });
+  });
+
   it('falls back to the email when there is no Stripe customer', () => {
     const { payload: p } = payloadForSession(session({ customer: null }), {
       kid: key.kid,

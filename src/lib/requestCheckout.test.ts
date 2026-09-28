@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { cardOffError, requestCheckout } from './requestCheckout';
+import { cardOffError, requestCheckout, saveCheckoutDetails } from './requestCheckout';
 import type { CheckoutRequest } from './checkout';
 
 const payload: CheckoutRequest = { pack: 'servers-m', period: 'year', servers: 20, tools: ['csm'], use: 'commercial' };
@@ -36,5 +36,27 @@ describe('requestCheckout', () => {
       throw new TypeError('offline');
     }) as unknown as typeof fetch;
     expect((await requestCheckout(payload, fetcher)).kind).toBe('failed');
+  });
+});
+
+describe('requestCheckout fallback', () => {
+  it('asks for hosted Checkout with ?mode=hosted, same body', async () => {
+    const fetcher = answer(200, { url: 'https://checkout.stripe.com/c/pay/cs_test_1' });
+    expect(await requestCheckout(payload, fetcher, true)).toEqual({ kind: 'redirect', url: 'https://checkout.stripe.com/c/pay/cs_test_1' });
+    expect(fetcher).toHaveBeenCalledWith('/api/checkout?mode=hosted', expect.objectContaining({ body: JSON.stringify(payload) }));
+  });
+});
+
+describe('saveCheckoutDetails', () => {
+  const details = { sessionId: 'cs_test_a1b2c3d4e5f6', company: 'X AS', eventName: 'X LAN', eventDates: '1 May 2027', vatId: '', business: true as const, terms: true as const };
+
+  it('POSTs the details and reads the field the server points at', async () => {
+    expect(await saveCheckoutDetails(details, answer(200, { ok: 'saved' }))).toEqual({ ok: true });
+    expect(await saveCheckoutDetails(details, answer(400, { error: 'Enter the city.', field: 'eventDates' }))).toEqual({ ok: false, error: 'Enter the city.', field: 'eventDates' });
+    expect(await saveCheckoutDetails(details, answer(502, {}))).toMatchObject({ ok: false });
+    const broken = vi.fn(async () => {
+      throw new Error('offline');
+    }) as unknown as typeof fetch;
+    expect(await saveCheckoutDetails(details, broken)).toMatchObject({ ok: false, error: expect.stringContaining("Couldn't reach") });
   });
 });

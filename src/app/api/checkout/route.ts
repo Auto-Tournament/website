@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import {
   checkoutSessionParams,
+  type CheckoutMode,
   clientIp,
   createRateLimiter,
   describeLicense,
@@ -20,9 +21,11 @@ import { checkoutCustomerParams, consoleCheckoutPrefill } from '@/lib/console/ch
 
 // Starts a Stripe Checkout Session for a commercial license pack. Server only: the
 // secret key comes from STRIPE_SECRET_KEY at runtime and never reaches the
-// client. With STRIPE_PUBLISHABLE_KEY set it is an Embedded Checkout session
-// and the answer is { clientSecret } for the dialog (src/components/checkout);
-// without it, a hosted one and { url } to redirect to, as before. Without it, or while the prices come from the pricing.ts fallback
+// client. With STRIPE_PUBLISHABLE_KEY set it is a custom-UI session (ui_mode
+// `elements`) and the answer is { clientSecret } for our own checkout form in
+// the dialog (src/components/checkout); without it, or with ?mode=hosted (the
+// browser couldn't start the custom form), a hosted one and { url } to
+// redirect to, as before. Without it, or while the prices come from the pricing.ts fallback
 // instead of Stripe, the route answers 503 and the guide and the pack cards fall back to
 // the email request.
 export const runtime = 'nodejs';
@@ -135,17 +138,18 @@ export async function POST(request: Request) {
   const buyer = checkoutCustomerParams(await consoleCheckoutPrefill());
   const metadata = { ...licenseMetadata(order), max_servers: String(pack.maxServers), ...buyer.metadata };
 
-  // Embedded Checkout (on our page) once the publishable key is set; until
-  // then the hosted page, exactly as before.
-  const embedded = stripePublishableKey() !== null;
+  // Our custom form (on our page) once the publishable key is set; until
+  // then, or when the browser asks for the fallback, the hosted page.
+  const hostedAsked = new URL(request.url).searchParams.get('mode') === 'hosted';
+  const mode: CheckoutMode = stripePublishableKey() !== null && !hostedAsked ? 'custom' : 'hosted';
 
   try {
     const session = await stripe.checkout.sessions.create(
-      checkoutSessionParams({ base, priceId, description, metadata, buyer, embedded }),
+      checkoutSessionParams({ base, priceId, description, metadata, buyer, mode }),
     );
-    if (embedded) {
+    if (mode === 'custom') {
       if (!session.client_secret) {
-        console.error('[checkout] embedded session created without a client secret', { id: session.id });
+        console.error('[checkout] custom session created without a client secret', { id: session.id });
         return reply(502, { error: "Couldn't start checkout. Try again, or request the license by email." });
       }
       return reply(200, { clientSecret: session.client_secret });

@@ -3,7 +3,7 @@ import { FALLBACK_PACKS } from '@/components/pricing';
 import { checkoutPeriods, invoiceFooter } from '@/lib/checkout';
 import { lookupKey } from '@/lib/stripePacks';
 
-// POST /api/checkout against a fake Stripe client: embedded when
+// POST /api/checkout against a fake Stripe client: custom UI (our form) when
 // STRIPE_PUBLISHABLE_KEY is set, hosted (as before) when it isn't. Prices,
 // validation and the founder cap are the same either way.
 
@@ -62,13 +62,16 @@ const shared = {
   customer_creation: 'always',
   billing_address_collection: 'required',
   tax_id_collection: { enabled: true },
+  allow_promotion_codes: true,
+};
+/** Stripe's own form fields, hosted only: the custom session gets them from our form. */
+const hostedForm = {
   name_collection: { business: { enabled: true, optional: false } },
   consent_collection: { terms_of_service: 'required' },
-  allow_promotion_codes: true,
 };
 
 describe('POST /api/checkout', () => {
-  it('creates an Embedded Checkout session and answers the client secret when the publishable key is set', async () => {
+  it('creates a custom-UI session (ui_mode elements) and answers the client secret when the publishable key is set', async () => {
     vi.stubEnv('STRIPE_PUBLISHABLE_KEY', 'pk_test_routeTestKey');
     const res = await post(order);
     expect(res.status).toBe(200);
@@ -76,12 +79,12 @@ describe('POST /api/checkout', () => {
     const params = create.mock.calls[0][0];
     expect(params).toMatchObject({
       ...shared,
-      ui_mode: 'embedded_page',
+      ui_mode: 'elements',
       return_url: 'https://autotournament.gg/pricing/thanks?session_id={CHECKOUT_SESSION_ID}',
     });
     expect(params).not.toHaveProperty('success_url');
     expect(params).not.toHaveProperty('cancel_url');
-    expect(params.custom_fields.map((f: { key: string }) => f.key)).toEqual(['buyertype', 'eventdates', 'eventname']);
+    for (const key of ['custom_fields', 'custom_text', 'consent_collection', 'name_collection']) expect(params).not.toHaveProperty(key);
     expect(params.metadata).toEqual({ pack: 'servers-m', period: 'year', servers: '20', tools: 'csm', max_servers: '20' });
     expect(params.invoice_creation.invoice_data.footer).toBe(invoiceFooter);
     expect(params.payment_intent_data.metadata).toEqual(params.metadata);
@@ -95,11 +98,27 @@ describe('POST /api/checkout', () => {
     const params = create.mock.calls[0][0];
     expect(params).toMatchObject({
       ...shared,
+      ...hostedForm,
       success_url: 'https://autotournament.gg/pricing/thanks?session_id={CHECKOUT_SESSION_ID}',
       cancel_url: 'https://autotournament.gg/pricing#guide',
     });
     expect(params).not.toHaveProperty('ui_mode');
     expect(params).not.toHaveProperty('return_url');
+    expect(params.custom_fields.map((f: { key: string }) => f.key)).toEqual(['buyertype', 'eventdates', 'eventname']);
+  });
+
+  it('gives hosted Checkout when the browser asks for the fallback (?mode=hosted), even with the publishable key', async () => {
+    vi.stubEnv('STRIPE_PUBLISHABLE_KEY', 'pk_test_routeTestKey');
+    ip++;
+    const res = await POST(
+      new Request('http://localhost/api/checkout?mode=hosted', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'cf-connecting-ip': `203.0.113.${ip}` },
+        body: JSON.stringify(order),
+      }),
+    );
+    expect(await res.json()).toEqual({ url: 'https://checkout.stripe.com/c/pay/cs_test_1' });
+    expect(create.mock.calls[0][0]).toMatchObject({ ...shared, ...hostedForm, cancel_url: 'https://autotournament.gg/pricing#guide' });
   });
 
   it('uses hosted Checkout when the publishable key is in the other mode than the secret key', async () => {
@@ -108,7 +127,7 @@ describe('POST /api/checkout', () => {
     expect(await res.json()).toEqual({ url: 'https://checkout.stripe.com/c/pay/cs_test_1' });
   });
 
-  it('answers 502 when Stripe returns an embedded session without a client secret', async () => {
+  it('answers 502 when Stripe returns a custom session without a client secret', async () => {
     vi.stubEnv('STRIPE_PUBLISHABLE_KEY', 'pk_test_routeTestKey');
     create.mockResolvedValue({ id: 'cs_test_2', url: null, client_secret: null });
     expect((await post(order)).status).toBe(502);

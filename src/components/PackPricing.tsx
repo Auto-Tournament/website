@@ -113,7 +113,7 @@ export function PackPricing({
       tools: toolsFor(pack.product),
       use: 'commercial',
     };
-    const outcome = await startBuy({ payload, packName: pack.name, period, price: pack.prices[period] });
+    const outcome = await startBuy({ payload, packName: pack.name, maxServers: pack.maxServers, period, price: pack.prices[period] });
     // Going to hosted Checkout: stay loading while the browser navigates.
     if (outcome.kind === 'redirecting') return;
     setLoadingKey(null);
