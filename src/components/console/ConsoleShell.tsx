@@ -42,7 +42,6 @@ export function ConsoleShell({
             pl: 2,
             pr: 1,
             bgcolor: color.navGlass,
-            backdropFilter: 'blur(14px)',
             border: `1px solid ${color.rule}`,
             borderRadius: `${radius.lg}px`,
           }}

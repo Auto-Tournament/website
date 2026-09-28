@@ -141,7 +141,7 @@ export function deriveTheme(colors: string[], options: DeriveOptions = {}): Them
     bloom: rgba(accent.value, 0.22),
     bloom2: rgba(accent2, 0.14),
     logoInk: neutral(0.2, Math.min(chroma, 0.03)),
-    navGlass: rgba(neutral(0.185), 0.82),
+    navGlass: rgba(neutral(0.185), 0.94),
   };
 }
 

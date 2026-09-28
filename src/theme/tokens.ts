@@ -29,7 +29,7 @@ export const hex = {
   bloom: 'rgba(255, 106, 61, 0.22)',
   bloom2: 'rgba(230, 70, 50, 0.14)',
   logoInk: '#1d1d1f', // the ram's dark shapes
-  navGlass: 'rgba(24, 17, 14, 0.82)',
+  navGlass: 'rgba(24, 17, 14, 0.94)',
 };
 
 export type ColorKey = keyof typeof hex;
