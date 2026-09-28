@@ -25,11 +25,17 @@ export default async function AddPasskey({ searchParams }: { searchParams: Promi
   const token = typeof raw === 'string' && PASSKEY_TOKEN.test(raw) ? raw : null;
   const link = token && consoleEnabled() ? await linkByToken(db(), token).catch(() => null) : null;
   const user = await currentUser();
+  // Registering uses the link up, and the page re-renders right after: tell the admin who just used it that it worked.
+  const justAdded = Boolean(link?.usedAt && user && user.id === link.userId && Date.now() - link.usedAt.getTime() < 15 * 60_000);
   const invalid = !token || !link || link.usedAt || link.expiresAt.getTime() <= Date.now();
   return (
     <>
       <PageTitle>Add a passkey</PageTitle>
-      {invalid ? (
+      {justAdded ? (
+        <Typography>
+          Your passkey is added. <a href={consoleHref('/admin')}>Go to the admin area</a>
+        </Typography>
+      ) : invalid ? (
         <Typography>This link isn&apos;t valid, was already used or has expired. Ask for a new one on the admin page.</Typography>
       ) : !user || !isAdminUser(user) || user.id !== link.userId ? (
         <Typography>
