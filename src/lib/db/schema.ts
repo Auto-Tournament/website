@@ -152,14 +152,43 @@ export const licenses = pgTable(
     /** A send in progress (claimed); a claim older than 5 minutes is treated as abandoned. */
     emailClaimedAt: at('email_claimed_at'),
     orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'set null' }),
+    /**
+     * The Checkout Session's amount_total, in minor units (cents) of `currency`
+     * (EUR). Null on licenses issued before this column existed; the VAT
+     * threshold check (src/lib/vat) treats a null amount as 0 — there is no
+     * way to recover the historical amount without new Stripe permissions. A
+     * free or test purchase is recorded as 0, not null.
+     */
+    amountTotal: integer('amount_total'),
+    /** Always 'eur' so far; kept alongside amountTotal rather than assumed. */
+    currency: text('currency'),
+    /** When Stripe considers the session paid (falls back to issuedAt when unknown). Used for the VAT rolling window. */
+    paidAt: at('paid_at'),
     createdAt: at('created_at').notNull().defaultNow(),
   },
   (t) => [
     index('licenses_email_hash_idx').on(t.emailHash),
     index('licenses_org_idx').on(t.orgId),
     index('licenses_invoice_number_idx').on(sql`upper(${t.invoiceNumber})`),
+    index('licenses_paid_at_idx').on(t.paidAt),
   ],
 );
+
+/**
+ * One row per VAT threshold percentage (70/90/100 of VAT_THRESHOLD_NOK).
+ * `active` is set once the rolling 12-month NOK total reaches the threshold
+ * (the alert fires then) and cleared once the total drops back below it, so
+ * crossing the same line again fires another alert (src/lib/vat/threshold.ts).
+ */
+export const vatAlerts = pgTable('vat_alerts', {
+  percent: integer('percent').primaryKey(),
+  active: boolean('active').notNull().default(false),
+  /** When this crossing was first detected. */
+  firstCrossedAt: at('first_crossed_at'),
+  /** The rolling NOK total at the last check, for visibility only. */
+  lastTotalNok: integer('last_total_nok'),
+  updatedAt: at('updated_at').notNull().defaultNow(),
+});
 
 /** Every write in the console, and sign-ins. `details` never holds tokens. */
 export const auditLog = pgTable(

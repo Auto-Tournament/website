@@ -11,6 +11,7 @@ import { db } from '@/lib/db/client';
 import { dbError } from '@/lib/db/errors';
 import { licenseIssuedToOrg, orgForCheckout } from '@/lib/console/orgs';
 import { stripeLivemode } from '@/lib/stripeMode';
+import { checkVatThreshold } from '@/lib/vat/threshold';
 
 /**
  * Issues the license key for a paid Checkout Session, once. Called by the
@@ -77,6 +78,10 @@ export async function issueForSession(session: Stripe.Checkout.Session, now: Dat
       payload,
       token: signLicense(payload, key),
       org_id: orgId,
+      // amount_total is null for a fully-discounted ($0) session; that is a real 0, not "unknown".
+      amount_total: session.amount_total ?? 0,
+      currency: session.currency ?? null,
+      paid_at: now.toISOString(),
     };
   });
   if (created) {
@@ -85,6 +90,10 @@ export async function issueForSession(session: Stripe.Checkout.Session, now: Dat
       await licenseIssuedToOrg(db(), record, stripeLivemode()).catch((err) =>
         console.error('[license] could not record the organization purchase', { id: record.payload.id }, dbError(err)),
       );
+    }
+    if (record.livemode) {
+      // Fire-and-forget: a slow or failed VAT check never blocks or fails the webhook / thanks page.
+      checkVatThreshold().catch((err) => console.error('[vat] threshold check failed', dbError(err)));
     }
   }
   // Also on 'existing': a webhook retry (or one resent from the Stripe dashboard) sends it when an earlier try failed.

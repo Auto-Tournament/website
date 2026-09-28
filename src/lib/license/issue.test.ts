@@ -22,6 +22,9 @@ beforeEach(async () => {
   vi.stubEnv('LICENSE_SIGNING_KEY', privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64'));
   vi.stubEnv('POSTMARK_SERVER_TOKEN', '');
   vi.stubEnv('STRIPE_SECRET_KEY', '');
+  // The VAT threshold check (src/lib/vat/threshold.ts) fires on every issued live-mode
+  // license; off here so these tests don't make a real network call. It has its own tests.
+  vi.stubEnv('VAT_ALERTS', 'off');
   vi.spyOn(console, 'info').mockImplementation(() => {});
 });
 afterEach(async () => {

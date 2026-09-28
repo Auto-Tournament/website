@@ -6,14 +6,17 @@ import { importLicenseFile, licenseDataDir, licenseStore } from '../license/stor
 import { databaseUrl, db } from './client';
 import { pruneExpired } from './prune';
 import { dbError } from './errors';
+import { checkVatThreshold } from '../vat/threshold';
 
 /**
  * Runs at server start (src/instrumentation.ts): applies pending migrations
  * from ./drizzle (idempotent: drizzle keeps track in drizzle.__drizzle_migrations),
  * then imports licenses.json once (only licenses not in the database yet; the
  * file is left as it is, as a backup), then deletes expired rows (and daily
- * after that, src/lib/db/prune.ts). Never throws: a failure is logged, and
- * the marketing pages keep working while license issuing answers 500 (Stripe
+ * after that, src/lib/db/prune.ts), then checks the VAT threshold (and daily
+ * after that; it also runs after every issued live-mode license,
+ * src/lib/license/issue.ts). Never throws: a failure is logged, and the
+ * marketing pages keep working while license issuing answers 500 (Stripe
  * retries) until the next start.
  */
 export async function startDatabase(): Promise<void> {
@@ -42,4 +45,8 @@ export async function startDatabase(): Promise<void> {
       .catch((err) => console.error('[db] pruning failed', dbError(err)));
   await prune();
   setInterval(prune, 24 * 60 * 60_000).unref();
+
+  const checkVat = () => checkVatThreshold().catch((err) => console.error('[vat] threshold check failed', dbError(err)));
+  await checkVat();
+  setInterval(checkVat, 24 * 60 * 60_000).unref();
 }

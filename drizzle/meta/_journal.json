@@ -8,6 +8,13 @@
       "when": 1790584305366,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790587737218,
+      "tag": "0001_curious_malcolm_colcord",
+      "breakpoints": true
     }
   ]
 }
