@@ -264,7 +264,11 @@ export default async function Pricing() {
               One fixed price per event, per year, or once as a founding supporter. The pack size is the most game servers you set up at a time.
             </Typography>
             <Typography sx={{ mt: 2, maxWidth: '56ch', color: color.muted, fontSize: '0.9375rem' }}>
-              {pricingVersion}. Prices in EUR. {vatNote}. If a price doesn&apos;t fit your case, email us and we&apos;ll work it out.
+              {pricingVersion}. Prices in EUR. {vatNote}. If a price doesn&apos;t fit your case,{' '}
+              <Box component="a" href={mailHref} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
+                email us
+              </Box>{' '}
+              and we&apos;ll work it out.
             </Typography>
           </Container>
         </Box>
