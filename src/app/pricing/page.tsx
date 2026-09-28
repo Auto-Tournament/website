@@ -1,11 +1,10 @@
 /*
- * Hallmark · macrostructure: Map / Diagram (stack diagram → setups → packs → fine print)
+ * Hallmark · macrostructure: Guided flow (question steps → one answer → folded details: diagram, packs, alternatives, fine print)
  * genre: modern-minimal · theme: Auto Tournament system (src/theme/tokens.ts, Sora + Geist) · nav: N5 · footer: Ft5
- * pre-emit critique: P4 H4 E4 S5 R4 V4
+ * pre-emit critique: P4 H5 E4 S5 R4 V4
  */
 import type { Metadata } from 'next';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
@@ -29,7 +28,6 @@ import {
   packRules,
   pricingVersion,
   serverLimitRule,
-  vatNote,
   yearlyAfterExpiry,
   yearlyCs2Note,
   yearlyUpdates,
@@ -40,10 +38,10 @@ import {
 import { getPacks } from '@/lib/stripePrices';
 import { PackPricing } from '@/components/PackPricing';
 import { licenseStore } from '@/lib/license/store';
-import { PriceCalculator } from '@/components/PriceCalculator';
-import { FreeLanConfirmation } from '@/components/FreeLanConfirmation';
+import { PackFinder } from '@/components/PackFinder';
+import { parseAnswers } from '@/components/findPack';
 import { Disclosure } from '@/components/Disclosure';
-import { Alternatives, ProductStack, SetupPaths } from '@/components/PricingGuide';
+import { Alternatives, ProductStack } from '@/components/PricingGuide';
 
 const { color, radius } = tokens;
 
@@ -284,7 +282,9 @@ function faqFor(packs: readonly Pack[]): { q: string; a: React.ReactNode }[] {
 
 const list = { m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2 } as const;
 
-export default async function Pricing() {
+export default async function Pricing({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  // The guide's answers live in the query, so a reload or a shared link (or a browser without JavaScript) lands on the same step.
+  const initial = parseAnswers(await searchParams);
   // Plain numbers only go to the client components; the Stripe price ids stay here.
   const priceSource = await getPacks();
   let founderOpen = true;
@@ -301,95 +301,60 @@ export default async function Pricing() {
     <>
       <Nav />
       <main>
-        {/* 1 · The rule, in one line. */}
-        <Box component="section" aria-labelledby="pricing-title">
-          <Container maxWidth="lg" sx={{ pt: { xs: 8, md: 14 }, pb: { xs: 2, md: 4 } }}>
-            <Typography id="pricing-title" variant="h1" sx={{ fontSize: 'clamp(2.25rem, 3vw + 1rem, 4rem)', maxWidth: '21ch' }}>
-              Free if nobody earns money from it.{' '}
-              <Box component="span" sx={{ color: color.accent }}>
-                If you do, one fixed price.
-              </Box>
-            </Typography>
-            <Typography sx={{ mt: 3, maxWidth: '58ch', color: color.ink2, fontSize: '1.125rem' }}>
-              Trying it is free: install it and run a test tournament with bots. No sign-up, no card, no time limit. When someone earns money from it, they buy one
-              pack: a fixed price per event, per year, or once as a founding supporter.
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 4 }}>
-              <Button variant="contained" href="#setups" sx={{ whiteSpace: 'nowrap' }}>
-                Which setup fits you?
-              </Button>
-              <Button variant="outlined" href="#packs" sx={{ whiteSpace: 'nowrap' }}>
-                See the packs
-              </Button>
+        {/* 1 · The rule, then the guide: a few questions, one answer. */}
+        <Box component="section" id="guide" aria-labelledby="pricing-title" sx={{ scrollMarginTop: 80 }}>
+          {/* Old links (#calculator, #setups, #free) land on the guide. */}
+          <Box component="span" id="calculator" aria-hidden sx={{ display: 'block', height: 0 }} />
+          <Box component="span" id="setups" aria-hidden sx={{ display: 'block', height: 0 }} />
+          <Box component="span" id="free" aria-hidden sx={{ display: 'block', height: 0 }} />
+          <Container maxWidth="lg" sx={{ pt: { xs: 5, md: 10 }, pb: { xs: 5, md: 8 } }}>
+            <Box sx={{ maxWidth: '52rem', mx: 'auto', display: 'grid', gap: { xs: 3, md: 4 } }}>
+              <div>
+                <Typography id="pricing-title" variant="h1" sx={{ fontSize: 'clamp(2rem, 2.4vw + 1rem, 3.25rem)', maxWidth: '22ch' }}>
+                  Free if nobody earns money from it.{' '}
+                  <Box component="span" sx={{ color: color.accent }}>
+                    If you do, one fixed price.
+                  </Box>
+                </Typography>
+                <Typography sx={{ mt: 2, maxWidth: '58ch', color: color.ink2, fontSize: { xs: '1rem', md: '1.125rem' } }}>
+                  Trying it is free: install it and run a tournament. No sign-up, no card, no time limit. Answer a few questions to see what you&apos;d pay, if
+                  anything.
+                </Typography>
+              </div>
+              <PackFinder packs={packs} pricesAvailable={pricesAvailable} founderOpen={founderOpen} initial={initial} />
+              <Typography sx={{ color: color.muted, fontSize: '0.875rem' }}>
+                Rather compare everything yourself?{' '}
+                <Box component="a" href="#packs" sx={underline}>
+                  See all packs
+                </Box>{' '}
+                or{' '}
+                <Box component="a" href={`${links.contact}?topic=quote`} sx={underline}>
+                  ask us
+                </Box>
+                .
+              </Typography>
             </Box>
-            <Typography sx={{ mt: 3, maxWidth: '62ch', color: color.muted, fontSize: '0.875rem' }}>
-              {pricingVersion}. Prices in EUR. {vatNote} If a price doesn&apos;t fit your case,{' '}
-              <Box component="a" href={`${links.contact}?topic=quote`} sx={underline}>
-                contact us
-              </Box>{' '}
-              and we&apos;ll work it out.
-            </Typography>
           </Container>
         </Box>
 
-        {/* 2 · What each product is, as one diagram. */}
-        <Section id="whats-what" title="What you’d be buying" pad="normal">
-          <ProductStack />
-        </Section>
+        {/* 2 · What each product is, as one diagram, folded. */}
+        <Container maxWidth="lg" component="section" aria-labelledby="details-title" sx={{ pt: { xs: 5, md: 8 } }}>
+          <Typography id="details-title" variant="h2" sx={{ mb: { xs: 2, md: 3 } }}>
+            The details
+          </Typography>
+          <Disclosure id="whats-what" title="What you’d be buying: the four pieces, in one picture">
+            <ProductStack />
+          </Disclosure>
+        </Container>
 
-        {/* 3 · Three setups, side by side. */}
-        <Section
-          id="setups"
-          title="Which setup fits you?"
-          lede="Pick the setup by what you do. The pack size comes after, from how many servers you run."
-          pad="normal"
-        >
-          <SetupPaths />
-        </Section>
-
-        {/* 4 · The zero-profit rule. */}
-        <Section id="free" title="Is it free for you?" lede="No license, no payment, no registration." pad="tight">
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', md: 'minmax(0,1.5fr) minmax(0,1fr)' }, gap: { xs: 4, md: 6 }, alignItems: 'start' }}>
-            <div>
-              <Box component="ul" data-testid="free-list" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', color: color.ink2 }}>
-                {[
-                  ['Zero-profit LANs', freeUseHelp],
-                  ['Non-profit organizations', freeOrganizations],
-                  ['Personal use', 'Hobby projects, learning and playing with friends, under PolyForm’s personal-use terms.'],
-                  ['MatchZy Enhanced, always', 'The MIT CS2 plugin is free for any use, including paid work. CS2 Server Manager and Ready Up need a license when someone earns money from them.'],
-                ].map(([head, body]) => (
-                  <Box
-                    key={head}
-                    component="li"
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: { xs: 'minmax(0,1fr)', sm: 'minmax(0,12rem) minmax(0,1fr)' },
-                      gap: { xs: 0.5, sm: 3 },
-                      py: 2,
-                      borderTop: `1px solid ${color.rule}`,
-                    }}
-                  >
-                    <Typography sx={{ color: color.ink, fontWeight: 600 }}>{head}</Typography>
-                    <Typography sx={{ fontSize: '0.9375rem' }}>{body}</Typography>
-                  </Box>
-                ))}
-              </Box>
-              <Typography sx={{ mt: 1, pt: 2, borderTop: `1px solid ${color.rule}`, color: color.ink }}>
-                <strong>Who pays:</strong> {earnMoneyRule}
-              </Typography>
-            </div>
-            <FreeLanConfirmation headingLevel="h3" />
-          </Box>
-        </Section>
-
-        {/* 5 · The packs, with direct Stripe checkout. */}
+        {/* 3 · The packs, with direct Stripe checkout. */}
         <Section
           id="packs"
-          title="Pick a pack"
+          title="All packs"
           lede="One fixed price, sized by the most game servers you set up at the same time, spares included."
-          pad="loose"
+          pad="normal"
         >
-          {/* The setup cards link here; PackPricing reads the hash and opens that product. */}
+          {/* The guide and old links point here; PackPricing reads the hash and opens that product. */}
           <Box component="span" id="packs-servers" aria-hidden sx={{ display: 'block', height: 0 }} />
           <Box component="span" id="packs-platform" aria-hidden sx={{ display: 'block', height: 0 }} />
           <Box
@@ -417,27 +382,24 @@ export default async function Pricing() {
             </Box>
           </Box>
           <PackPricing packs={packs} pricesAvailable={pricesAvailable} founderOpen={founderOpen} />
+          <Typography sx={{ mt: 3, maxWidth: '62ch', color: color.muted, fontSize: '0.875rem' }}>
+            {pricingVersion}. If a price doesn&apos;t fit your case,{' '}
+            <Box component="a" href={`${links.contact}?topic=quote`} sx={underline}>
+              contact us
+            </Box>{' '}
+            and we&apos;ll work it out.
+          </Typography>
         </Section>
 
-        {/* 6 · How it compares, from checked sources only. */}
-        <Section
-          id="compare"
-          title="What the alternatives cost"
-          lede="Public prices, checked on 28 September 2026, each with its source. Where an alternative does something we don’t, it says so."
-          pad="normal"
-        >
-          <Alternatives packs={packs} />
-        </Section>
-
-        {/* 7 · The calculator. */}
-        <Section
-          id="calculator-intro"
-          title="Can't decide? Let us recommend a pack"
-          lede="Tell us what you'll run and how many servers, and we'll suggest the right pack."
-          pad="normal"
-        >
-          <PriceCalculator packs={packs} pricesAvailable={pricesAvailable} />
-        </Section>
+        {/* 4 · How it compares, from checked sources only, folded. */}
+        <Container maxWidth="lg" component="section" aria-label="Compare" sx={{ pb: { xs: 2, md: 4 } }}>
+          <Disclosure id="compare" title="What the alternatives cost">
+            <Typography sx={{ mb: 3, color: color.ink2, maxWidth: '62ch' }}>
+              Public prices, checked on 28 September 2026, each with its source. Where an alternative does something we don’t, it says so.
+            </Typography>
+            <Alternatives packs={packs} />
+          </Disclosure>
+        </Container>
 
         {/* 8 · The fine print, folded. Same wording as before; /terms has the full text. */}
         <Section

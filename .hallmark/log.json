@@ -1,6 +1,15 @@
 [
   {
     "date": "2026-09-28",
+    "macrostructure": "Guided flow (stepped questions \u2192 one answer \u2192 folded details)",
+    "theme": "Auto Tournament system (tokens.ts)",
+    "enrichment": "none (game app icons as tile marks)",
+    "nav": "N5 (existing)",
+    "footer": "Ft5 (existing)",
+    "brief": "autotournament.gg/pricing for dummies \u00b7 interactive guide first, details folded below"
+  },
+  {
+    "date": "2026-09-28",
     "macrostructure": "Map / Diagram",
     "theme": "Auto Tournament system (tokens.ts)",
     "enrichment": "none (HTML stack diagram)",

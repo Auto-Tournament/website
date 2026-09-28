@@ -1,5 +1,4 @@
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
 import { fontDisplay, fontMono } from '@/theme/theme';
@@ -7,17 +6,13 @@ import { formatEuro, packIn, type Pack } from '@/components/pricing';
 
 /*
  * The explaining parts of the pricing page: what each product is (a stack
- * diagram), which setup fits whom, and what the alternatives cost. No hooks,
- * so they render on the server with the page.
+ * diagram) and what the alternatives cost. No hooks, so they render on the
+ * server with the page.
  */
 
 const { color, radius } = tokens;
 
 const underline = { color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule, textUnderlineOffset: '0.15em' } as const;
-
-const repos = {
-  cs2Plugin: 'https://github.com/Auto-Tournament/cs2-plugin',
-};
 
 /** A link that leaves the site: new tab, with an arrow. */
 function Out({ href, children }: { href: string; children: React.ReactNode }) {
@@ -30,7 +25,7 @@ function Out({ href, children }: { href: string; children: React.ReactNode }) {
 
 type ProductNo = 1 | 2 | 3 | 4;
 
-/** The numbered dot that ties the diagram, the legend and the setup cards together. */
+/** The numbered dot that ties the diagram and its legend together. */
 function Marker({ n, dim = false, size = 22 }: { n: ProductNo; dim?: boolean; size?: number }) {
   return (
     <Box
@@ -96,8 +91,6 @@ const products: Product[] = [
   },
   { n: 4, name: 'MatchZy Enhanced', line: 'Our MIT CS2 match plugin. It does the same job as Ready Up, free for everyone.', covered: 'Free for any use (MIT)' },
 ];
-
-const nameOf = (n: ProductNo) => products.find((p) => p.n === n)!.name;
 
 /**
  * The stack: the platform on top, one machine of CS2 servers below it, a
@@ -186,7 +179,7 @@ export function ProductStack() {
                 <Marker n={p.n} />
               </Box>
               <div>
-                <Typography component="h3" sx={{ fontFamily: fontDisplay, fontWeight: 700, fontSize: '1.0625rem', lineHeight: 1.35 }}>
+                <Typography component="h4" sx={{ fontFamily: fontDisplay, fontWeight: 700, fontSize: '1.0625rem', lineHeight: 1.35 }}>
                   {p.name}
                 </Typography>
                 <Typography sx={{ color: color.ink2, mt: 0.25 }}>{p.line}</Typography>
@@ -196,162 +189,6 @@ export function ProductStack() {
           ))}
         </Box>
       </Box>
-    </Box>
-  );
-}
-
-type Setup = {
-  id: string;
-  name: string;
-  tools: string;
-  includes: ProductNo[];
-  who: string;
-  get: string;
-  good: string[];
-  mind: string[];
-  pack: string;
-  cta: { label: string; href: string; external?: boolean };
-};
-
-const setups: Setup[] = [
-  {
-    id: 'setup-plugin',
-    name: 'Just a match plugin',
-    tools: 'MatchZy Enhanced',
-    includes: [4],
-    who: 'You already have your servers and run the bracket somewhere else. You want each match handled on the server.',
-    get: 'Our MIT CS2 plugin on each server: ready-up, pauses, demos and results.',
-    good: ['Free for any use, including paid work. No license, no sign-up.', 'Does more match work than Ready Up today, such as demo upload.'],
-    mind: ['You install and update each server yourself.', 'No sign-ups, brackets or tournament website.', 'CS2 only.'],
-    pack: 'No pack needed',
-    cta: { label: 'Get the plugin', href: repos.cs2Plugin, external: true },
-  },
-  {
-    id: 'setup-servers',
-    name: 'Servers',
-    tools: 'CS2 Server Manager + Ready Up',
-    includes: [2, 3],
-    who: 'Server operators and freelancers who set up and run CS2 servers for LANs.',
-    get: 'Many CS2 servers installed, updated and run from one machine, with Ready Up running the match on each.',
-    good: ['Install and update a whole set of servers from one place.', 'Free when nobody earns money from it.'],
-    mind: [
-      'No sign-ups or brackets: bring your own tournament tool.',
-      'Ready Up is still early. MatchZy Enhanced does more today, and runs under CS2 Server Manager too.',
-      'Free tools such as LinuxGSM and Pterodactyl also install CS2 servers.',
-    ],
-    pack: 'Servers packs',
-    cta: { label: 'See Servers packs', href: '#packs-servers' },
-  },
-  {
-    id: 'setup-platform',
-    name: 'Platform',
-    tools: 'Everything',
-    includes: [1, 2, 3],
-    who: 'Organizers running a tournament or a LAN.',
-    get: 'Your tournament’s website with sign-ups, brackets, map veto, admin and live scores, plus CS2 Server Manager and Ready Up. Other games come as game packs.',
-    good: ['One self-hosted system, from sign-up to final.', 'Your servers and match control run at the venue.'],
-    mind: ['CS2 is the only game pack today; the others are planned.', 'No paid registration, ticketing or stream overlays yet.', 'You host and look after it yourself.'],
-    pack: 'Platform packs',
-    cta: { label: 'See Platform packs', href: '#packs-platform' },
-  },
-];
-
-function Points({ label, items, tone }: { label: string; items: string[]; tone: 'good' | 'mind' }) {
-  return (
-    <div>
-      <Typography sx={{ fontWeight: 600, color: color.ink, fontSize: '0.875rem', mb: 0.75 }}>{label}</Typography>
-      <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 0.75, fontSize: '0.9375rem', color: color.ink2 }}>
-        {items.map((item) => (
-          <Box
-            component="li"
-            key={item}
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: '14px minmax(0,1fr)',
-              columnGap: 1,
-              '&::before': {
-                content: tone === 'good' ? '"+"' : '"–"',
-                color: tone === 'good' ? color.live : color.muted,
-                fontWeight: 700,
-                lineHeight: 1.55,
-              },
-            }}
-          >
-            {item}
-          </Box>
-        ))}
-      </Box>
-    </div>
-  );
-}
-
-/** Three setups side by side: who each is for, what you get, the honest trade-offs, and which packs it maps to. */
-export function SetupPaths() {
-  return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', md: 'repeat(3, minmax(0,1fr))' }, gap: { xs: 2, md: 2.5 } }}>
-      {setups.map((s) => (
-        <Box
-          component="article"
-          key={s.id}
-          id={s.id}
-          aria-labelledby={`${s.id}-name`}
-          sx={{
-            bgcolor: color.paper2,
-            border: `1px solid ${color.rule}`,
-            borderRadius: `${radius.lg}px`,
-            p: { xs: 2.5, md: 3 },
-            display: 'grid',
-            gridTemplateRows: 'auto auto auto auto 1fr auto',
-            gap: 2,
-          }}
-        >
-          <Box sx={{ display: 'flex', gap: 0.5 }} aria-hidden>
-            {([1, 2, 3, 4] as ProductNo[]).map((n) => (
-              <Marker key={n} n={n} dim={!s.includes.includes(n)} size={20} />
-            ))}
-          </Box>
-          <div>
-            <Typography id={`${s.id}-name`} variant="h3">
-              {s.name}
-            </Typography>
-            <Typography sx={{ color: color.muted, fontSize: '0.875rem', mt: 0.5 }}>
-              {s.tools}
-              <Box component="span" sx={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' }}>
-                {`: ${s.includes.map(nameOf).join(', ')}`}
-              </Box>
-            </Typography>
-          </div>
-          <Typography sx={{ color: color.ink }}>
-            <Box component="strong" sx={{ fontWeight: 600 }}>
-              For:
-            </Box>{' '}
-            {s.who}
-          </Typography>
-          <Typography sx={{ color: color.ink2 }}>
-            <Box component="strong" sx={{ fontWeight: 600, color: color.ink }}>
-              You get:
-            </Box>{' '}
-            {s.get}
-          </Typography>
-          <Box sx={{ display: 'grid', gap: 2, alignContent: 'start' }}>
-            <Points label="Good" items={s.good} tone="good" />
-            <Points label="Keep in mind" items={s.mind} tone="mind" />
-          </Box>
-          <Box sx={{ borderTop: `1px solid ${color.rule}`, pt: 2, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-            <Typography sx={{ fontWeight: 600, fontSize: '0.9375rem', color: s.includes.includes(1) || s.includes.includes(2) ? color.ink : color.live }}>{s.pack}</Typography>
-            <Button
-              variant="outlined"
-              size="small"
-              href={s.cta.href}
-              {...(s.cta.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-              sx={{ whiteSpace: 'nowrap' }}
-            >
-              {s.cta.label}
-              {s.cta.external ? ' ↗' : ''}
-            </Button>
-          </Box>
-        </Box>
-      ))}
     </Box>
   );
 }
@@ -459,7 +296,7 @@ export function Alternatives({ packs }: { packs: readonly Pack[] }) {
         ))}
       </Box>
       <Box component="aside" aria-labelledby="gaps-title" sx={{ bgcolor: color.paper2, border: `1px solid ${color.rule}`, borderRadius: `${radius.lg}px`, p: 3 }}>
-        <Typography id="gaps-title" component="h3" sx={{ fontFamily: fontDisplay, fontWeight: 700, fontSize: '1.125rem', mb: 1.5 }}>
+        <Typography id="gaps-title" component="h4" sx={{ fontFamily: fontDisplay, fontWeight: 700, fontSize: '1.125rem', mb: 1.5 }}>
           Where we’re behind
         </Typography>
         <Box component="ul" sx={{ m: 0, pl: 2.5, display: 'grid', gap: 1, color: color.ink2, fontSize: '0.9375rem' }}>

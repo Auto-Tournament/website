@@ -7,7 +7,7 @@ const { color, radius } = tokens;
 
 /**
  * The optional free LAN confirmation, shown by the free tier and in the
- * calculator's free result. Voluntary: PolyForm already grants non-commercial
+ * pricing guide's free answer. Voluntary: PolyForm already grants non-commercial
  * use, so never word it as a requirement. No hooks, so it renders in both
  * server and client components.
  */

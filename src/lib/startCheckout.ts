@@ -3,7 +3,7 @@
 /**
  * Client-side helper that POSTs /api/checkout and redirects to the returned
  * Stripe Checkout url. Shared by the pack cards, the founder strip and the
- * calculator so all three handle the response the same way.
+ * pricing guide so all three handle the response the same way.
  */
 import type { CheckoutRequest } from '@/lib/checkout';
 

@@ -1,5 +1,5 @@
 /**
- * Shared pricing facts for the pricing page and the price calculator. No
+ * Shared pricing facts for the pricing page and the pricing guide. No
  * 'use client' here: the pricing page (a server component) reads it directly.
  *
  * Stripe is the source of truth for the pack prices and server limits: the
@@ -177,11 +177,11 @@ export function founderSalesOpen(sold: number, now: Date = new Date()): boolean 
   return sold < founderLimit && now.toISOString().slice(0, 10) <= founderLastDay;
 }
 
-/** What "lifetime" means. Used on the pricing page, the calculator and /terms. */
+/** What "lifetime" means. Used on the pricing page, the guide and /terms. */
 export const founderLifetime =
   'for as long as we sell the software your pack covers, including new major versions and renamed successors of it';
 
-/** The one-line pitch: founder strip and calculator. */
+/** The one-line pitch on the founder strip. */
 export const founderPitch = `Pay once and get lifetime updates: every new version, ${founderLifetime}. No yearly fee.`;
 
 export const founderUpdateWarning = 'CS2 updates can break older versions; install our updates to stay current';
@@ -217,7 +217,7 @@ export function founderTerms(packs: readonly Pack[]): string[] {
 
 /**
  * The rule behind every price: if you earn money from it, you pay full price.
- * Shown in the calculator's "?" next to the free option.
+ * Shown in the pricing guide's free answer.
  */
 export const freeUseHelp =
   'Free when nobody earns money from it: all entry fees and sponsor money go back into the event, and no organizer, volunteer or helper is paid or takes profit.';
@@ -259,25 +259,6 @@ export const vatNote =
 /** Short form next to prices. */
 export const vatShort = 'excl. VAT';
 
-/** Tools someone ticks in "What will you run?". */
+/** Tool ids on the price page side; /api/checkout maps them to its own ids. */
 export type ToolOption = 'matchzy' | 'serverManager' | 'readyUp' | 'platform';
 
-export const toolLabels: Record<ToolOption, string> = {
-  matchzy: 'MatchZy Enhanced (MIT CS2 plugin)',
-  serverManager: 'CS2 Server Manager',
-  readyUp: 'Ready Up (native CS2 plugin)',
-  platform: 'Auto Tournament platform',
-};
-
-export const toolOrder: ToolOption[] = ['matchzy', 'serverManager', 'readyUp', 'platform'];
-
-/** Who the license is for. */
-export type UseType = 'commercial' | 'noncommercial' | 'nonprofit';
-
-export const useTypeLabels: Record<UseType, string> = {
-  commercial: 'Commercial (someone earns money)',
-  noncommercial: 'Non-commercial: nobody earns money (free)',
-  nonprofit: 'Non-profit organization (free)',
-};
-
-export const useTypeOrder: UseType[] = ['commercial', 'noncommercial', 'nonprofit'];
