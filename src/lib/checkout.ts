@@ -1,5 +1,5 @@
 /**
- * Pure checkout logic shared by the calculator (client) and /api/checkout
+ * Pure checkout logic shared by the pricing guide (client) and /api/checkout
  * (server): tools → product, servers → pack, request validation, the license
  * text, and the small abuse limits. The packs (prices and server limits) are
  * passed in: they come from Stripe (src/lib/stripePrices.ts). No Stripe import
@@ -27,7 +27,7 @@ export type CheckoutPeriod = Period;
 export const minServers = 1;
 export const maxBodyBytes = 2048;
 
-/** Calculator tool ids → the ids the checkout API takes. */
+/** Price-page tool ids → the ids the checkout API takes. */
 export const checkoutToolFor: Record<ToolOption, CheckoutTool> = {
   matchzy: 'matchzy',
   serverManager: 'csm',

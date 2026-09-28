@@ -76,8 +76,8 @@ export default async function Terms() {
       <H2 id="packs">4. Packs and server limits</H2>
       <p>
         Your pack allows no more than its number of game servers set up at any one time during the period, spares included: S up to {upTo('servers-s')}, M up to {upTo('servers-m')}, L up to{' '}
-        {upTo('servers-l')}. The pack and its server limit are in your license key. Only servers used for the licensed commercial activity count; test, staging
-        and CI servers don&apos;t.
+        {upTo('servers-l')}. The pack and its server limit are in your license key. Every game server running the licensed software counts, including spares,
+        practice and test servers.
       </p>
       <ul>
         <li>One pack per event, or per 12 months for a yearly pack.</li>
@@ -168,7 +168,7 @@ export default async function Terms() {
 
       <H2 id="who-pays">11. Who needs a license</H2>
       <p>
-        If you earn money from it, you pay full price. That includes an organizer who makes a profit, any business, and a paid operator or contractor, even one
+        If you earn money from it, you need a license. That includes an organizer who makes a profit, any business, and a paid operator or contractor, even one
         hired by an event that is itself free.
       </p>
       <p>

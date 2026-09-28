@@ -1,11 +1,14 @@
+/*
+ * Hallmark · macrostructure: Guided flow (question steps → one answer → folded details: diagram, packs, alternatives, fine print)
+ * genre: modern-minimal · theme: Auto Tournament system (src/theme/tokens.ts, Sora + Geist) · nav: N5 · footer: Ft5
+ * pre-emit critique: P4 H5 E4 S5 R4 V4
+ */
 import type { Metadata } from 'next';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
-import { Reveal } from '@/components/ui';
 import { Footer, Nav } from '@/components/sections';
 import { links } from '@/components/links';
 import {
@@ -25,7 +28,6 @@ import {
   packRules,
   pricingVersion,
   serverLimitRule,
-  vatNote,
   yearlyAfterExpiry,
   yearlyCs2Note,
   yearlyUpdates,
@@ -36,8 +38,10 @@ import {
 import { getPacks } from '@/lib/stripePrices';
 import { PackPricing } from '@/components/PackPricing';
 import { licenseStore } from '@/lib/license/store';
-import { PriceCalculator } from '@/components/PriceCalculator';
-import { FreeLanConfirmation } from '@/components/FreeLanConfirmation';
+import { PackFinder } from '@/components/PackFinder';
+import { parseAnswers } from '@/components/findPack';
+import { Disclosure } from '@/components/Disclosure';
+import { Alternatives, ProductStack } from '@/components/PricingGuide';
 
 const { color, radius } = tokens;
 
@@ -61,18 +65,51 @@ export const metadata: Metadata = {
 const email = 'sivert@autotournament.gg';
 const mailHref = `mailto:${email}`;
 
-function Section({ id, title: heading, lede, children }: { id?: string; title: string; lede?: React.ReactNode; children: React.ReactNode }) {
+const underline = { color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule, textUnderlineOffset: '0.15em' } as const;
+/** Short links inside prose: keep them on one line. */
+const underlineNowrap = { ...underline, whiteSpace: 'nowrap' } as const;
+
+/** A page section with an h2. `pad` varies the rhythm so every section doesn't sit on the same spacing. */
+function Section({
+  id,
+  title: heading,
+  lede,
+  pad = 'normal',
+  split = false,
+  children,
+}: {
+  id: string;
+  title: string;
+  lede?: React.ReactNode;
+  pad?: 'tight' | 'normal' | 'loose';
+  /** Heading in a narrow column on the left (it stays in view on desktop), content on the right. */
+  split?: boolean;
+  children: React.ReactNode;
+}) {
+  const py = { tight: { xs: 5, md: 7 }, normal: { xs: 6, md: 10 }, loose: { xs: 8, md: 13 } }[pad];
   return (
-    <Container maxWidth="lg" component="section" id={id} sx={{ py: { xs: 6, md: 10 } }}>
-      <Reveal>
-        <Box sx={{ maxWidth: '48rem', mb: { xs: 4, md: 6 } }}>
-          <Typography variant="h2">{heading}</Typography>
-          {lede && (
-            <Typography sx={{ mt: 2, color: color.ink2 }}>{lede}</Typography>
-          )}
-        </Box>
-        {children}
-      </Reveal>
+    <Container
+      maxWidth="lg"
+      component="section"
+      id={id}
+      aria-labelledby={`${id}-title`}
+      sx={{
+        py,
+        ...(split && {
+          display: 'grid',
+          gridTemplateColumns: { xs: 'minmax(0,1fr)', md: 'minmax(0,1fr) minmax(0,2.2fr)' },
+          columnGap: { md: 8 },
+          alignItems: 'start',
+        }),
+      }}
+    >
+      <Box sx={{ maxWidth: '46rem', mb: { xs: 4, md: split ? 0 : 5 }, ...(split && { position: { md: 'sticky' }, top: { md: 112 } }) }}>
+        <Typography id={`${id}-title`} variant="h2">
+          {heading}
+        </Typography>
+        {lede && <Typography sx={{ mt: 2, color: color.ink2 }}>{lede}</Typography>}
+      </Box>
+      {children}
     </Container>
   );
 }
@@ -218,7 +255,7 @@ function faqFor(packs: readonly Pack[]): { q: string; a: React.ReactNode }[] {
     },
     {
       q: 'I’m paid to run servers at a volunteer event. Do I need a license?',
-      a: 'Yes, at the full price. You earn money from it, so your use is commercial, even when the event itself is free.',
+      a: 'Yes. You earn money from it, so you need a license, even when the event itself is free.',
     },
     {
       q: 'Do players or teams need a license?',
@@ -243,7 +280,11 @@ function faqFor(packs: readonly Pack[]): { q: string; a: React.ReactNode }[] {
   ];
 }
 
-export default async function Pricing() {
+const list = { m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2 } as const;
+
+export default async function Pricing({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  // The guide's answers live in the query, so a reload or a shared link (or a browser without JavaScript) lands on the same step.
+  const initial = parseAnswers(await searchParams);
   // Plain numbers only go to the client components; the Stripe price ids stay here.
   const priceSource = await getPacks();
   let founderOpen = true;
@@ -260,244 +301,294 @@ export default async function Pricing() {
     <>
       <Nav />
       <main>
-        <Box component="section">
-          <Container maxWidth="lg" sx={{ pt: { xs: 8, md: 14 }, pb: { xs: 4, md: 6 } }}>
-            <Typography variant="h1" sx={{ fontSize: 'clamp(2.25rem, 3vw + 1rem, 4rem)', maxWidth: '22ch' }}>
-              Free if nobody earns money from it.{' '}
-              <Box component="span" sx={{ color: color.accent }}>
-                If you do, pick a pack.
-              </Box>
-            </Typography>
-            <Typography sx={{ mt: 3, maxWidth: '56ch', color: color.ink2, fontSize: '1.125rem' }}>
-              One fixed price per event, per year, or once as a founding supporter. The pack size is the most game servers you set up at a time.
-            </Typography>
-            <Typography sx={{ mt: 2, maxWidth: '56ch', color: color.muted, fontSize: '0.9375rem' }}>
-              {pricingVersion}. Prices in EUR. {vatNote}. If a price doesn&apos;t fit your case,{' '}
-              <Box component="a" href={`${links.contact}?topic=quote`} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
-                contact us
-              </Box>{' '}
-              and we&apos;ll work it out.
-            </Typography>
+        {/* 1 · The rule, then the guide: a few questions, one answer. */}
+        <Box component="section" id="guide" aria-labelledby="pricing-title" sx={{ scrollMarginTop: 80 }}>
+          {/* Old links (#calculator, #setups, #free) land on the guide. */}
+          <Box component="span" id="calculator" aria-hidden sx={{ display: 'block', height: 0 }} />
+          <Box component="span" id="setups" aria-hidden sx={{ display: 'block', height: 0 }} />
+          <Box component="span" id="free" aria-hidden sx={{ display: 'block', height: 0 }} />
+          <Container maxWidth="lg" sx={{ pt: { xs: 5, md: 10 }, pb: { xs: 5, md: 8 } }}>
+            <Box sx={{ maxWidth: '52rem', mx: 'auto', display: 'grid', gap: { xs: 3, md: 4 } }}>
+              <div>
+                <Typography id="pricing-title" variant="h1" sx={{ fontSize: 'clamp(2rem, 2.4vw + 1rem, 3.25rem)', maxWidth: '22ch' }}>
+                  Free if nobody earns money from your events.{' '}
+                  <Box component="span" sx={{ color: color.accent }}>
+                    If someone does, one fixed price.
+                  </Box>
+                </Typography>
+                <Typography sx={{ mt: 2, maxWidth: '58ch', color: color.ink2, fontSize: { xs: '1rem', md: '1.125rem' } }}>
+                  Free for non-profit events and for trying it out privately. The moment you earn money from it, you need a license. Answer a few questions
+                  to see if you need one, and which.
+                </Typography>
+              </div>
+              <PackFinder packs={packs} pricesAvailable={pricesAvailable} founderOpen={founderOpen} initial={initial} />
+              <Typography sx={{ color: color.muted, fontSize: '0.875rem' }}>
+                Rather compare everything yourself?{' '}
+                <Box component="a" href="#packs" sx={underline}>
+                  See all packs
+                </Box>{' '}
+                or{' '}
+                <Box component="a" href={`${links.contact}?topic=quote`} target="_blank" rel="noopener" sx={underline}>
+                  ask us
+                </Box>
+                .
+              </Typography>
+            </Box>
           </Container>
         </Box>
 
-        <Container maxWidth="lg" component="section" id="packs" aria-label="Packs" sx={{ pb: { xs: 6, md: 10 } }}>
-          <PackPricing packs={packs} pricesAvailable={pricesAvailable} founderOpen={founderOpen} />
+        {/* 2 · What each product is, as one diagram, folded. */}
+        <Container maxWidth="lg" component="section" aria-labelledby="details-title" sx={{ pt: { xs: 5, md: 8 } }}>
+          <Typography id="details-title" variant="h2" sx={{ mb: { xs: 2, md: 3 } }}>
+            The details
+          </Typography>
+          <Disclosure id="whats-what" title="What you’d be buying: the four pieces, in one picture">
+            <ProductStack />
+          </Disclosure>
         </Container>
 
-        <Section id="free" title="Free if…" lede="No license, no payment, no registration.">
-          <Box component="ul" data-testid="free-list" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2, gridTemplateColumns: { xs: 'minmax(0,1fr)', md: '1fr 1fr' } }}>
-            {[
-              ['Zero-profit LANs', freeUseHelp],
-              ['Non-profit organizations', freeOrganizations],
-              ['Personal use', 'Hobby projects, learning and playing with friends, under PolyForm’s personal-use terms.'],
-              ['MatchZy Enhanced, always', 'The MIT CS2 plugin is free for any use, including paid work. CS2 Server Manager and Ready Up need a license when someone earns money from them.'],
-            ].map(([head, body]) => (
-              <Box key={head} component="li" sx={{ bgcolor: color.paper2, border: `1px solid ${color.rule}`, borderRadius: `${radius.lg}px`, p: 2.5 }}>
-                <Typography sx={{ color: color.ink, fontWeight: 600, mb: 0.5 }}>{head}</Typography>
-                <Typography sx={{ fontSize: '0.9375rem' }}>{body}</Typography>
-              </Box>
-            ))}
+        {/* 3 · The packs, with direct Stripe checkout. */}
+        <Section
+          id="packs"
+          title="All packs"
+          lede="One fixed price, sized by the most game servers you set up at the same time, spares included."
+          pad="normal"
+        >
+          {/* The guide and old links point here; PackPricing reads the hash and opens that product. */}
+          <Box component="span" id="packs-servers" aria-hidden sx={{ display: 'block', height: 0 }} />
+          <Box component="span" id="packs-platform" aria-hidden sx={{ display: 'block', height: 0 }} />
+          <Box
+            component="ul"
+            data-testid="pack-notes"
+            sx={{ ...list, gap: { xs: 1.5, md: 3 }, mb: { xs: 4, md: 5 }, gridTemplateColumns: { xs: 'minmax(0,1fr)', md: 'repeat(3, minmax(0,1fr))' }, fontSize: '0.9375rem' }}
+          >
+            <Box component="li" sx={{ borderLeft: { md: `1px solid ${color.rule}` }, pl: { md: 2 } }}>
+              <Box component="strong" sx={{ color: color.ink }}>
+                What counts:
+              </Box>{' '}
+              every game server running our software, today CS2 Server Manager and Ready Up, including spares, practice and test servers. Game servers without our software don&apos;t count.
+            </Box>
+            <Box component="li" sx={{ borderLeft: { md: `1px solid ${color.rule}` }, pl: { md: 2 } }}>
+              <Box component="strong" sx={{ color: color.ink }}>
+                Other games:
+              </Box>{' '}
+              a Platform pack covers the game packs you use with it. There is no separate price for game packs.
+            </Box>
+            <Box component="li" sx={{ borderLeft: { md: `1px solid ${color.rule}` }, pl: { md: 2 } }}>
+              <Box component="strong" sx={{ color: color.ink }}>
+                How long:
+              </Box>{' '}
+              one event is up to 5 days in a row. Yearly is 12 months with unlimited events, and never renews by itself.
+            </Box>
           </Box>
-          <Typography sx={{ mt: 3, color: color.ink2 }}>
-            <strong>Who pays:</strong> {earnMoneyRule}
+          <PackPricing packs={packs} pricesAvailable={pricesAvailable} founderOpen={founderOpen} />
+          <Typography sx={{ mt: 3, maxWidth: '62ch', color: color.muted, fontSize: '0.875rem' }}>
+            {pricingVersion}. If a price doesn&apos;t fit your case,{' '}
+            <Box component="a" href={`${links.contact}?topic=quote`} target="_blank" rel="noopener" sx={underline}>
+              contact us
+            </Box>{' '}
+            and we&apos;ll work it out.
           </Typography>
         </Section>
 
+        {/* 4 · How it compares, from checked sources only, folded. */}
+        <Container maxWidth="lg" component="section" aria-label="Compare" sx={{ pb: { xs: 2, md: 4 } }}>
+          <Disclosure id="compare" title="What the alternatives cost">
+            <Typography sx={{ mb: 3, color: color.ink2, maxWidth: '62ch' }}>
+              Public prices, checked on 28 September 2026, each with its source. Where an alternative does something we don’t, it says so.
+            </Typography>
+            <Alternatives packs={packs} />
+          </Disclosure>
+        </Container>
+
+        {/* 8 · The fine print, folded. Same wording as before; /terms has the full text. */}
         <Section
-          id="calculator-intro"
-          title="Can't decide? Let us recommend a pack"
-          lede="Tell us what you'll run and how many servers, and we'll suggest the right pack."
-        >
-          <PriceCalculator packs={packs} pricesAvailable={pricesAvailable} />
-        </Section>
-
-        <Section id="rules" title="The rules" lede="Short, so there are no surprises.">
-          <Box component="ul" data-testid="pack-rules" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2 }}>
-            {[
-              serverLimitRule,
-              ...packRules(packs),
-              'What counts is what you run: CS2 Server Manager and Ready Up each need a license for commercial use; MatchZy Enhanced never does. Either or both of them is a Servers pack.',
-              'A Platform pack covers the game packs used with it. There is no separate price for game packs.',
-            ].map((item) => (
-              <Box key={item} component="li" sx={bullet}>
-                {item}
-              </Box>
-            ))}
-          </Box>
-
-          <Box id="founder-terms" sx={{ mt: { xs: 4, md: 5 }, scrollMarginTop: 96 }}>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.25, mb: 2 }}>
-              <Typography variant="h3" sx={{ fontSize: '1.25rem' }}>
-                Founding supporter terms
-              </Typography>
-              <Chip size="small" variant="outlined" label={founderBadge} />
-            </Box>
-            <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2 }}>
-              {[...founderTerms(packs), `${founderUpdateWarning}.`, neverLockOut].map((item) => (
-                <Box key={item} component="li" sx={bullet}>
-                  {item}
-                </Box>
-              ))}
-            </Box>
-          </Box>
-        </Section>
-
-        <Section
-          id="licenses"
-          title="What's licensed how"
-          lede="Each project has one license. Only the projects under PolyForm Noncommercial need a license for commercial use."
-        >
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', md: '1fr 1fr' }, gap: 3 }}>
-            {licenseGroups.map((group) => (
-              <Box key={group.license} sx={{ bgcolor: color.paper2, border: `1px solid ${color.rule}`, borderRadius: `${radius.lg}px`, p: 3 }}>
-                <Chip size="small" color={group.mit ? 'primary' : 'default'} label={group.license} sx={{ mb: 1.5 }} />
-                <Typography sx={{ color: color.ink, fontWeight: 600, mb: 1.5 }}>{group.summary}</Typography>
-                <Box component="ul" sx={{ m: 0, pl: 2.5, color: color.ink2, display: 'grid', gap: 1 }}>
-                  {group.items.map((item) => (
-                    <li key={item.name}>
-                      {item.href ? (
-                        <Box component="a" href={item.href} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
-                          {item.name}
-                        </Box>
-                      ) : (
-                        item.name
-                      )}
-                      {item.note ? <Box component="span" sx={{ color: color.muted }}>{` (${item.note})`}</Box> : null}
-                    </li>
-                  ))}
-                </Box>
-              </Box>
-            ))}
-          </Box>
-          <Typography sx={{ mt: 3, color: color.muted, fontSize: '0.875rem' }}>
-            Forks can&apos;t be relicensed. The full details are in the{' '}
-            <Box component="a" href={links.licensing} target="_blank" rel="noopener noreferrer" sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
-              license reference ↗
-            </Box>
-            .
-          </Typography>
-        </Section>
-
-        <Section
-          id="commercial-use"
-          title="What counts as commercial use"
-          lede="If you earn money from it, you pay full price. Any of the following with the platform, CS2 Server Manager, Ready Up or a game pack needs a license. A Platform pack covers the game packs used with it."
-        >
-          <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2 }}>
-            {[
-              'Paid hosting.',
-              'Selling or reselling Auto Tournament.',
-              'Events where the organizer makes a profit.',
-              'Use inside a business.',
-              'Being paid to set up or operate servers or tournaments for someone else, even for a flat fee, and even when that event is free.',
-            ].map((item) => (
-              <Box key={item} component="li" sx={bullet}>
-                {item}
-              </Box>
-            ))}
-          </Box>
-        </Section>
-
-        <Section id="examples" title="Examples">
-          <Box sx={{ display: 'grid', gap: 2 }}>
-            {examples.map((ex) => (
-              <Box
-                component="article"
-                key={ex.scenario}
-                sx={{
-                  bgcolor: color.paper2,
-                  border: `1px solid ${color.rule}`,
-                  borderRadius: `${radius.lg}px`,
-                  p: 3,
-                  display: 'grid',
-                  gridTemplateColumns: { xs: 'minmax(0,1fr)', sm: 'minmax(0,1fr) auto' },
-                  gap: { xs: 1.5, sm: 3 },
-                  alignItems: 'center',
-                }}
-              >
-                <Box>
-                  <Typography sx={{ color: color.ink }}>{ex.scenario}</Typography>
-                  <Typography sx={{ mt: 0.75, color: color.muted, fontSize: '0.8125rem' }}>{ex.why}</Typography>
-                </Box>
-                <Chip size="small" color={ex.verdict === 'Free' || ex.verdict === 'No license needed' ? 'default' : 'primary'} label={ex.verdict} sx={{ justifySelf: { xs: 'start', sm: 'end' } }} />
-              </Box>
-            ))}
-          </Box>
-        </Section>
-
-        <Section
-          id="what-we-need"
-          title="What we need from you"
-          lede="Licenses are sold to businesses and organizations, including clubs and associations, not to consumers. A license names who holds it, so we verify every buyer before sending the license confirmation."
-        >
-          <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2 }}>
-            {[
-              'The legal name of the company or organization, and your name',
-              'Organization number, and VAT ID if it has one',
-              'Country and billing address',
-              'Contact email and phone',
-              'The event: name, date(s), venue or city, and website or social link. Paid operators: the event or client you work for',
-              'The pack and period, which tools you’ll run, and how many servers you’ll set up (spares included)',
-            ].map((item) => (
-              <Box key={item} component="li" sx={bullet}>
-                {item}
-              </Box>
-            ))}
-          </Box>
-          <Typography sx={{ mt: 3, color: color.ink2 }}>
-            We check the details before issuing the license. If something doesn&apos;t match, we&apos;ll ask, and we refund in full if we can&apos;t verify you.
-          </Typography>
-          <Box sx={{ mt: 3 }}>
-            <FreeLanConfirmation />
-          </Box>
-        </Section>
-
-        <Section
-          id="get-a-license"
-          title="Getting a license"
+          id="fine-print"
+          title="Rules and licenses"
           lede={
             <>
-              Email{' '}
-              <Box component="a" href={mailHref} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
-                {email}
-              </Box>{' '}
-              or use the calculator above, then:
-            </>
-          }
-        >
-          <Box component="ol" sx={{ m: 0, p: 0, pl: 2.5, color: color.ink2, display: 'grid', gap: 1.5 }}>
-            <li>Pay by card with the calculator above, or ask for an invoice by email. Either way you get an invoice.</li>
-            <li>
-              By paying you accept the{' '}
-              <Box component="a" href={links.terms} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
+              The short version. The{' '}
+              <Box component="a" href={links.terms} sx={underlineNowrap}>
                 Commercial License Terms
               </Box>{' '}
-              and{' '}
-              <Box component="a" href={links.termsOfSale} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule }}>
-                Terms of Sale
+              have the full wording.
+            </>
+          }
+          pad="tight"
+          split
+        >
+          <div>
+            <Disclosure id="rules" title="Pack rules">
+              <Box component="ul" data-testid="pack-rules" sx={list}>
+                {[
+                  serverLimitRule,
+                  ...packRules(packs),
+                  'What counts is what you run: CS2 Server Manager and Ready Up each need a license for commercial use; MatchZy Enhanced never does. Either or both of them is a Servers pack.',
+                  'A Platform pack covers the game packs used with it. There is no separate price for game packs.',
+                ].map((item) => (
+                  <Box key={item} component="li" sx={bullet}>
+                    {item}
+                  </Box>
+                ))}
               </Box>
-              .
-            </li>
-            <li>We verify the details you sent us and confirm your license by email within 2 working days.</li>
-          </Box>
-          <Typography sx={{ mt: 3, color: color.ink2 }}>
-            Buy it before the event. Not sure which pack fits? Email and ask, no charge for asking.
-          </Typography>
-          <Button variant="contained" href={mailHref} sx={{ mt: 3 }}>
-            Email {email}
-          </Button>
+            </Disclosure>
+
+            <Disclosure id="founder-terms" title="Founding supporter terms">
+              <Chip size="small" variant="outlined" label={founderBadge} sx={{ mb: 2, maxWidth: '100%', height: 'auto', py: 0.25, '& .MuiChip-label': { whiteSpace: 'normal' } }} />
+              <Box component="ul" sx={list}>
+                {[...founderTerms(packs), `${founderUpdateWarning}.`, neverLockOut].map((item) => (
+                  <Box key={item} component="li" sx={bullet}>
+                    {item}
+                  </Box>
+                ))}
+              </Box>
+            </Disclosure>
+
+            <Disclosure id="commercial-use" title="What counts as commercial use">
+              <Typography sx={{ mb: 2 }}>
+                If you earn money from it, you need a license. Any of the following with the platform, CS2 Server Manager, Ready Up or a game pack needs a license. A
+                Platform pack covers the game packs used with it.
+              </Typography>
+              <Box component="ul" sx={list}>
+                {[
+                  'Paid hosting.',
+                  'Selling or reselling Auto Tournament.',
+                  'Events where the organizer makes a profit.',
+                  'Use inside a business.',
+                  'Being paid to set up or operate servers or tournaments for someone else, even for a flat fee, and even when that event is free.',
+                ].map((item) => (
+                  <Box key={item} component="li" sx={bullet}>
+                    {item}
+                  </Box>
+                ))}
+              </Box>
+            </Disclosure>
+
+            <Disclosure id="examples" title="Examples">
+              <Box component="ul" sx={{ ...list, gap: 0 }}>
+                {examples.map((ex) => (
+                  <Box
+                    component="li"
+                    key={ex.scenario}
+                    sx={{
+                      py: 2,
+                      borderBottom: `1px solid ${color.rule}`,
+                      '&:first-of-type': { pt: 0 },
+                      '&:last-of-type': { borderBottom: 0, pb: 0 },
+                      display: 'grid',
+                      gridTemplateColumns: { xs: 'minmax(0,1fr)', sm: 'minmax(0,1fr) auto' },
+                      gap: { xs: 1, sm: 3 },
+                      alignItems: 'start',
+                    }}
+                  >
+                    <div>
+                      <Typography sx={{ color: color.ink }}>{ex.scenario}</Typography>
+                      <Typography sx={{ mt: 0.5, color: color.muted, fontSize: '0.875rem' }}>{ex.why}</Typography>
+                    </div>
+                    <Chip
+                      size="small"
+                      color={ex.verdict === 'Free' || ex.verdict === 'No license needed' ? 'default' : 'primary'}
+                      label={ex.verdict}
+                      sx={{ justifySelf: { xs: 'start', sm: 'end' } }}
+                    />
+                  </Box>
+                ))}
+              </Box>
+            </Disclosure>
+
+            <Disclosure id="licenses" title="What’s licensed how">
+              <Typography sx={{ mb: 2 }}>Each project has one license. Only the projects under PolyForm Noncommercial need a license for commercial use.</Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', md: 'minmax(0,1fr) minmax(0,1fr)' }, gap: 2 }}>
+                {licenseGroups.map((group) => (
+                  <Box key={group.license} sx={{ bgcolor: color.paper2, border: `1px solid ${color.rule}`, borderRadius: `${radius.md}px`, p: 2.5 }}>
+                    <Chip size="small" color={group.mit ? 'primary' : 'default'} label={group.license} sx={{ mb: 1.5 }} />
+                    <Typography sx={{ color: color.ink, fontWeight: 600, mb: 1.5 }}>{group.summary}</Typography>
+                    <Box component="ul" sx={{ m: 0, pl: 2.5, display: 'grid', gap: 1 }}>
+                      {group.items.map((item) => (
+                        <li key={item.name}>
+                          {item.href ? (
+                            <Box component="a" href={item.href} target="_blank" rel="noopener noreferrer" sx={underline}>
+                              {item.name} ↗
+                            </Box>
+                          ) : (
+                            item.name
+                          )}
+                          {item.note ? <Box component="span" sx={{ color: color.muted }}>{` (${item.note})`}</Box> : null}
+                        </li>
+                      ))}
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+              <Typography sx={{ mt: 2, color: color.muted, fontSize: '0.875rem' }}>
+                Forks can&apos;t be relicensed. The full details are in the{' '}
+                <Box component="a" href={links.licensing} target="_blank" rel="noopener noreferrer" sx={underlineNowrap}>
+                  license reference ↗
+                </Box>
+                .
+              </Typography>
+            </Disclosure>
+
+            <Disclosure id="get-a-license" title="Buying a license: what we need and what happens next">
+              <Box id="what-we-need">
+                <Typography sx={{ mb: 2 }}>
+                  Licenses are sold to businesses and organizations, including clubs and associations, not to consumers. A license names who holds it, so we verify
+                  every buyer before sending the license confirmation.
+                </Typography>
+                <Box component="ul" sx={list}>
+                  {[
+                    'The legal name of the company or organization, and your name',
+                    'Organization number, and VAT ID if it has one',
+                    'Country and billing address',
+                    'Contact email and phone',
+                    'The event: name, date(s), venue or city, and website or social link. Paid operators: the event or client you work for',
+                    'The pack and period, which tools you’ll run, and how many servers you’ll set up (spares included)',
+                  ].map((item) => (
+                    <Box key={item} component="li" sx={bullet}>
+                      {item}
+                    </Box>
+                  ))}
+                </Box>
+                <Typography sx={{ mt: 2 }}>
+                  We check the details before issuing the license. If something doesn&apos;t match, we&apos;ll ask, and we refund in full if we can&apos;t verify you.
+                </Typography>
+              </Box>
+              <Typography sx={{ mt: 3, mb: 1.5, color: color.ink, fontWeight: 600 }}>
+                Email{' '}
+                <Box component="a" href={mailHref} sx={underline}>
+                  {email}
+                </Box>{' '}
+                or use the buttons above, then:
+              </Typography>
+              <Box component="ol" sx={{ m: 0, p: 0, pl: 2.5, display: 'grid', gap: 1.5 }}>
+                <li>Pay by card with the buttons above, or ask for an invoice by email. Either way you get an invoice.</li>
+                <li>
+                  By paying you accept the{' '}
+                  <Box component="a" href={links.terms} sx={underlineNowrap}>
+                    Commercial License Terms
+                  </Box>{' '}
+                  and{' '}
+                  <Box component="a" href={links.termsOfSale} sx={underlineNowrap}>
+                    Terms of Sale
+                  </Box>
+                  .
+                </li>
+                <li>We verify the details you sent us and confirm your license by email within 2 working days.</li>
+              </Box>
+              <Typography sx={{ mt: 2 }}>Buy it before the event. Not sure which pack fits? Email and ask, no charge for asking.</Typography>
+            </Disclosure>
+          </div>
         </Section>
 
-        <Section id="faq" title="FAQ">
-          <Box sx={{ display: 'grid', gap: 3 }}>
-            {faq.map((item) => (
-              <Box key={item.q}>
-                <Typography variant="subtitle1">{item.q}</Typography>
-                <Typography sx={{ mt: 0.75, color: color.ink2 }}>{item.a}</Typography>
-              </Box>
+        {/* 9 · FAQ, one question per fold. */}
+        <Section id="faq" title="FAQ" pad="tight" split>
+          <div>
+            {faq.map((item, i) => (
+              <Disclosure key={item.q} id={`faq-${i + 1}`} title={item.q}>
+                <Typography component="div">{item.a}</Typography>
+              </Disclosure>
             ))}
-          </Box>
+          </div>
         </Section>
       </main>
       <Footer />

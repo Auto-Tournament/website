@@ -1,5 +1,5 @@
 /**
- * Shared pricing facts for the pricing page and the price calculator. No
+ * Shared pricing facts for the pricing page and the pricing guide. No
  * 'use client' here: the pricing page (a server component) reads it directly.
  *
  * Stripe is the source of truth for the pack prices and server limits: the
@@ -83,15 +83,15 @@ export const productLabels: Record<PackProduct, string> = {
 
 /** The Servers / Platform toggle: a short name and one line on what it covers. */
 export const productIntro: Record<PackProduct, { title: string; line: string }> = {
-  servers: { title: 'Servers', line: 'CS2 Server Manager and/or Ready Up, on game servers you run.' },
+  servers: { title: 'Servers', line: 'Our server tools on game servers you run: today CS2 Server Manager and Ready Up, for CS2.' },
   platform: { title: 'Platform', line: 'The full Auto Tournament platform, with CS2 Server Manager, Ready Up and the game packs included.' },
 };
 
-/** What each size fits, on the pack cards. */
+/** What each size fits, on the pack cards. Said in events, never bracket sizes. */
 export const packGoodFor: Record<PackSize, string> = {
-  S: 'Small LAN: one tournament, plus a spare or practice server',
-  M: 'Mid-size LAN: a few tournaments at once, plus practice and spare servers',
-  L: 'Big LAN: many tournaments at once, plus practice and spare servers',
+  S: 'one tournament, plus a spare or practice server',
+  M: 'a few tournaments at once, plus practice and spare servers',
+  L: 'many tournaments at once, plus practice and spare servers',
 };
 
 export const popularSize: PackSize = 'M';
@@ -146,7 +146,7 @@ export const yearlyCs2Note =
 
 /** An event pack counts toward a yearly pack bought soon after. */
 export const eventCreditRule =
-  'Bought an event pack in the last 90 days? Its full price counts toward a yearly pack of the same product and size.';
+  'Bought an event pack in the last 90 days? Its price counts toward a yearly pack of the same product and size.';
 
 /** Paid operators and contractors (e.g. someone hired to run the servers at a LAN). */
 export const operatorRule =
@@ -154,7 +154,7 @@ export const operatorRule =
 
 /** Which servers count toward the limit. */
 export const testServersRule =
-  'Only servers used for the paid activity count, spares included. Test, staging and CI servers are free.';
+  'Every game server running our software counts: match servers, spares, practice and test servers.';
 
 /** Price changes never touch what you already bought. */
 export const priceChangeRule =
@@ -177,11 +177,11 @@ export function founderSalesOpen(sold: number, now: Date = new Date()): boolean 
   return sold < founderLimit && now.toISOString().slice(0, 10) <= founderLastDay;
 }
 
-/** What "lifetime" means. Used on the pricing page, the calculator and /terms. */
+/** What "lifetime" means. Used on the pricing page, the guide and /terms. */
 export const founderLifetime =
   'for as long as we sell the software your pack covers, including new major versions and renamed successors of it';
 
-/** The one-line pitch: founder strip and calculator. */
+/** The one-line pitch on the founder strip. */
 export const founderPitch = `Pay once and get lifetime updates: every new version, ${founderLifetime}. No yearly fee.`;
 
 export const founderUpdateWarning = 'CS2 updates can break older versions; install our updates to stay current';
@@ -216,19 +216,19 @@ export function founderTerms(packs: readonly Pack[]): string[] {
 }
 
 /**
- * The rule behind every price: if you earn money from it, you pay full price.
- * Shown in the calculator's "?" next to the free option.
+ * The rule behind every price: if you earn money from it, you need a license.
+ * Shown in the pricing guide's free answer.
  */
 export const freeUseHelp =
-  'Free when nobody earns money from it: all entry fees and sponsor money go back into the event, and no organizer, volunteer or helper is paid or takes profit.';
+  'Free when nobody earns money from your events: all entry fees and sponsor money go back into the event, and no organizer, volunteer or helper is paid or takes profit.';
 
 /** The organizations PolyForm Noncommercial 1.0.0 lets use the software free, in plain words. */
 export const freeOrganizations =
   'Charities, schools and universities, public research, public safety or health and environmental protection organizations, and government bodies are free, even when they charge entry.';
 
-/** Who pays: anyone who earns money from it, at the full price. */
+/** Who pays: anyone who earns money from it, one price for everyone. */
 export const earnMoneyRule =
-  'If you earn money from it, you pay full price: an organizer who makes a profit, any business, or a paid operator or contractor, even one hired by a zero-profit event.';
+  'If you earn money from it, you need a license: an organizer who makes a profit, any business, or a paid operator or contractor, even one hired by a zero-profit event.';
 
 /**
  * The optional free LAN confirmation. PolyForm already allows non-commercial
@@ -259,25 +259,6 @@ export const vatNote =
 /** Short form next to prices. */
 export const vatShort = 'excl. VAT';
 
-/** Tools someone ticks in "What will you run?". */
+/** Tool ids on the price page side; /api/checkout maps them to its own ids. */
 export type ToolOption = 'matchzy' | 'serverManager' | 'readyUp' | 'platform';
 
-export const toolLabels: Record<ToolOption, string> = {
-  matchzy: 'MatchZy Enhanced (MIT CS2 plugin)',
-  serverManager: 'CS2 Server Manager',
-  readyUp: 'Ready Up (native CS2 plugin)',
-  platform: 'Auto Tournament platform',
-};
-
-export const toolOrder: ToolOption[] = ['matchzy', 'serverManager', 'readyUp', 'platform'];
-
-/** Who the license is for. */
-export type UseType = 'commercial' | 'noncommercial' | 'nonprofit';
-
-export const useTypeLabels: Record<UseType, string> = {
-  commercial: 'Commercial (someone earns money)',
-  noncommercial: 'Non-commercial: nobody earns money (free)',
-  nonprofit: 'Non-profit organization (free)',
-};
-
-export const useTypeOrder: UseType[] = ['commercial', 'noncommercial', 'nonprofit'];

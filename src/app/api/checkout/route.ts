@@ -20,7 +20,7 @@ import { checkoutCustomerParams, consoleCheckoutPrefill } from '@/lib/console/ch
 // Starts a Stripe Checkout Session for a commercial license pack. Server only: the
 // secret key comes from STRIPE_SECRET_KEY at runtime and never reaches the
 // client. Without it, or while the prices come from the pricing.ts fallback
-// instead of Stripe, the route answers 503 and the calculator falls back to
+// instead of Stripe, the route answers 503 and the guide and the pack cards fall back to
 // the email request.
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -152,7 +152,7 @@ export async function POST(request: Request) {
       invoice_creation: { enabled: true, invoice_data: { description, metadata, footer: invoiceFooter } },
       allow_promotion_codes: true,
       success_url: `${base}/pricing/thanks?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${base}/pricing#calculator`,
+      cancel_url: `${base}/pricing#guide`,
     });
     if (!session.url) {
       console.error('[checkout] session created without a url', { id: session.id });

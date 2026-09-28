@@ -7,11 +7,11 @@ const { color, radius } = tokens;
 
 /**
  * The optional free LAN confirmation, shown by the free tier and in the
- * calculator's free result. Voluntary: PolyForm already grants non-commercial
+ * pricing guide's free answer. Voluntary: PolyForm already grants non-commercial
  * use, so never word it as a requirement. No hooks, so it renders in both
  * server and client components.
  */
-export function FreeLanConfirmation({ compact = false }: { compact?: boolean }) {
+export function FreeLanConfirmation({ compact = false, headingLevel = 'h4' }: { compact?: boolean; headingLevel?: 'h3' | 'h4' }) {
   return (
     <Box
       component="aside"
@@ -27,7 +27,7 @@ export function FreeLanConfirmation({ compact = false }: { compact?: boolean }) 
         maxWidth: '60ch',
       }}
     >
-      <Typography id={compact ? undefined : 'free-lan-confirmation'} component="h4" sx={{ fontWeight: 600, color: color.ink }}>
+      <Typography id={compact ? undefined : 'free-lan-confirmation'} component={headingLevel} sx={{ fontWeight: 600, color: color.ink }}>
         Running a zero-profit LAN?
       </Typography>
       <Typography sx={{ color: color.ink2, fontSize: '0.9375rem' }}>

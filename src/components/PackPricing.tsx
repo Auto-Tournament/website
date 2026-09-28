@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -82,6 +82,17 @@ export function PackPricing({
   founderOpen?: boolean;
 }) {
   const [product, setProduct] = useState<PackProduct>('servers');
+  // #packs-servers and #packs-platform (the setup cards on the pricing page) open that product.
+  useEffect(() => {
+    const fromHash = () => {
+      const hash = window.location.hash.slice(1);
+      if (hash === 'packs-servers') setProduct('servers');
+      if (hash === 'packs-platform') setProduct('platform');
+    };
+    fromHash();
+    window.addEventListener('hashchange', fromHash);
+    return () => window.removeEventListener('hashchange', fromHash);
+  }, []);
   const [loadingKey, setLoadingKey] = useState<LoadingKey | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
