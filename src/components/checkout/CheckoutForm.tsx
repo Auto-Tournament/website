@@ -512,7 +512,11 @@ export function CheckoutForm({
     if (r.field) setErrors((prev) => ({ ...prev, [r.field as FieldKey]: r.error }));
   };
 
-  const payLabel = `Pay ${formatMoney(summary.total, summary.currency)}`;
+  // A promo code that covers the whole price: Stripe needs no payment method
+  // (the session completes with payment_status no_payment_required), so no
+  // Payment Element and no "Pay €0". Confirm still runs the same steps.
+  const free = summary.total === 0;
+  const payLabel = free ? 'Get my license' : `Pay ${formatMoney(summary.total, summary.currency)}`;
 
   return (
     <Box
@@ -614,9 +618,15 @@ export function CheckoutForm({
         </Section>
 
         <Section title="Payment">
-          <Box data-testid="checkout-payment" sx={{ minHeight: 120 }}>
-            {adapter.payment}
-          </Box>
+          {free ? (
+            <Box data-testid="checkout-free" sx={{ color: color.ink2, fontSize: '0.9375rem' }}>
+              Nothing to pay: your promo code covers the full price.
+            </Box>
+          ) : (
+            <Box data-testid="checkout-payment" sx={{ minHeight: 120 }}>
+              {adapter.payment}
+            </Box>
+          )}
         </Section>
 
         <Box sx={{ display: 'grid', gap: 2 }}>
@@ -652,7 +662,7 @@ export function CheckoutForm({
           </Button>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'center', color: color.muted, fontSize: '0.8125rem' }}>
             <LockSimple size={14} aria-hidden />
-            <span>Payment by Stripe. Card details go straight to Stripe, never to us.</span>
+            <span>{free ? 'Order handled by Stripe.' : 'Payment by Stripe. Card details go straight to Stripe, never to us.'}</span>
           </Box>
         </Box>
       </Box>

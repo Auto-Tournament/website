@@ -284,6 +284,27 @@ describe('custom checkout form', () => {
     expect(actions.confirm).not.toHaveBeenCalled();
   });
 
+  it('at a total of 0 (full promo) hides the Payment Element and confirms without a payment method', async () => {
+    checkoutState = { type: 'success', checkout: { ...session, total: { subtotal: { minorUnitsAmount: 49900 }, discount: { minorUnitsAmount: 49900 }, total: { minorUnitsAmount: 0 } }, ...actions } };
+    const fetchMock = await openForm();
+    expect(screen.queryByTestId('payment-element')).toBeNull();
+    expect(screen.getByTestId('checkout-free').textContent).toBe('Nothing to pay: your promo code covers the full price.');
+    expect(screen.getByTestId('checkout-pay').textContent).toBe('Get my license');
+    fillValid();
+    fireEvent.click(screen.getByTestId('checkout-pay'));
+    await waitFor(() => expect(actions.confirm).toHaveBeenCalled());
+    expect(actions.runServerUpdate).toHaveBeenCalled();
+    expect(fetchMock.mock.calls.some(([url]) => url === '/api/checkout/details')).toBe(true);
+    expect(actions.confirm.mock.calls[0][0]).not.toHaveProperty('paymentMethod');
+  });
+
+  it('with a nonzero total shows the Payment Element and the price on the button', async () => {
+    await openForm();
+    expect(screen.getByTestId('payment-element')).toBeTruthy();
+    expect(screen.queryByTestId('checkout-free')).toBeNull();
+    expect(screen.getByTestId('checkout-pay').textContent).toBe('Pay €499');
+  });
+
   it('applies a promo code through Stripe and shows an error when it is refused', async () => {
     await openForm();
     fireEvent.click(screen.getByRole('button', { name: 'Add a promo code' }));

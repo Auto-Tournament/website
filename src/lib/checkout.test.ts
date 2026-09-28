@@ -312,6 +312,10 @@ describe('checkoutSessionParams', () => {
     expect(p).toMatchObject({ customer: 'cus_1', customer_update: { name: 'auto', address: 'auto' } });
     expect(p).not.toHaveProperty('customer_creation');
   });
+
+  it('leaves payment_method_collection out: Stripe allows it only in subscription mode, and payment mode already skips the payment method at a total of 0', () => {
+    for (const mode of ['custom', 'hosted'] as const) expect(checkoutSessionParams({ ...args, mode })).not.toHaveProperty('payment_method_collection');
+  });
 });
 
 describe('validateCheckoutDetails (our custom form)', () => {
