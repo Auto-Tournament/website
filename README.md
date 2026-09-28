@@ -37,8 +37,9 @@ routes `autotournament.gg` to `http://dev.lan:31236`.
 
 ## Payments
 
-The price calculator's "Buy with card" button starts a Stripe Checkout
-Session through `POST /api/checkout`. Set these in a `.env` file next to
+Every Buy button (pack cards, founding supporter strip, the pricing guide,
+the console's Buy page) starts a Stripe Checkout Session through
+`POST /api/checkout` (`useCheckout` in `src/components/checkout/Checkout.tsx`). Set these in a `.env` file next to
 `docker-compose.yml` on the server (git- and docker-ignored, read at runtime;
 `env_file` with `required: false` needs Docker Compose 2.24 or newer):
 
@@ -48,6 +49,15 @@ Session through `POST /api/checkout`. Set these in a `.env` file next to
   answers 503 and the calculator offers the email request instead.
 - `SITE_URL`: base URL for Stripe's return links. Defaults to
   `https://autotournament.gg`.
+- `STRIPE_PUBLISHABLE_KEY`: the publishable key (`pk_live_…`, public by
+  design) in the same mode as `STRIPE_SECRET_KEY`. With it, every Buy button
+  opens **Stripe Embedded Checkout** in a dialog on our own page (full screen
+  on phones), and after paying Stripe opens
+  `/pricing/thanks?session_id=…` as before. It is read at runtime and passed
+  to the page as a prop, not as `NEXT_PUBLIC_…` (the Docker image is built
+  without `.env`). Unset, not a `pk_` key, or in the other mode (live/test)
+  than the secret key: checkout falls back to the hosted Stripe page
+  (checkout.stripe.com), exactly as before.
 
 After editing `.env`, run `docker compose up -d` to restart the container
 with the new values.
@@ -57,6 +67,19 @@ Sale (`consent_collection.terms_of_service`). Stripe needs a Terms of service
 URL in Dashboard → Settings → Public details first
 (`https://autotournament.gg/terms`); without it, creating a Checkout Session
 fails and the calculator falls back to the email request.
+
+Embedded Checkout needs, in the Stripe Dashboard:
+
+- Settings → Payment method domains: add `autotournament.gg` and
+  `console.autotournament.gg` (the console's Buy page), or Apple Pay and
+  Google Pay don't show in the embedded form. Cards work either way.
+- Settings → Branding: the form uses these colours, so match the site
+  (dark background, the brand orange).
+
+The site sends no script-src/frame-src CSP, so nothing blocks Stripe.js. The
+console's `Permissions-Policy` allows `payment` for Stripe's frames
+(`src/proxy.ts`), for the wallets. `/dev/checkout` (development only)
+shows the dialog in every state with a mock of Stripe's form.
 
 `yarn test` runs the checkout, Stripe price, license key, license email, console (on an in-memory Postgres, PGlite) and CS2 compatibility tests.
 

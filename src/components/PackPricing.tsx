@@ -28,7 +28,7 @@ import {
 } from '@/components/pricing';
 import { links } from '@/components/links';
 import { checkoutToolFor, type CheckoutRequest, type CheckoutTool } from '@/lib/checkout';
-import { startCheckout } from '@/lib/startCheckout';
+import { useCheckout } from '@/components/checkout/Checkout';
 import { seller } from '@/components/seller';
 
 const { color, radius } = tokens;
@@ -65,7 +65,8 @@ const founderButton = {
 /**
  * The top of the pricing page: Servers / Platform toggle, the S / M / L pack
  * cards, and the founding supporter strip. Every Buy button starts Stripe
- * Checkout directly for that pack and period.
+ * Checkout for that pack and period through useCheckout (the embedded dialog,
+ * or hosted Checkout as a fallback).
  *
  * `allPacks` comes from the server (Stripe prices, or the pricing.ts
  * fallback): plain numbers only. `pricesAvailable` is false when those are
@@ -98,6 +99,8 @@ export function PackPricing({
 
   const packs = allPacks.filter((p) => p.product === product);
 
+  const { buy: startBuy } = useCheckout();
+
   const buy = async (pack: Pack, period: Period) => {
     if (loadingKey) return;
     const key = loadingKeyFor(pack.id, period);
@@ -110,12 +113,13 @@ export function PackPricing({
       tools: toolsFor(pack.product),
       use: 'commercial',
     };
-    const result = await startCheckout(payload);
-    if (!result.ok) {
-      setLoadingKey(null);
-      setErrors((prev) => ({ ...prev, [pack.id]: "Couldn't open checkout. Try again, or email us." }));
+    const outcome = await startBuy({ payload, packName: pack.name, period, price: pack.prices[period] });
+    // Going to hosted Checkout: stay loading while the browser navigates.
+    if (outcome.kind === 'redirecting') return;
+    setLoadingKey(null);
+    if (outcome.kind === 'failed' && !outcome.shownInDialog) {
+      setErrors((prev) => ({ ...prev, [pack.id]: outcome.error }));
     }
-    // On success, the browser is navigating away; stay loading.
   };
 
   return (

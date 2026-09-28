@@ -204,6 +204,70 @@ export function checkoutFormParams(base: string) {
   };
 }
 
+/** Seller details a Norwegian invoice needs (org number), and why no VAT is shown. */
+export const invoiceFooter =
+  'Gullberg Hansen Consulting (ENK) · Org. nr. 938 566 674 · Fredengvegen 15, 2817 Gjøvik, Norway · sivert@autotournament.gg\n' +
+  'No VAT added (seller not VAT-registered). Licenses are governed by the Commercial License Terms at https://autotournament.gg/terms';
+
+/**
+ * Where Stripe sends the buyer. Embedded Checkout (on our own page) has one
+ * return_url, which Stripe opens after paying; there is no cancel URL, since
+ * the buyer never left. Hosted Checkout (the fallback while
+ * STRIPE_PUBLISHABLE_KEY is unset) has a success and a cancel URL. Both end
+ * on the same thanks page with the session id.
+ */
+export function checkoutReturnParams(base: string, embedded: boolean) {
+  const thanks = `${base}/pricing/thanks?session_id={CHECKOUT_SESSION_ID}`;
+  return embedded
+    ? { ui_mode: 'embedded_page' as const, return_url: thanks }
+    : { success_url: thanks, cancel_url: `${base}/pricing#guide` };
+}
+
+/** The customer fields from checkoutCustomerParams (src/lib/console/prefill.ts). */
+export type CheckoutBuyer = {
+  customer?: string;
+  customer_email?: string;
+  customer_creation?: 'always';
+  customer_update?: { name: 'auto'; address: 'auto' };
+};
+
+/**
+ * Every Checkout Session field, in one place so the embedded and the hosted
+ * session differ only in checkoutReturnParams. Structural types only; the
+ * route passes the result straight to Stripe.
+ */
+export function checkoutSessionParams({
+  base,
+  priceId,
+  description,
+  metadata,
+  buyer,
+  embedded,
+}: {
+  base: string;
+  priceId: string;
+  description: string;
+  metadata: Record<string, string>;
+  buyer: CheckoutBuyer;
+  embedded: boolean;
+}) {
+  return {
+    mode: 'payment' as const,
+    // The Stripe price found by its lookup key (<pack>_<period>). The amount
+    // is Stripe's and never comes from the client.
+    line_items: [{ price: priceId, quantity: 1 }],
+    ...(buyer.customer ? { customer: buyer.customer, customer_update: buyer.customer_update } : { customer_creation: buyer.customer_creation }),
+    ...(buyer.customer_email ? { customer_email: buyer.customer_email } : {}),
+    // Business name, B2B confirmation, event details and the terms checkbox.
+    ...checkoutFormParams(base),
+    metadata,
+    payment_intent_data: { description, metadata },
+    invoice_creation: { enabled: true, invoice_data: { description, metadata, footer: invoiceFooter } },
+    allow_promotion_codes: true,
+    ...checkoutReturnParams(base, embedded),
+  };
+}
+
 /** Client IP behind the Cloudflare tunnel; falls back to the first X-Forwarded-For hop. */
 export function clientIp(headers: Headers): string {
   const cf = headers.get('cf-connecting-ip')?.trim();

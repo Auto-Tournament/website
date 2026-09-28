@@ -42,6 +42,8 @@ import { PackFinder } from '@/components/PackFinder';
 import { parseAnswers } from '@/components/findPack';
 import { Disclosure } from '@/components/Disclosure';
 import { Alternatives, ProductStack } from '@/components/PricingGuide';
+import { CheckoutProvider } from '@/components/checkout/Checkout';
+import { stripePublishableKey } from '@/lib/stripePublishable';
 
 const { color, radius } = tokens;
 
@@ -295,11 +297,14 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
   }
   const { packs } = priceSource;
   const pricesAvailable = priceSource.source === 'stripe';
+  // Read at request time (the image is built without .env): Embedded Checkout when set.
+  const publishableKey = pricesAvailable ? stripePublishableKey() : null;
   const examples = examplesFor(packs);
   const faq = faqFor(packs);
   return (
     <>
       <Nav />
+      <CheckoutProvider publishableKey={publishableKey}>
       <main>
         {/* 1 · The rule, then the guide: a few questions, one answer. */}
         <Box component="section" id="guide" aria-labelledby="pricing-title" sx={{ scrollMarginTop: 80 }}>
@@ -591,6 +596,7 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
           </div>
         </Section>
       </main>
+      </CheckoutProvider>
       <Footer />
     </>
   );
