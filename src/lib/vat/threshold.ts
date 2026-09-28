@@ -1,11 +1,12 @@
 import 'server-only';
-import { and, asc, eq, gte, lte, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { db as sharedDb } from '../db/client';
-import { licenses, vatAlerts } from '../db/schema';
+import { vatAlerts } from '../db/schema';
 import { packName } from '../license/describe';
 import { emailConfig, sendEmail } from '../email/postmark';
 import { seller } from '../../components/seller';
+import { formatMoney, salesBetween, toEur, toNok, type Currency } from '../license/sales';
 import { eurNokRate, type RateResult } from './rate';
 import { vatAlertEmail, type SaleLine } from './email';
 
@@ -20,10 +21,9 @@ import { vatAlertEmail, type SaleLine } from './email';
  * never break license issuing or app startup.
  *
  * Only live-mode sales count — test purchases are never real VAT-relevant
- * revenue. Refunds: there is no refunded/voided state on a license row yet,
- * so a refunded sale still counts here.
- * TODO(vat): once refunds are tracked on a license (or a linked sale), exclude
- * refunded/voided rows from the sum below.
+ * revenue. The sales are src/lib/license/sales.ts's: Stripe checkouts, paid
+ * manual licenses (EUR or NOK) and differences paid for reissues; licenses
+ * marked refunded in the admin CRM don't count.
  */
 
 export const DEFAULT_VAT_THRESHOLD_NOK = 50_000;
@@ -41,33 +41,11 @@ export function vatAlertsEnabled(env: Record<string, string | undefined> = proce
   return (env.VAT_ALERTS?.trim().toLowerCase() ?? '') !== 'off';
 }
 
-type SaleRow = { licenseId: string; pack: string; amountTotal: number; paidAt: Date };
+type SaleRow = { licenseId: string; pack: string; amountTotal: number; currency: Currency; paidAt: Date };
 
 async function salesInWindow(database: Db, windowStart: Date, now: Date): Promise<SaleRow[]> {
-  const rows = await database
-    .select({
-      licenseId: licenses.licenseId,
-      payload: licenses.payload,
-      amountTotal: licenses.amountTotal,
-      paidAt: licenses.paidAt,
-      issuedAt: licenses.issuedAt,
-    })
-    .from(licenses)
-    .where(
-      and(
-        eq(licenses.livemode, true),
-        // paidAt is null on rows issued before that column existed; issuedAt is the next best thing.
-        gte(sql`coalesce(${licenses.paidAt}, ${licenses.issuedAt})`, windowStart),
-        lte(sql`coalesce(${licenses.paidAt}, ${licenses.issuedAt})`, now),
-      ),
-    )
-    .orderBy(asc(sql`coalesce(${licenses.paidAt}, ${licenses.issuedAt})`));
-  return rows.map((r) => ({
-    licenseId: r.licenseId,
-    pack: packName(r.payload),
-    amountTotal: r.amountTotal ?? 0,
-    paidAt: r.paidAt ?? r.issuedAt,
-  }));
+  const sales = await salesBetween(database, windowStart, now);
+  return sales.map((s) => ({ licenseId: s.licenseId, pack: packName(s.payload), amountTotal: s.amountTotal, currency: s.currency, paidAt: s.paidAt }));
 }
 
 type AlertRow = { percent: number; active: boolean };
@@ -111,7 +89,7 @@ async function sendAlert(input: {
     date: s.paidAt.toISOString().slice(0, 10),
     licenseId: s.licenseId,
     pack: s.pack,
-    amount: `€${(s.amountTotal / 100).toFixed(2)}`,
+    amount: s.currency === 'eur' ? `€${(s.amountTotal / 100).toFixed(2)}` : formatMoney(s.amountTotal / 100, s.currency),
   }));
   const mail = vatAlertEmail({
     percent: input.percent,
@@ -141,9 +119,10 @@ export async function checkVatThreshold(options: { db?: Db; fetchImpl?: typeof f
     const now = options.now ?? new Date();
     const windowStart = new Date(now.getTime() - WINDOW_DAYS * 24 * 60 * 60_000);
     const sales = await salesInWindow(database, windowStart, now);
-    const totalEurCents = sales.reduce((sum, s) => sum + s.amountTotal, 0);
     const rate = await eurNokRate({ fetchImpl: options.fetchImpl, now: now.getTime() });
-    const totalNok = (totalEurCents / 100) * rate.rate;
+    // NOK sales (manual licenses) count as they are; EUR at the rate. totalEurCents is the EUR equivalent of everything.
+    const totalNok = sales.reduce((sum, s) => sum + toNok(s.amountTotal, s.currency, rate.rate), 0);
+    const totalEurCents = Math.round(sales.reduce((sum, s) => sum + toEur(s.amountTotal, s.currency, rate.rate), 0) * 100);
     const thresholdNok = vatThresholdNok();
 
     for (const percent of PERCENTS) {

@@ -8,6 +8,7 @@ import { users } from '@/lib/db/schema';
 import { dbError } from '@/lib/db/errors';
 import { emailConfig, sendEmail } from '@/lib/email/postmark';
 import { audit } from './audit';
+import { syncAdminFlag } from '@/lib/admin/access';
 import { consoleAdapter } from './adapter';
 import { signInEmail } from './emails';
 import { consoleHref, consoleOrigin, consoleUrl } from './urls';
@@ -125,6 +126,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => ({
             .set({ emailVerified: new Date() })
             .where(and(eq(users.id, user.id), eq(users.email, user.email.toLowerCase()), isNull(users.emailVerified)));
         }
+        // ADMIN_EMAILS decides who is admin: granted or taken away at every sign-in.
+        await syncAdminFlag(db(), user.id);
         await audit(db(), { actor: user.id, action: 'auth.signin', targetType: 'user', targetId: user.id, details: { provider: account?.provider ?? 'unknown', new_user: Boolean(isNewUser) } });
       } catch (err) {
         console.error('[console] sign-in bookkeeping failed', dbError(err));

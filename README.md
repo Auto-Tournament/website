@@ -289,8 +289,9 @@ Tests: `src/lib/license/license.test.ts` (throwaway keys made at runtime).
 
 Sivert's ENK must register for Norwegian VAT (Merverdiavgiftsregisteret) once
 rolling 12-month license revenue passes NOK 50,000. `src/lib/vat/threshold.ts`
-sums every live-mode paid license's `amount_total` (EUR, on the `licenses`
-row) from the trailing 365 days, converts it to NOK with Norges Bank's daily
+sums every live-mode paid license's `amount_total` (on the `licenses` row:
+card sales in EUR, manual ones in EUR or NOK, see `src/lib/license/sales.ts`)
+from the trailing 365 days, leaving out licenses marked refunded, converts it to NOK with Norges Bank's daily
 EUR/NOK rate (`src/lib/vat/rate.ts`, no key needed, cached 12h; a conservative
 12.0 fallback if Norges Bank can't be reached), and emails the seller
 (`seller.email`, `src/components/seller.ts`) through Postmark the first time
@@ -317,8 +318,8 @@ percentage, never an amount or the email).
 All sales are converted with the latest rate rather than each sale's own
 day's rate — the rate moves little day to day, and per-day conversion would
 need one Norges Bank request per unique day. The rate used is always shown in
-the alert email. Refunds aren't tracked on a license row yet, so a refunded
-sale still counts toward the total; see the TODO in `threshold.ts`.
+the alert email. A license marked refunded in the admin CRM leaves the total;
+a revoked one (money kept) stays in it.
 
 Tests: `src/lib/vat/threshold.test.ts`, `src/lib/vat/rate.test.ts`,
 `src/lib/vat/email.test.ts`.
@@ -326,7 +327,8 @@ Tests: `src/lib/vat/threshold.test.ts`, `src/lib/vat/rate.test.ts`,
 ## Console (console.autotournament.gg)
 
 The customer area: sign in, organizations with members, their licenses and
-keys, and invoices. It will grow into the license CRM. Same app and
+keys, and invoices; and, for Auto Tournament staff, the admin CRM at `/admin`
+(below). Same app and
 container as the site: `src/proxy.ts` maps the host `console.autotournament.gg`
 onto the routes in `src/app/console` (`/licenses` is `src/app/console/(org)/licenses`),
 and the main site's `/account` redirects there. When `AUTH_URL` is a
@@ -366,13 +368,64 @@ instead.
   organization. From the main site, checkout is exactly as before.
 - **Audit log**: every write (and sign-in) goes into `audit_log`: actor, action,
   organization, target, time, details. Never tokens.
-- `users.is_admin` marks Auto Tournament staff for the admin CRM that comes
-  later. Set it by hand for now:
-  `ssh <host> "docker exec autotournament-db psql -U autotournament -d autotournament -c \"update users set is_admin = true where email = 'you@example.com'\""`.
+- `users.is_admin` marks Auto Tournament staff (the admin CRM). It follows
+  `ADMIN_EMAILS` (below); don't set it by hand.
 
 Retention (also in the privacy policy): expired sessions and sign-in links are
 deleted at startup and daily, invites 30 days after they are used, withdrawn or
-expired, and audit log entries after 2 years.
+expired, audit log entries after 2 years, and contact form leads 24 months
+after their last activity.
+
+### Admin CRM (/admin)
+
+`console.autotournament.gg/admin` (`src/app/console/admin`, logic in
+`src/lib/admin`), for the addresses in `ADMIN_EMAILS` only. A user whose
+verified email is in the list gets `is_admin` at sign-in and at startup, and
+loses it when the address leaves the list; every admin page, action and route
+also checks the list again, so a removal counts at once. Everyone else gets a
+404, as if the pages weren't there. Without `ADMIN_EMAILS` nobody is admin. The
+console's header shows "Admin" to admins only. Every admin write goes into the
+audit log with the admin as the actor; signing and email actions are
+rate-limited (20 per 10 minutes).
+
+- **Overview**: sales and revenue for the last 30 days and 12 months (EUR and
+  NOK), the VAT threshold bar (the same sales and rate as the VAT alert),
+  founder packs sold of 25 and days to 31 March 2027, licenses ending in the
+  next 30 days, recent and unpaid orders, open leads, and the bookkeeping CSV.
+- **Licenses**: search and filter; the detail page has the key, the public
+  check link, organization, Stripe Dashboard links (built from the ids),
+  email status, notes and history. Actions:
+  - *Reissue*: signs a new key with the current `LICENSE_SIGNING_KEY` (new id,
+    same email hash, organization and customer) and sets the old row's
+    `superseded_by`. The old key keeps working offline; `/verify` shows it as
+    "Replaced by <new id>", and `/license` hands out the newest key for the
+    old order reference. An amount entered is the difference paid (it counts
+    as a sale), never the original again.
+  - *Refund / revoke*: sets `revoked_at` and the reason; never deletes.
+    `/verify` says "Revoked", the console and `/license` stop showing the key,
+    and a refunded license leaves revenue, the VAT total and the founder count.
+  - *Resend license email*: to the address it was bought with only (checked
+    against the stored hash); for a card purchase it can read the address from
+    the Checkout Session.
+  - *Notes* (`admin_notes`), on licenses and organizations.
+- **New license** (bank transfer / invoice): `manual_orders`. Paid: the key is
+  issued at once into `licenses` (`source = 'manual'`, with amount, currency
+  EUR or NOK, and payment reference) and optionally emailed. Not paid yet: no
+  key; "Mark paid" issues it. The buyer email is kept as a hash, like card
+  purchases. Unpaid founder orders hold a place under the founder cap, which
+  checkout and the pricing page count too.
+- **Organizations** and **Users**: members, licenses, Stripe customer, notes;
+  users with organizations and last sign-in (from the audit log).
+- **Leads**: every `/contact` message is stored in `leads` as well as emailed
+  (status new/replied/won/lost and a note; "Reply" opens your mail app).
+  Deleted 24 months after the last activity (`src/lib/db/prune.ts`).
+- **Free LANs**: the register of free LAN confirmations, from a lead or by hand.
+- **Audit log**: filter by actor (email, user id or `system`) and action prefix.
+- **Bookkeeping export**: `/admin/export/sales?from=YYYY-MM-DD&to=YYYY-MM-DD`,
+  paid sales as CSV (date, license id, licensee, country, amount, currency,
+  NOK amount, payment reference, rate). NOK amounts use Norges Bank's EUR/NOK
+  rate of each sale's day (the business day before on weekends), fetched in
+  one request; the latest rate if that fails.
 
 ### Database
 
@@ -406,6 +459,9 @@ In `.env` next to `docker-compose.yml` on the server:
   Unset: only the email link.
 - `POSTMARK_SERVER_TOKEN`: as for the license email; the console sends the
   sign-in links and invites through it (tags `console-signin`, `console-invite`).
+- `ADMIN_EMAILS`: comma-separated addresses that get the admin CRM, for
+  example `sivertgullberg@gmail.com`. They must sign in with that address
+  (email link or Google). Unset: nobody is admin.
 
 `ACCOUNT_SESSION_SECRET` (the old `/account` page) is no longer used: remove it
 from `.env`. The old `account.json` next to `licenses.json` can be deleted.
@@ -414,7 +470,7 @@ For local development, a throwaway Postgres and `.env.local`:
 
 ```bash
 docker run -d --name at-console-pg -e POSTGRES_USER=at -e POSTGRES_PASSWORD=localtest -e POSTGRES_DB=at -p 127.0.0.1:55432:5432 postgres:17-alpine
-printf 'DATABASE_URL=postgres://at:localtest@127.0.0.1:55432/at\nAUTH_SECRET=%s\nAUTH_URL=http://localhost:4611\nSITE_URL=http://localhost:4611\n' "$(openssl rand -base64 48)" > .env.local
+printf 'DATABASE_URL=postgres://at:localtest@127.0.0.1:55432/at\nAUTH_SECRET=%s\nAUTH_URL=http://localhost:4611\nSITE_URL=http://localhost:4611\nADMIN_EMAILS=you@example.com\n' "$(openssl rand -base64 48)" > .env.local
 yarn dev   # the console is at http://localhost:4611/console; sign-in links are printed in the log
 ```
 

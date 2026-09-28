@@ -171,3 +171,21 @@ describe('checkVatThreshold', () => {
     expect(rows).toHaveLength(0);
   });
 });
+
+describe('what counts', () => {
+  it('leaves out refunded licenses and counts manual NOK sales as they are', async () => {
+    const now = new Date('2026-09-28T12:00:00Z');
+    const paidAt = new Date('2026-09-01T12:00:00Z');
+    await insert(
+      sale('cs_live_kept', { amountCents: 100_000, paidAt }),
+      { ...sale('cs_live_refunded', { amountCents: 500_000, paidAt }), revoked_at: paidAt.toISOString(), revoke_reason: 'refunded' },
+      { ...sale('cs_live_revoked', { amountCents: 10_000, paidAt }), revoked_at: paidAt.toISOString(), revoke_reason: 'revoked' },
+      { ...sale('manual_nok', { amountCents: 950_000, paidAt }), source: 'manual', currency: 'nok' },
+    );
+    const fetchImpl = vi.fn(async () => okResponse('10'));
+    const result = await checkVatThreshold({ fetchImpl, now });
+    // EUR 1,000 + EUR 100 (revoked, not refunded) at 10, plus NOK 9,500.
+    expect(result?.totalNok).toBe(20_500);
+    expect(result?.totalEurCents).toBe(205_000);
+  });
+});

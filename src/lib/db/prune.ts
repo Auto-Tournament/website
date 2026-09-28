@@ -1,20 +1,34 @@
 import { lt, or, and, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from './client';
-import { auditLog, invites, sessions, verificationTokens } from './schema';
+import { auditLog, invites, leads, sessions, verificationTokens } from './schema';
 
 /** How long the console keeps what it no longer needs (also in the privacy policy, section 4). */
 export const AUDIT_RETENTION_DAYS = 2 * 365;
 export const INVITE_RETENTION_DAYS = 30;
+/** Contact form leads: 24 months after the last activity (created, or status or note changed). */
+export const LEAD_RETENTION_MONTHS = 24;
+
+/** The moment `months` calendar months before `now` (UTC). */
+export function monthsBefore(now: Date, months: number): Date {
+  const d = new Date(now.getTime());
+  const day = d.getUTCDate();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() - months);
+  const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(day, last));
+  return d;
+}
 
 /**
  * Deletes expired sessions and sign-in links, invites 30 days after they were
- * used, withdrawn or expired, and activity log entries older than 2 years.
+ * used, withdrawn or expired, activity log entries older than 2 years, and
+ * contact form leads 24 months after their last activity.
  * Runs at startup and then daily (src/lib/db/startup.ts).
  */
 export async function pruneExpired(db: Db, now = new Date()): Promise<Record<string, number>> {
   const daysAgo = (days: number) => new Date(now.getTime() - days * 24 * 60 * 60_000);
   const inviteCutoff = daysAgo(INVITE_RETENTION_DAYS);
-  const [s, v, i, a] = await Promise.all([
+  const [s, v, i, a, l] = await Promise.all([
     db.delete(sessions).where(lt(sessions.expires, now)).returning({ x: sessions.userId }),
     db.delete(verificationTokens).where(lt(verificationTokens.expires, now)).returning({ x: verificationTokens.expires }),
     db
@@ -28,6 +42,7 @@ export async function pruneExpired(db: Db, now = new Date()): Promise<Record<str
       )
       .returning({ x: invites.id }),
     db.delete(auditLog).where(lt(auditLog.at, daysAgo(AUDIT_RETENTION_DAYS))).returning({ x: sql<number>`1` }),
+    db.delete(leads).where(lt(leads.updatedAt, monthsBefore(now, LEAD_RETENTION_MONTHS))).returning({ x: leads.id }),
   ]);
-  return { sessions: s.length, signInLinks: v.length, invites: i.length, auditLog: a.length };
+  return { sessions: s.length, signInLinks: v.length, invites: i.length, auditLog: a.length, leads: l.length };
 }

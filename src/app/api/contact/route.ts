@@ -12,11 +12,16 @@ import { escapeHtml } from '@/lib/license/email';
 import { readCapped } from '@/lib/readCapped';
 import { sameOrigin } from '@/lib/site';
 import { seller } from '@/components/seller';
+import { databaseUrl, db } from '@/lib/db/client';
+import { dbError } from '@/lib/db/errors';
+import { createLead } from '@/lib/admin/leads';
 
 // The /contact form: POST { name, email, organization, topic, numServers,
-// eventDates, message, website (honeypot) }. Sends one email to seller.email
-// through the existing Postmark sender, Reply-To the sender's own address. No
-// database: a later console PR reads a lead inbox instead.
+// eventDates, message, website (honeypot) }. Stores the message as a lead
+// (the admin CRM's inbox, /admin/leads; deleted 24 months after the last
+// activity) and sends one email to seller.email through the existing Postmark
+// sender, Reply-To the sender's own address. Either one is enough: the answer
+// is an error only when neither worked.
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +39,8 @@ export async function POST(request: Request) {
     return reply(400, { error: 'Expected a JSON body.' });
   }
   const config = emailConfig();
-  if (!config) return reply(503, { error: 'Email is not set up. Email us directly instead.' });
+  const keep = databaseUrl() !== null;
+  if (!config && !keep) return reply(503, { error: 'Email is not set up. Email us directly instead.' });
   if (!allow(clientIp(request.headers), Date.now())) return reply(429, { error: 'Too many messages. Try again in a few minutes.' });
 
   let body: unknown;
@@ -53,19 +59,32 @@ export async function POST(request: Request) {
   if (!checked.ok) return reply(400, { error: checked.error });
   const req = checked.value;
 
-  const subject = contactSubject(req);
-  const text = contactEmailText(req);
-  const html = `<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">${escapeHtml(text)}</pre>`;
-  const replyTo = sanitizeHeaderValue(req.email);
-
-  try {
-    const result = await sendEmail({ to: seller.email, subject, text, html, replyTo, tag: 'contact' }, config);
-    if (!result.ok) {
-      console.error('[contact] send failed', result.error);
-      return reply(502, { error: "Couldn't send your message. Try again, or email us directly." });
+  let stored = false;
+  if (keep) {
+    try {
+      await createLead(db(), req);
+      stored = true;
+    } catch (err) {
+      console.error('[contact] could not store the lead', dbError(err));
     }
-  } catch (err) {
-    console.error('[contact] send threw', err instanceof Error ? err.name : 'unknown error');
+  }
+
+  if (config) {
+    const subject = contactSubject(req);
+    const text = contactEmailText(req);
+    const html = `<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">${escapeHtml(text)}</pre>`;
+    const replyTo = sanitizeHeaderValue(req.email);
+    try {
+      const result = await sendEmail({ to: seller.email, subject, text, html, replyTo, tag: 'contact' }, config);
+      if (!result.ok) {
+        console.error('[contact] send failed', result.error);
+        if (!stored) return reply(502, { error: "Couldn't send your message. Try again, or email us directly." });
+      }
+    } catch (err) {
+      console.error('[contact] send threw', err instanceof Error ? err.name : 'unknown error');
+      if (!stored) return reply(502, { error: "Couldn't send your message. Try again, or email us directly." });
+    }
+  } else if (!stored) {
     return reply(502, { error: "Couldn't send your message. Try again, or email us directly." });
   }
 

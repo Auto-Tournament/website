@@ -356,18 +356,23 @@ export async function acceptInvite(db: Db, user: ConsoleUser, by: { token: strin
 
 export async function licensesForOrg(db: Db, userId: string, orgId: string): Promise<LicenseRecord[]> {
   await requireOrg(db, userId, orgId);
-  const rows = await db.select().from(licenses).where(eq(licenses.orgId, orgId)).orderBy(desc(licenses.issuedAt));
+  // Current keys only: not replaced by a reissue, not refunded or revoked.
+  const rows = await db
+    .select()
+    .from(licenses)
+    .where(and(eq(licenses.orgId, orgId), isNull(licenses.supersededBy), isNull(licenses.revokedAt)))
+    .orderBy(desc(licenses.issuedAt));
   return rows.map(fromRow);
 }
 
-/** Licenses bought with the user's verified email that aren't in any organization yet. */
+/** Licenses bought with the user's verified email that aren't in any organization yet (current keys only). */
 export async function unassignedLicenses(db: Db, user: ConsoleUser): Promise<LicenseRecord[]> {
   const email = verifiedEmail(user);
   if (!email) return [];
   const rows = await db
     .select()
     .from(licenses)
-    .where(and(eq(licenses.emailHash, emailHash(email)), isNull(licenses.orgId)))
+    .where(and(eq(licenses.emailHash, emailHash(email)), isNull(licenses.orgId), isNull(licenses.supersededBy), isNull(licenses.revokedAt)))
     .orderBy(desc(licenses.issuedAt));
   return rows.map(fromRow);
 }
@@ -402,7 +407,7 @@ export async function claimLicense(db: Db, user: ConsoleUser, orgId: string, ses
     const [row] = await tx
       .update(licenses)
       .set({ orgId })
-      .where(and(eq(licenses.sessionId, sessionId), isNull(licenses.orgId), eq(licenses.emailHash, emailHash(email))))
+      .where(and(eq(licenses.sessionId, sessionId), isNull(licenses.orgId), eq(licenses.emailHash, emailHash(email)), isNull(licenses.supersededBy), isNull(licenses.revokedAt)))
       .returning();
     if (!row) throw new ConsoleError('not-found', 'That license is not available to add.');
     const record = fromRow(row);
