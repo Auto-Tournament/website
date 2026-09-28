@@ -46,12 +46,12 @@ export const packDefs: readonly Pick<Pack, 'id' | 'product' | 'size' | 'name'>[]
  * the fallback page doesn't mislead. Same order as packDefs.
  */
 export const FALLBACK_PACKS: readonly Pack[] = [
-  { id: 'servers-s', product: 'servers', size: 'S', name: 'Servers S', maxServers: 6, prices: { event: 1900, year: 4900, founder: 14900 } },
-  { id: 'servers-m', product: 'servers', size: 'M', name: 'Servers M', maxServers: 20, prices: { event: 5900, year: 14900, founder: 44900 } },
-  { id: 'servers-l', product: 'servers', size: 'L', name: 'Servers L', maxServers: 40, prices: { event: 9900, year: 27900, founder: 84900 } },
-  { id: 'platform-s', product: 'platform', size: 'S', name: 'Platform S', maxServers: 6, prices: { event: 3900, year: 9900, founder: 29900 } },
-  { id: 'platform-m', product: 'platform', size: 'M', name: 'Platform M', maxServers: 20, prices: { event: 9900, year: 24900, founder: 74900 } },
-  { id: 'platform-l', product: 'platform', size: 'L', name: 'Platform L', maxServers: 40, prices: { event: 15900, year: 42900, founder: 129900 } },
+  { id: 'servers-s', product: 'servers', size: 'S', name: 'Servers S', maxServers: 6, prices: { event: 1900, year: 4900, founder: 19900 } },
+  { id: 'servers-m', product: 'servers', size: 'M', name: 'Servers M', maxServers: 20, prices: { event: 5900, year: 14900, founder: 59900 } },
+  { id: 'servers-l', product: 'servers', size: 'L', name: 'Servers L', maxServers: 40, prices: { event: 9900, year: 27900, founder: 109900 } },
+  { id: 'platform-s', product: 'platform', size: 'S', name: 'Platform S', maxServers: 6, prices: { event: 3900, year: 9900, founder: 39900 } },
+  { id: 'platform-m', product: 'platform', size: 'M', name: 'Platform M', maxServers: 20, prices: { event: 9900, year: 24900, founder: 99900 } },
+  { id: 'platform-l', product: 'platform', size: 'L', name: 'Platform L', maxServers: 40, prices: { event: 15900, year: 42900, founder: 169900 } },
 ];
 
 export const packIds: readonly PackId[] = packDefs.map((p) => p.id);

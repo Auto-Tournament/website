@@ -31,14 +31,14 @@ function seedTable(): { id: string; maxServers: number; prices: Record<string, n
 }
 
 describe('founder prices', () => {
-  it('are the Pricing v3 lifetime founder prices (3× yearly)', () => {
+  it('are the Pricing v3 lifetime founder prices (about 4× yearly)', () => {
     expect(Object.fromEntries(FALLBACK_PACKS.map((p) => [p.id, p.prices.founder / 100]))).toEqual({
-      'servers-s': 149,
-      'servers-m': 449,
-      'servers-l': 849,
-      'platform-s': 299,
-      'platform-m': 749,
-      'platform-l': 1299,
+      'servers-s': 199,
+      'servers-m': 599,
+      'servers-l': 1099,
+      'platform-s': 399,
+      'platform-m': 999,
+      'platform-l': 1699,
     });
   });
 
@@ -82,9 +82,9 @@ describe('founder copy', () => {
   });
 
   it('prices a size upgrade as the founder price difference', () => {
-    expect(founderUpgradeExample(FALLBACK_PACKS)).toBe('Servers M to Servers L costs €400');
-    expect(founderUpgradeExample(FALLBACK_PACKS, 'platform')).toBe('Platform M to Platform L costs €550');
-    expect(terms).toContain('Servers M to Servers L costs €400');
+    expect(founderUpgradeExample(FALLBACK_PACKS)).toBe('Servers M to Servers L costs €500');
+    expect(founderUpgradeExample(FALLBACK_PACKS, 'platform')).toBe('Platform M to Platform L costs €700');
+    expect(terms).toContain('Servers M to Servers L costs €500');
   });
 
   it('includes the shutdown promise and never locks anyone out', () => {
