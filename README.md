@@ -130,10 +130,10 @@ blocks**: a problem is a warning in the product, never a lockout.
    the key itself (same one-per-session store, so never two keys).
 4. The key is emailed to the address paid with, once (see "License email"
    below; off until Postmark is set up).
-5. `/license` gets a key again with the order reference (`cs_…`, shown on the
-   thanks page) or the invoice number from Stripe's receipt, plus the email
-   paid with. "Email it to me again" there sends it to that address, only when
-   it is the one the license was bought with.
+5. Every license bought with an email shows up when that email signs in at
+   the console (console.autotournament.gg). That is the one place to see a
+   license or its key again; the site itself no longer has a "get it again"
+   page.
 
 Issued keys live in Postgres (the `licenses` table, see Console), with a
 SHA-256 of the buyer's email instead of the email. Until the console they
@@ -161,8 +161,8 @@ file, so it stays as a backup of the keys issued before the move.
    `checkout.session.completed` and `checkout.session.async_payment_succeeded`.
    Copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
 5. Optional: give the site's restricted Stripe key **Invoices: Read**, so the
-   invoice number can be used on `/license`. Without it, only the order
-   reference works.
+   invoice number is available too. Without it, only the order reference
+   shows up.
 6. `docker compose up -d`.
 
 Without `LICENSE_SIGNING_KEY`, no keys are issued: the webhook answers 503 so
@@ -181,8 +181,7 @@ written to the license's row when it works. A failed send
 never fails the webhook or the key; it logs `[license] email failed` with the
 license id and the error (never the address) and keeps it in `email_error`. It
 is tried again when Stripe delivers the event again (Stripe Dashboard →
-Webhooks → the event → Resend), or the buyer uses "Email it to me again" on
-`/license` (rate-limited: 5 per IP per 10 minutes, 3 per license per hour).
+Webhooks → the event → Resend), or from the console's admin resend action.
 
 Env, in `.env` on the server (all optional; unset `POSTMARK_SERVER_TOKEN` means
 no email is sent and the site works as before):
@@ -212,9 +211,9 @@ Postmark setup (once), in this order:
 `/verify/<license id>` shows the licensee, pack and server limit, kind,
 period, updates until, and a status: valid, upcoming, expired, test, or not
 found (the same for every unknown id). Never the key, email, customer id or
-order reference. 30 checks per IP per minute, not indexed. `/license` has a
-"Check a license" form; the thanks page and the console show each license's check
-link. Always on.
+order reference. 30 checks per IP per minute, not indexed. `/verify` itself
+has the "Check a license" form (also linked from the nav); the thanks page
+and the console show each license's check link. Always on.
 
 **Rotating:** run the keygen again, add the new public key to
 `public-keys.json` (keep the old one, so old keys still verify), ship the new
@@ -398,11 +397,11 @@ rate-limited (20 per 10 minutes).
   - *Reissue*: signs a new key with the current `LICENSE_SIGNING_KEY` (new id,
     same email hash, organization and customer) and sets the old row's
     `superseded_by`. The old key keeps working offline; `/verify` shows it as
-    "Replaced by <new id>", and `/license` hands out the newest key for the
-    old order reference. An amount entered is the difference paid (it counts
+    "Replaced by <new id>", and the console shows the newest key for that
+    organization. An amount entered is the difference paid (it counts
     as a sale), never the original again.
   - *Refund / revoke*: sets `revoked_at` and the reason; never deletes.
-    `/verify` says "Revoked", the console and `/license` stop showing the key,
+    `/verify` says "Revoked", the console stops showing the key,
     and a refunded license leaves revenue, the VAT total and the founder count.
   - *Resend license email*: to the address it was bought with only (checked
     against the stored hash); for a card purchase it can read the address from

@@ -14,7 +14,6 @@ export const links = {
   contact: '/contact',
   compatibility: '/compatibility',
   terms: '/terms',
-  license: '/license',
   account: '/account',
   verify: '/verify',
   termsOfSale: '/terms-of-sale',
