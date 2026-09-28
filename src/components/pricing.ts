@@ -123,10 +123,22 @@ export function packRules(packs: readonly Pack[]): string[] {
   return [
     'One pack per event, or per 12 months for yearly.',
     'Packs can\'t be combined or stacked: two S packs don\'t make an M. Servers and Platform can\'t be combined either; Platform already includes the servers.',
+    `${yearlyUpdates} ${yearlyAfterExpiry}`,
     'Need more servers during the period? Email us to upgrade to the next size and pay the difference.',
     `More than ${maxPackServers(packs)} servers: contact us for a custom quote.`,
   ];
 }
+
+/**
+ * Yearly: all updates for 12 months. Without renewal the buyer keeps commercial
+ * use of each version line (major.minor) that started during the paid year,
+ * later patch releases of those lines included. Same words in /terms section 8.
+ */
+export const yearlyUpdates = 'Yearly includes all updates for 12 months.';
+export const yearlyAfterExpiry =
+  "If you don't renew, you keep commercial use of every version line (such as 1.4) that started during your paid year, including its later patches (1.4.1, 1.4.2…). New minor and major versions (1.5, 2.0) need active updates; renewing restores them.";
+export const yearlyCs2Note =
+  'CS2 compatibility fixes ship as patches of the current version line, so after your year ends you get them only for lines that started while you paid.';
 
 /**
  * Founding supporter: pay once, lifetime updates. Limited, and checked by hand

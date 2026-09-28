@@ -10,7 +10,11 @@ import {
   founderTerms,
   founderUpgradeExample,
   neverLockOut,
+  packRules,
   periodLabels,
+  yearlyAfterExpiry,
+  yearlyCs2Note,
+  yearlyUpdates,
 } from './pricing';
 
 /** The PACKS table in the seed script, parsed from its source (the script runs on import). */
@@ -86,5 +90,19 @@ describe('founder copy', () => {
     expect(founderShutdownPromise).toContain('final build without the license check');
     expect(neverLockOut).toMatch(/^We never lock you out\./);
     expect(neverLockOut).toContain('never stops the software');
+  });
+});
+
+describe('yearly copy', () => {
+  it('keeps the version lines that started during the paid year, patches included', () => {
+    expect(yearlyUpdates).toBe('Yearly includes all updates for 12 months.');
+    expect(yearlyAfterExpiry).toContain('every version line (such as 1.4) that started during your paid year');
+    expect(yearlyAfterExpiry).toContain('later patches (1.4.1, 1.4.2…)');
+    expect(yearlyAfterExpiry).toContain('New minor and major versions (1.5, 2.0) need active updates; renewing restores them.');
+    expect(yearlyCs2Note).toContain('patches of the current version line');
+  });
+
+  it('is part of the pack rules', () => {
+    expect(packRules(FALLBACK_PACKS)).toContain(`${yearlyUpdates} ${yearlyAfterExpiry}`);
   });
 });

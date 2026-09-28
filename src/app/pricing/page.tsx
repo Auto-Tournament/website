@@ -25,6 +25,9 @@ import {
   pricingVersion,
   serverLimitRule,
   vatNote,
+  yearlyAfterExpiry,
+  yearlyCs2Note,
+  yearlyUpdates,
   type Pack,
   type PackId,
   type Period,
@@ -178,6 +181,10 @@ function faqFor(packs: readonly Pack[]): { q: string; a: React.ReactNode }[] {
     {
       q: 'We need more servers than we planned. What now?',
       a: `Email us before you set them up. You upgrade to the next size and pay the difference, and we send an updated license confirmation. Above ${max} servers, we work out a custom quote with you.`,
+    },
+    {
+      q: 'What happens when a yearly pack ends?',
+      a: `${yearlyUpdates} ${yearlyAfterExpiry} ${yearlyCs2Note}`,
     },
     {
       q: 'What does “lifetime updates” mean for a founding supporter pack?',

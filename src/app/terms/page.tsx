@@ -91,7 +91,8 @@ export default async function Terms() {
           <strong>One event:</strong> the event named in the confirmation, on the dates given there, up to 5 days in a row.
         </li>
         <li>
-          <strong>Yearly:</strong> 12 months from the start date in the confirmation, for any number of the licensee&apos;s own events.
+          <strong>Yearly:</strong> 12 months from the start date in the confirmation, for any number of the licensee&apos;s own events, with all updates
+          released in that time. What you keep afterwards is in section 8.
         </li>
         <li>
           <strong>Founding supporter:</strong> see section 6.
@@ -129,9 +130,16 @@ export default async function Terms() {
 
       <H2 id="after">8. After the period</H2>
       <p>
-        When the period of an event or yearly pack ends, your commercial rights end. Founding supporter packs follow section 6. Your rights under PolyForm
-        continue. To keep using the software commercially, buy a new license.
+        <strong>Event packs:</strong> when the event&apos;s dates end, your commercial rights end. To use the software commercially again, buy a new license.
       </p>
+      <p>
+        <strong>Yearly packs:</strong> if you don&apos;t renew, you keep commercial use, for the licensee&apos;s own events, of every release of each version
+        line that started during your paid 12 months. A version line is a major.minor version such as 1.4, and its releases include later patch releases
+        (1.4.1, 1.4.2…), even ones published after your period ends. New minor or major versions (1.5, 2.0) need active updates. CS2 compatibility fixes
+        are shipped as patch releases of the current line, so you get them only for lines that started during a period you paid for. Renewing, at the
+        yearly price of the same pack, restores updates for 12 months.
+      </p>
+      <p>Founding supporter packs follow section 6. Your rights under PolyForm continue.</p>
 
       <H2 id="upgrades">9. Upgrades</H2>
       <p>

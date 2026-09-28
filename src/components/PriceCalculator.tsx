@@ -28,6 +28,8 @@ import {
   useTypeLabels,
   useTypeOrder,
   vatNote,
+  yearlyAfterExpiry,
+  yearlyUpdates,
   type Pack,
   type PackProduct,
   type Period,
@@ -383,6 +385,11 @@ export function PriceCalculator({ packs, pricesAvailable = true }: { packs: read
             <Typography sx={{ color: color.ink2 }}>
               Up to {quote.pack.maxServers} game servers set up at any one time, spares included. {vatNote}.
             </Typography>
+            {period === 'year' && (
+              <Typography sx={{ mt: 1, color: color.ink2, fontSize: '0.875rem' }}>
+                {yearlyUpdates} {yearlyAfterExpiry}
+              </Typography>
+            )}
             {period === 'founder' && (
               <Box sx={{ mt: 1, display: 'grid', gap: 0.75, justifyItems: 'start' }}>
                 <Chip size="small" color="primary" label={founderBadge} />
