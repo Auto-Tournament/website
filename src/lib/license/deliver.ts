@@ -3,8 +3,8 @@ import { emailConfig, sendEmail } from '@/lib/email/postmark';
 import { dbError } from '@/lib/db/errors';
 import { siteUrl } from '@/lib/site';
 import { emailHash } from './format';
-import { licenseEmail } from './email';
-import { licenseStore, type LicenseStore } from './store';
+import { licenseEmail, refundEmail } from './email';
+import { licenseStore, type LicenseRecord, type LicenseStore } from './store';
 
 /**
  * Emails a license key to the buyer. Off (returns 'disabled') without
@@ -59,6 +59,39 @@ export async function emailLicense(
   } catch (err) {
     console.error('[license] email failed', { session: sessionId }, dbError(err));
     if (claimed) await store.finishEmail(sessionId, { ok: false, at: new Date().toISOString(), error: 'internal error' }).catch(() => {});
+    return 'failed';
+  }
+}
+
+/**
+ * The "your license was refunded" note, to the address the license was bought
+ * with only (checked against the stored hash, like the key). Never throws; logs
+ * the license id and the error, never the address.
+ */
+export async function emailRefund(
+  record: LicenseRecord,
+  to: string,
+  refund: { amount: number; currency: string; full: boolean },
+  options: { fetchImpl?: typeof fetch } = {},
+): Promise<DeliverResult> {
+  const config = emailConfig();
+  if (!config) return 'disabled';
+  const site = siteUrl();
+  if (!site) return 'failed';
+  if (!record.email_sha256 || record.email_sha256 !== emailHash(to)) {
+    console.warn('[refund] email not sent: the address does not match the license', { id: record.payload.id });
+    return 'failed';
+  }
+  try {
+    const result = await sendEmail({ to: to.trim(), ...refundEmail(record, refund, site), tag: 'license-refund' }, config, options.fetchImpl);
+    if (result.ok) {
+      console.info('[refund] emailed', { id: record.payload.id });
+      return 'sent';
+    }
+    console.error('[refund] email failed', { id: record.payload.id, error: result.error });
+    return 'failed';
+  } catch (err) {
+    console.error('[refund] email failed', { id: record.payload.id }, err instanceof Error ? err.name : 'unknown error');
     return 'failed';
   }
 }
