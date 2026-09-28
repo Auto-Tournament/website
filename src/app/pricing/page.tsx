@@ -12,6 +12,7 @@ import {
   earnMoneyRule,
   formatEuro,
   founderBadge,
+  founderSalesOpen,
   founderLifetime,
   founderShutdownPromise,
   founderTerms,
@@ -34,6 +35,7 @@ import {
 } from '@/components/pricing';
 import { getPacks } from '@/lib/stripePrices';
 import { PackPricing } from '@/components/PackPricing';
+import { licenseStore } from '@/lib/license/store';
 import { PriceCalculator } from '@/components/PriceCalculator';
 import { FreeLanConfirmation } from '@/components/FreeLanConfirmation';
 
@@ -101,17 +103,17 @@ function examplesFor(packs: readonly Pack[]): { scenario: string; verdict: strin
       why: `The organizer earns money from it, so it is commercial use. 4 servers fit the S pack (up to ${upTo('platform-s')}), for one event.`,
     },
     {
-      scenario: 'A freelancer uses CS2 Server Manager to install and run MatchZy Enhanced on 8 servers (6 + 2 spares) at a volunteer LAN where nobody else earns money.',
+      scenario: 'A freelancer uses CS2 Server Manager to install and run MatchZy Enhanced on 10 servers (8 + 2 spares) for a 16-team volunteer LAN where nobody else earns money.',
       verdict: `Servers M, ${price('servers-m', 'event')}`,
-      why: `The freelancer earns money from it, so the freelancer pays, even though the event itself is free. Spares count, so 8 servers need the M pack (up to ${upTo('servers-m')}). CS2 Server Manager needs a license for commercial use, even though MatchZy Enhanced itself is MIT.`,
+      why: `The freelancer earns money from it, so the freelancer pays, even though the event itself is free. Spares count, so 10 servers need the M pack (up to ${upTo('servers-m')}). CS2 Server Manager needs a license for commercial use, even though MatchZy Enhanced itself is MIT.`,
     },
     {
-      scenario: 'A freelancer runs 34 servers (32 + 2 spares) with CS2 Server Manager for a paying client.',
+      scenario: 'A freelancer runs 34 servers (32 + 2 spares) with CS2 Server Manager for a paying client, once a year.',
       verdict: `Servers L, ${price('servers-l', 'event')}`,
-      why: `34 servers fit the L pack (up to ${upTo('servers-l')}): ${price('servers-l', 'event')} for one event. As a founding supporter it is ${price('servers-l', 'founder')} once, with lifetime updates.`,
+      why: `34 servers fit the L pack (up to ${upTo('servers-l')}): ${price('servers-l', 'event')} for one event. Running several client events a year? The yearly pack (${price('servers-l', 'year')}) covers events you operate for clients too.`,
     },
     {
-      scenario: 'An esports org runs events all year on 10 servers with the platform.',
+      scenario: 'An esports org runs 32-team events all year on 18 servers with the platform.',
       verdict: `Platform M, ${price('platform-m', 'year')} / yr`,
       why: `Running events all year round fits the yearly Platform M pack (up to ${upTo('platform-m')} servers) rather than paying per event.`,
     },
@@ -236,6 +238,12 @@ function faqFor(packs: readonly Pack[]): { q: string; a: React.ReactNode }[] {
 export default async function Pricing() {
   // Plain numbers only go to the client components; the Stripe price ids stay here.
   const priceSource = await getPacks();
+  let founderOpen = true;
+  try {
+    founderOpen = founderSalesOpen(await licenseStore().founderCount());
+  } catch {
+    founderOpen = founderSalesOpen(0);
+  }
   const { packs } = priceSource;
   const pricesAvailable = priceSource.source === 'stripe';
   const examples = examplesFor(packs);
@@ -262,7 +270,7 @@ export default async function Pricing() {
         </Box>
 
         <Container maxWidth="lg" component="section" id="packs" aria-label="Packs" sx={{ pb: { xs: 6, md: 10 } }}>
-          <PackPricing packs={packs} pricesAvailable={pricesAvailable} />
+          <PackPricing packs={packs} pricesAvailable={pricesAvailable} founderOpen={founderOpen} />
         </Container>
 
         <Section id="free" title="Free if…" lede="No license, no payment, no registration.">

@@ -13,6 +13,8 @@ import {
   maxPackServers,
   neverLockOut,
   packIn,
+  pricingVersion,
+  vatNote,
 } from '@/components/pricing';
 import { getPacks } from '@/lib/stripePrices';
 
@@ -74,7 +76,8 @@ export default async function Terms() {
       <H2 id="packs">4. Packs and server limits</H2>
       <p>
         Your pack allows no more than its number of game servers set up at any one time during the period, spares included: S up to {upTo('servers-s')}, M up to {upTo('servers-m')}, L up to{' '}
-        {upTo('servers-l')}. The pack and its server limit are in your license confirmation.
+        {upTo('servers-l')}. The pack and its server limit are in your license key. Only servers used for the licensed commercial activity count; test, staging
+        and CI servers don&apos;t.
       </p>
       <ul>
         <li>One pack per event, or per 12 months for a yearly pack.</li>
@@ -82,16 +85,20 @@ export default async function Terms() {
           Packs can&apos;t be combined or stacked: two S packs don&apos;t make an M. Servers and Platform packs can&apos;t be combined either; Platform already
           includes the servers.
         </li>
-        <li>More than {maxPackServers(packs)} servers needs a separate written agreement.</li>
+        <li>
+          More than {maxPackServers(packs)} servers, or hosting for many clients at once (for example tournaments as a service), needs a separate written
+          agreement.
+        </li>
+        <li>An event pack bought in the last 90 days counts in full toward a yearly pack of the same product and size.</li>
       </ul>
 
       <H2 id="period">5. Period</H2>
       <ul>
         <li>
-          <strong>One event:</strong> the event named in the confirmation, on the dates given there, up to 5 days in a row.
+          <strong>One event:</strong> the event named in your order, on the dates given there, up to 5 days in a row.
         </li>
         <li>
-          <strong>Yearly:</strong> 12 months from the start date in the confirmation, for any number of the licensee&apos;s own events, with all updates
+          <strong>Yearly:</strong> 12 months from the start date in the license key, for any number of events (section 7), with all updates
           released in that time. What you keep afterwards is in section 8.
         </li>
         <li>
@@ -101,12 +108,12 @@ export default async function Terms() {
 
       <H2 id="founding-supporter">6. Founding supporter packs</H2>
       <p>
-        Founding supporter packs are sold to the first {founderLimit} buyers, or until {founderDeadline}, whichever comes first. We may refuse and refund an order
-        that comes after that.
+        Founding supporter packs are sold to the first {founderLimit} buyers, or until {founderDeadline}, whichever comes first. Checkout stops offering them
+        after that.
       </p>
       <ul>
         <li>
-          <strong>Lifetime updates:</strong> you pay once and get commercial use, for the licensee&apos;s own events, of every version we release, {founderLifetime}.
+          <strong>Lifetime updates:</strong> you pay once and get commercial use, for the events in section 7, of every version we release, {founderLifetime}.
           There is no yearly fee, and the versions you have stay yours to use for good.
         </li>
         <li>
@@ -114,8 +121,9 @@ export default async function Terms() {
           doesn&apos;t include other products or services we sell separately.
         </li>
         <li>
-          <strong>Pack size:</strong> the pack&apos;s server limit is fixed; a founding supporter pack doesn&apos;t grow. To move to a bigger size, you pay the
-          difference between the founding supporter prices ({founderUpgradeExample(packs)}).
+          <strong>Pack size:</strong> the pack&apos;s server limit is fixed; a founding supporter pack doesn&apos;t grow. While founding supporter sales are open,
+          you can move to a bigger size by paying the difference between the founding supporter prices ({founderUpgradeExample(packs)}). After that, a bigger
+          size is a yearly pack.
         </li>
         <li>{founderShutdownPromise}</li>
         <li>{founderUpdateWarning}. We don&apos;t promise that an older version keeps working after a CS2 update.</li>
@@ -123,8 +131,10 @@ export default async function Terms() {
 
       <H2 id="who">7. Who may use the license</H2>
       <p>
-        The license covers the named licensee and its contractors, for the named event (or, for yearly and founding supporter packs, the licensee&apos;s own
-        events). A contractor who uses the software for someone else&apos;s event needs its own license, or the organizer needs one that names that event.
+        The license covers the named licensee and its contractors, for the named event. Yearly and founding supporter packs cover the licensee&apos;s own events
+        and events the licensee operates for clients (for example a LAN that hires you to run its servers). The server limit applies at any one time, and we
+        may ask which events you ran. With an event pack, a contractor who uses the software for someone else&apos;s event needs its own license, or the
+        organizer needs one that names that event.
       </p>
       <p>You can&apos;t transfer, resell or sublicense the license.</p>
 
@@ -133,10 +143,11 @@ export default async function Terms() {
         <strong>Event packs:</strong> when the event&apos;s dates end, your commercial rights end. To use the software commercially again, buy a new license.
       </p>
       <p>
-        <strong>Yearly packs:</strong> if you don&apos;t renew, you keep commercial use, for the licensee&apos;s own events, of every release of each version
-        line that started during your paid 12 months. A version line is a major.minor version such as 1.4, and its releases include later patch releases
+        <strong>Yearly packs:</strong> if you don&apos;t renew, you keep commercial use, for the events in section 7, of every release of each version
+        line that started on or before the last day of your paid 12 months (so the line current when you bought is included). A version line is a major.minor version such as 1.4, and its releases include later patch releases
         (1.4.1, 1.4.2…), even ones published after your period ends. New minor or major versions (1.5, 2.0) need active updates. CS2 compatibility fixes
-        are shipped as patch releases of the current line, so you get them only for lines that started during a period you paid for. Renewing, at the
+        are shipped as patch releases of the current line, so you get them only for lines covered by a period you paid for. Yearly packs never renew
+        automatically. Renewing, at the
         yearly price of the same pack, restores updates for 12 months.
       </p>
       <p>Founding supporter packs follow section 6. Your rights under PolyForm continue.</p>
@@ -149,8 +160,9 @@ export default async function Terms() {
 
       <H2 id="start">10. When the license starts</H2>
       <p>
-        We check the order details and email a written license confirmation within 2 working days of payment. The confirmation names the licensee, pack (with its
-        server limit) and period, and it is part of the license together with these terms.
+        For card payments the license starts at payment: your license key is shown right after checkout and can be retrieved later on the license page (/license).
+        For invoice orders we email your license key once the invoice is paid. The key names the licensee, pack (with its server limit) and period, and it is part of
+        the license together with these terms.
       </p>
 
       <H2 id="who-pays">11. Who needs a license</H2>
@@ -204,8 +216,9 @@ export default async function Terms() {
       <H2 id="changes">17. Changes</H2>
       <p>
         We may update these terms. A license keeps the terms that applied when it was bought. Upgrades and new licenses follow the terms in force at the time.
+        Price changes apply to new purchases and renewals only, never to a running period or a founding supporter pack.
       </p>
-      <p>Licenses bought under Pricing v1 (per seat, 25 September 2026) keep their terms.</p>
+      <p>Licenses bought under Pricing v1 (per seat) or Pricing v2 (25 September 2026) keep their terms.</p>
 
       <H2 id="license-checks">18. License checks</H2>
       <p>{neverLockOut}</p>
@@ -216,9 +229,9 @@ export default async function Terms() {
 
       <H2 id="prices">19. Prices and contact</H2>
       <p>
-        Current prices (Pricing v2, valid from 25 September 2026), per event, yearly and founding supporter:{' '}
+        Current prices ({pricingVersion}), per event, yearly and founding supporter:{' '}
         {packs.map((p) => `${p.name} (up to ${p.maxServers} servers) ${formatEuro(p.prices.event)}, ${formatEuro(p.prices.year)}, ${formatEuro(p.prices.founder)}`).join('; ')}.
-        No VAT added (seller not VAT-registered). See <a href={links.pricing}>Licensing &amp; pricing</a>.
+        {vatNote} See <a href={links.pricing}>Licensing &amp; pricing</a>.
       </p>
       <p>
         Questions: <a href={`mailto:${seller.email}`}>{seller.email}</a>.

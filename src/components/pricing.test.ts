@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
+  founderSalesOpen,
+  founderLimit,
   FALLBACK_PACKS,
   founderBadge,
   founderLifetime,
@@ -29,14 +31,14 @@ function seedTable(): { id: string; maxServers: number; prices: Record<string, n
 }
 
 describe('founder prices', () => {
-  it('are the lifetime founder prices', () => {
+  it('are the Pricing v3 lifetime founder prices (3× yearly)', () => {
     expect(Object.fromEntries(FALLBACK_PACKS.map((p) => [p.id, p.prices.founder / 100]))).toEqual({
       'servers-s': 149,
-      'servers-m': 389,
-      'servers-l': 799,
+      'servers-m': 449,
+      'servers-l': 849,
       'platform-s': 299,
-      'platform-m': 649,
-      'platform-l': 1199,
+      'platform-m': 749,
+      'platform-l': 1299,
     });
   });
 
@@ -80,9 +82,9 @@ describe('founder copy', () => {
   });
 
   it('prices a size upgrade as the founder price difference', () => {
-    expect(founderUpgradeExample(FALLBACK_PACKS)).toBe('Servers M to Servers L costs €410');
+    expect(founderUpgradeExample(FALLBACK_PACKS)).toBe('Servers M to Servers L costs €400');
     expect(founderUpgradeExample(FALLBACK_PACKS, 'platform')).toBe('Platform M to Platform L costs €550');
-    expect(terms).toContain('Servers M to Servers L costs €410');
+    expect(terms).toContain('Servers M to Servers L costs €400');
   });
 
   it('includes the shutdown promise and never locks anyone out', () => {
@@ -96,7 +98,7 @@ describe('founder copy', () => {
 describe('yearly copy', () => {
   it('keeps the version lines that started during the paid year, patches included', () => {
     expect(yearlyUpdates).toBe('Yearly includes all updates for 12 months.');
-    expect(yearlyAfterExpiry).toContain('every version line (such as 1.4) that started during your paid year');
+    expect(yearlyAfterExpiry).toContain('every version line (such as 1.4) that started on or before the last day of your paid year');
     expect(yearlyAfterExpiry).toContain('later patches (1.4.1, 1.4.2…)');
     expect(yearlyAfterExpiry).toContain('New minor and major versions (1.5, 2.0) need active updates; renewing restores them.');
     expect(yearlyCs2Note).toContain('patches of the current version line');
@@ -104,5 +106,16 @@ describe('yearly copy', () => {
 
   it('is part of the pack rules', () => {
     expect(packRules(FALLBACK_PACKS)).toContain(`${yearlyUpdates} ${yearlyAfterExpiry}`);
+  });
+});
+
+describe('founder cap', () => {
+  it('is open below the limit and on the last day', () => {
+    expect(founderSalesOpen(0, new Date('2026-09-28T12:00:00Z'))).toBe(true);
+    expect(founderSalesOpen(founderLimit - 1, new Date('2027-03-31T23:59:59Z'))).toBe(true);
+  });
+  it('closes at the limit or after the last day', () => {
+    expect(founderSalesOpen(founderLimit, new Date('2026-10-01T00:00:00Z'))).toBe(false);
+    expect(founderSalesOpen(0, new Date('2027-04-01T00:00:00Z'))).toBe(false);
   });
 });

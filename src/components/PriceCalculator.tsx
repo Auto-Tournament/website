@@ -28,6 +28,7 @@ import {
   useTypeLabels,
   useTypeOrder,
   vatNote,
+  vatShort,
   yearlyAfterExpiry,
   yearlyUpdates,
   type Pack,
@@ -170,7 +171,7 @@ export function PriceCalculator({ packs, pricesAvailable = true }: { packs: read
       `Use: ${useLabel}`,
       `Period: ${periodLabel}`,
       `Servers, spares included: ${servers}`,
-      `Price: ${formatEuro(price)}. ${vatNote}`,
+      `Price: ${formatEuro(price)} ${vatShort}.`,
       '',
       'Name / company: ',
       'Org number / VAT ID: ',
@@ -383,7 +384,7 @@ export function PriceCalculator({ packs, pricesAvailable = true }: { packs: read
               {quote.pack.name}: <span data-testid="quote-price">{formatEuro(price)}</span> {periodPriceSuffix[period]}
             </Typography>
             <Typography sx={{ color: color.ink2 }}>
-              Up to {quote.pack.maxServers} game servers set up at any one time, spares included. {vatNote}.
+              Up to {quote.pack.maxServers} game servers set up at any one time, spares included. Prices {vatShort}.
             </Typography>
             {period === 'year' && (
               <Typography sx={{ mt: 1, color: color.ink2, fontSize: '0.875rem' }}>

@@ -13,6 +13,7 @@ export const links = {
   pricing: '/pricing',
   compatibility: '/compatibility',
   terms: '/terms',
+  license: '/license',
   termsOfSale: '/terms-of-sale',
   privacy: '/privacy',
   polyform: 'https://polyformproject.org/licenses/noncommercial/1.0.0',

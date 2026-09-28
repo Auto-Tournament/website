@@ -12,6 +12,7 @@ import { fontDisplay } from '@/theme/theme';
 import {
   formatEuro,
   founderBadge,
+  founderClosedBadge,
   founderPitch,
   founderShutdownPromise,
   founderUpdateWarning,
@@ -70,7 +71,15 @@ const founderButton = {
  * the fallback prices: the buy buttons are hidden in favor of "Request by
  * email", since checkout can't charge a price that didn't come from Stripe.
  */
-export function PackPricing({ packs: allPacks, pricesAvailable = true }: { packs: readonly Pack[]; pricesAvailable?: boolean }) {
+export function PackPricing({
+  packs: allPacks,
+  pricesAvailable = true,
+  founderOpen = true,
+}: {
+  packs: readonly Pack[];
+  pricesAvailable?: boolean;
+  founderOpen?: boolean;
+}) {
   const [product, setProduct] = useState<PackProduct>('servers');
   const [loadingKey, setLoadingKey] = useState<LoadingKey | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -270,7 +279,7 @@ export function PackPricing({ packs: allPacks, pricesAvailable = true }: { packs
       </Box>
 
       <Typography sx={{ color: color.muted, fontSize: '0.875rem', mt: -1 }}>
-        Spares count toward the servers. More than {maxPackServers(allPacks)} servers? Contact us for a quote. Prices in EUR. {vatNote}.
+        Spares count toward the servers. More than {maxPackServers(allPacks)} servers? Contact us for a quote. Prices in EUR. {vatNote}
       </Typography>
 
       <Box
@@ -292,7 +301,7 @@ export function PackPricing({ packs: allPacks, pricesAvailable = true }: { packs
           <Typography id="founding-supporter-title" component="h3" sx={{ fontFamily: fontDisplay, fontWeight: 600, fontSize: '1.125rem' }}>
             Founding supporter
           </Typography>
-          <Chip size="small" variant="outlined" label={founderBadge} data-testid="founder-badge" />
+          <Chip size="small" variant="outlined" label={founderOpen ? founderBadge : founderClosedBadge} data-testid="founder-badge" />
         </Box>
         <Typography sx={{ color: color.ink2, maxWidth: '62ch' }}>
           {founderPitch}
@@ -305,7 +314,7 @@ export function PackPricing({ packs: allPacks, pricesAvailable = true }: { packs
                 key={pack.id}
                 variant="outlined"
                 onClick={() => buy(pack, 'founder')}
-                disabled={loadingKey !== null}
+                disabled={loadingKey !== null || !founderOpen}
                 aria-busy={founderLoading}
                 aria-label={`Become a founding supporter with ${pack.name}, ${formatEuro(pack.prices.founder)}`}
                 data-testid="founder-price"
@@ -315,7 +324,7 @@ export function PackPricing({ packs: allPacks, pricesAvailable = true }: { packs
                   {pack.size} · {pack.maxServers} servers
                 </Box>
                 <Box component="span" sx={{ fontFamily: fontDisplay, fontWeight: 700, fontSize: '1rem', color: color.ink }}>
-                  {founderLoading ? 'Opening checkout…' : `Pay once · ${formatEuro(pack.prices.founder)}`}
+                  {!founderOpen ? 'Sold out' : founderLoading ? 'Opening checkout…' : `Pay once · ${formatEuro(pack.prices.founder)}`}
                 </Box>
               </Button>
             ) : (
