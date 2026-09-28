@@ -82,3 +82,41 @@ export function coverageText(license: Pick<LicensePayload, 'kind' | 'updates_unt
     'Those lines stay yours after that, including their later patch releases. Renew yearly to get newer lines.'
   );
 }
+
+/**
+ * Where a license stands on `today` (YYYY-MM-DD, UTC):
+ * - event: upcoming before the window, active during it, expired after.
+ * - year: active until updates_until; after that `updates-ended`: the
+ *   covered version lines stay licensed (Commercial License Terms, section 8).
+ * - founder: always active, updates for life.
+ */
+export type LicenseStatus = 'active' | 'upcoming' | 'expired' | 'updates-ended';
+
+export function licenseStatus(license: Pick<LicensePayload, 'kind' | 'updates_until' | 'valid_from' | 'valid_to'>, today: string): LicenseStatus {
+  if (license.kind === 'founder') return 'active';
+  if (license.kind === 'event') {
+    const from = license.valid_from ?? license.updates_until;
+    const to = license.valid_to ?? license.updates_until;
+    if (today < from) return 'upcoming';
+    return today > to ? 'expired' : 'active';
+  }
+  return today > license.updates_until ? 'updates-ended' : 'active';
+}
+
+/** One line for the status, for the buyer. */
+export function statusText(license: Pick<LicensePayload, 'kind' | 'updates_until' | 'valid_from' | 'valid_to'>, today: string): string {
+  const status = licenseStatus(license, today);
+  if (license.kind === 'founder') return 'Active, updates for life';
+  if (license.kind === 'event') {
+    if (status === 'upcoming') return `Upcoming, starts ${formatDay(license.valid_from ?? license.updates_until)}`;
+    if (status === 'expired') return `Expired, the event ended ${formatDay(license.valid_to ?? license.updates_until)}`;
+    return `Active until ${formatDay(license.valid_to ?? license.updates_until)}`;
+  }
+  if (status === 'updates-ended') return `Updates ended ${formatDay(license.updates_until)}. The versions it covers stay licensed.`;
+  return `Active, updates until ${formatDay(license.updates_until)}`;
+}
+
+/** UTC today, YYYY-MM-DD. */
+export function todayUtc(now: Date = new Date()): string {
+  return now.toISOString().slice(0, 10);
+}

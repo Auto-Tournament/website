@@ -19,14 +19,14 @@ export function siteUrl(raw: string | undefined = process.env.SITE_URL): string 
 
 /**
  * CSRF check for POSTs from our own pages: a browser request must come from
- * this site. Rejects `Sec-Fetch-Site: cross-site` / `same-site`, and an
- * Origin that is neither SITE_URL nor the host the request was sent to.
- * Requests with neither header (curl, old browsers) pass; the routes also
- * require a JSON or form body and rate-limit.
+ * this site. When the browser sends `Sec-Fetch-Site` (all current ones do),
+ * that decides: only `same-origin` (or `none`, typed by the user) passes.
+ * Otherwise the Origin must be SITE_URL or the host the request was sent to.
+ * Requests with neither header (curl) pass; the routes also rate-limit.
  */
 export function sameOrigin(headers: Headers, site: string | null = siteUrl()): boolean {
   const fetchSite = headers.get('sec-fetch-site');
-  if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') return false;
+  if (fetchSite) return fetchSite === 'same-origin' || fetchSite === 'none';
   const origin = headers.get('origin');
   if (!origin) return true;
   if (origin === 'null') return false;

@@ -12,6 +12,8 @@ import { CHECKOUT_SESSION_ID } from '@/lib/license/format';
 import { issueForSession, stripeServer } from '@/lib/license/issue';
 import { licenseSigningKey } from '@/lib/license/keys';
 import { emailConfig } from '@/lib/email/postmark';
+import { siteUrl } from '@/lib/site';
+import { accountEnabled } from '@/lib/account/service';
 import { licenseStore, type LicenseRecord } from '@/lib/license/store';
 
 const { color } = tokens;
@@ -81,6 +83,7 @@ export default async function Thanks({ searchParams }: { searchParams: Promise<R
                 license={state.record.payload}
                 reference={state.record.session_id}
                 invoice={state.record.invoice_number}
+                checkUrl={`${siteUrl() ?? ''}/verify/${state.record.payload.id}`}
               />
               <Typography sx={{ mt: 3, maxWidth: '60ch', color: color.ink2 }}>
                 Lost it? Get it again on the{' '}
@@ -88,6 +91,16 @@ export default async function Thanks({ searchParams }: { searchParams: Promise<R
                   license page
                 </Box>{' '}
                 with the order reference above (or the invoice number on your receipt) and your email.
+                {accountEnabled() && (
+                  <>
+                    {' '}
+                    Or sign in to{' '}
+                    <Box component="a" href="/account" sx={link}>
+                      your licenses
+                    </Box>{' '}
+                    with that email to see all of them.
+                  </>
+                )}
               </Typography>
             </>
           )}

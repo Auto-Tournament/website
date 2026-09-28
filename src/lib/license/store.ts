@@ -1,7 +1,8 @@
 import 'server-only';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
-import { mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
+import { timingSafeEqual } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { writeFileAtomic } from '../atomicWrite';
 import type { LicensePayload } from './format';
 
 /**
@@ -44,6 +45,10 @@ export interface LicenseStore {
   find(reference: string, emailSha256: string): Promise<LicenseRecord | null>;
   /** Returns the session's record, creating it with `create` only when there is none. */
   issueOnce(sessionId: string, create: () => Promise<LicenseRecord>): Promise<{ record: LicenseRecord; created: boolean }>;
+  /** Every license bought with this email (by hash), newest first. */
+  forEmail(emailSha256: string): Promise<LicenseRecord[]>;
+  /** By license id (L-…), for the public check page. */
+  byLicenseId(id: string): Promise<LicenseRecord | null>;
   /** Live-mode founding supporter licenses issued so far (the founder cap). */
   founderCount(): Promise<number>;
   /**
@@ -88,22 +93,7 @@ export function createLicenseStore(dir: string): LicenseStore {
   }
 
   async function persist(next: LicenseRecord[]): Promise<void> {
-    await mkdir(dir, { recursive: true, mode: 0o700 });
-    const body = `${JSON.stringify({ version: FILE_VERSION, licenses: next } satisfies StoreFile, null, 1)}\n`;
-    const tmp = path.join(dir, `.${FILE_NAME}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`);
-    try {
-      const handle = await open(tmp, 'w', 0o600);
-      try {
-        await handle.writeFile(body, 'utf8');
-        await handle.sync();
-      } finally {
-        await handle.close();
-      }
-      await rename(tmp, file);
-    } catch (err) {
-      await unlink(tmp).catch(() => {});
-      throw err;
-    }
+    await writeFileAtomic(dir, FILE_NAME, `${JSON.stringify({ version: FILE_VERSION, licenses: next } satisfies StoreFile, null, 1)}\n`);
   }
 
   function serial<T>(task: () => Promise<T>): Promise<T> {
@@ -124,6 +114,16 @@ export function createLicenseStore(dir: string): LicenseStore {
         const match = (await current()).find((r) => r.session_id === ref || (r.invoice_number !== null && r.invoice_number.toUpperCase() === upper));
         return match && sameHash(match.email_sha256, emailSha256) ? match : null;
       });
+    },
+    forEmail(emailSha256) {
+      return serial(async () =>
+        (await current())
+          .filter((r) => sameHash(r.email_sha256, emailSha256))
+          .sort((a, b) => (a.payload.issued_at < b.payload.issued_at ? 1 : a.payload.issued_at > b.payload.issued_at ? -1 : 0)),
+      );
+    },
+    byLicenseId(id) {
+      return serial(async () => (await current()).find((r) => r.payload.id === id) ?? null);
     },
     founderCount() {
       return serial(async () => (await current()).filter((r) => r.livemode && r.payload.kind === 'founder').length);
