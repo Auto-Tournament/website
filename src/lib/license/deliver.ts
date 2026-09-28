@@ -1,5 +1,6 @@
 import 'server-only';
 import { emailConfig, sendEmail } from '@/lib/email/postmark';
+import { dbError } from '@/lib/db/errors';
 import { siteUrl } from '@/lib/site';
 import { emailHash } from './format';
 import { licenseEmail } from './email';
@@ -56,7 +57,7 @@ export async function emailLicense(
     console.error('[license] email failed', { id: record.payload.id, error: result.error });
     return 'failed';
   } catch (err) {
-    console.error('[license] email failed', { session: sessionId }, err instanceof Error ? err.message : 'unknown error');
+    console.error('[license] email failed', { session: sessionId }, dbError(err));
     if (claimed) await store.finishEmail(sessionId, { ok: false, at: new Date().toISOString(), error: 'internal error' }).catch(() => {});
     return 'failed';
   }

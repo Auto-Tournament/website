@@ -108,7 +108,8 @@ export function PackPricing({
   };
 
   return (
-    <Box sx={{ display: 'grid', gap: { xs: 3, md: 4 } }}>
+    // minmax(0, 1fr): the column may shrink below its content's widest line, so the cards fit a 320 px screen.
+    <Box sx={{ display: 'grid', gap: { xs: 3, md: 4 }, gridTemplateColumns: 'minmax(0, 1fr)' }}>
       <Box sx={{ display: 'grid', gap: 1.5, justifyItems: 'start' }}>
         <ToggleButtonGroup
           exclusive
@@ -299,6 +300,7 @@ export function PackPricing({
           borderRadius: `${radius.md}px`,
           p: { xs: 2.5, md: 3 },
           display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr)',
           gap: 1.5,
         }}
       >
@@ -306,12 +308,19 @@ export function PackPricing({
           <Typography id="founding-supporter-title" component="h3" sx={{ fontFamily: fontDisplay, fontWeight: 600, fontSize: '1.125rem' }}>
             Founding supporter
           </Typography>
-          <Chip size="small" variant="outlined" label={founderOpen ? founderBadge : founderClosedBadge} data-testid="founder-badge" />
+          <Chip
+            size="small"
+            variant="outlined"
+            label={founderOpen ? founderBadge : founderClosedBadge}
+            data-testid="founder-badge"
+            // The badge text is long: let it wrap on narrow phones instead of widening the strip.
+            sx={{ maxWidth: '100%', height: 'auto', py: 0.25, '& .MuiChip-label': { whiteSpace: 'normal' } }}
+          />
         </Box>
         <Typography sx={{ color: color.ink2, maxWidth: '62ch' }}>
           {founderPitch}
         </Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0,1fr))' }, gap: 1, maxWidth: 560 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', md: 'repeat(3, minmax(0,1fr))' }, gap: 1, maxWidth: 560 }}>
           {packs.map((pack) => {
             const founderLoading = loadingKey === loadingKeyFor(pack.id, 'founder');
             return pricesAvailable ? (

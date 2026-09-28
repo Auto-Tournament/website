@@ -1,3 +1,4 @@
+import { dbError } from '@/lib/db/errors';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import Box from '@mui/material/Box';
@@ -42,7 +43,7 @@ async function check(id: string): Promise<PublicCheck | 'busy' | 'error'> {
   try {
     return publicCheck(await licenseStore().byLicenseId(id), todayUtc());
   } catch (err) {
-    console.error('[license] public check failed', err instanceof Error ? err.message : 'unknown error');
+    console.error('[license] public check failed', dbError(err));
     return 'error';
   }
 }

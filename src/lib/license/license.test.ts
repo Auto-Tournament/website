@@ -1,5 +1,5 @@
 import { generateKeyPairSync } from 'node:crypto';
-import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -18,7 +18,9 @@ import {
   type SessionLike,
   type SigningKey,
 } from './format';
-import { createLicenseStore, type LicenseRecord } from './store';
+import { testDb } from '../db/testing';
+import { licenses } from '../db/schema';
+import { createLicenseStore, importLicenseFile, type LicenseRecord } from './store';
 
 /** A throwaway key made for this test run; nothing is committed. */
 function throwawayKey(): SigningKey {
@@ -249,12 +251,12 @@ describe('signing and verifying', () => {
 });
 
 describe('store', () => {
-  let dir: string;
+  let t: Awaited<ReturnType<typeof testDb>>;
   beforeEach(async () => {
-    dir = await mkdtemp(path.join(tmpdir(), 'licenses-'));
+    t = await testDb();
   });
   afterEach(async () => {
-    await rm(dir, { recursive: true, force: true });
+    await t.close();
   });
 
   const record = (sessionId: string, token = 'ATL1.x.y'): LicenseRecord => ({
@@ -263,12 +265,12 @@ describe('store', () => {
     email_sha256: emailHash('buyer@example.com'),
     livemode: false,
     dates_from_form: true,
-    payload: payload(),
+    payload: { ...payload(), id: `L-${sessionId}` },
     token,
   });
 
   it('issues one key per session, even when asked twice at once', async () => {
-    const store = createLicenseStore(dir);
+    const store = createLicenseStore(t.db);
     let made = 0;
     const create = async () => {
       made++;
@@ -279,19 +281,19 @@ describe('store', () => {
     expect([a.created, b.created].sort()).toEqual([false, true]);
     expect(a.record.token).toBe(b.record.token);
 
-    // A new process reads the same key back.
-    const again = createLicenseStore(dir);
+    // Another store on the same database reads the same key back.
+    const again = createLicenseStore(t.db);
     expect((await again.bySession('cs_test_1'))?.token).toBe('ATL1.1.x');
     expect((await again.issueOnce('cs_test_1', create)).created).toBe(false);
     expect(made).toBe(1);
   });
 
   it('counts only live founder licenses for the founder cap', async () => {
-    const store = createLicenseStore(dir);
+    const store = createLicenseStore(t.db);
     const make = (id: string, kind: 'founder' | 'year', livemode: boolean) => async () => ({
       ...record(id),
       livemode,
-      payload: { ...payload(), kind },
+      payload: { ...record(id).payload, kind },
     });
     await store.issueOnce('cs_live_f1', make('cs_live_f1', 'founder', true));
     await store.issueOnce('cs_live_f2', make('cs_live_f2', 'founder', true));
@@ -300,25 +302,28 @@ describe('store', () => {
     expect(await store.founderCount()).toBe(2);
   });
 
-  it('keeps the file private and without the email', async () => {
-    const store = createLicenseStore(dir);
+  it('keeps a hash of the email, never the email', async () => {
+    const store = createLicenseStore(t.db);
     await store.issueOnce('cs_test_2', async () => record('cs_test_2'));
-    expect((await stat(store.file)).mode & 0o777).toBe(0o600);
-    expect(await readFile(store.file, 'utf8')).not.toContain('buyer@example.com');
+    const rows = await t.db.select().from(licenses);
+    expect(JSON.stringify(rows)).not.toContain('buyer@example.com');
+    expect(rows[0].emailHash).toBe(emailHash('buyer@example.com'));
   });
 
   it('finds a key by session id or invoice number, only with the right email', async () => {
-    const store = createLicenseStore(dir);
+    const store = createLicenseStore(t.db);
     await store.issueOnce('cs_test_3', async () => record('cs_test_3'));
     const hash = emailHash(' Buyer@Example.COM ');
     expect((await store.find('cs_test_3', hash))?.session_id).toBe('cs_test_3');
     expect((await store.find('abcd1234-0001', hash))?.session_id).toBe('cs_test_3');
     expect(await store.find('cs_test_3', emailHash('someone@else.com'))).toBeNull();
     expect(await store.find('cs_test_nope', hash)).toBeNull();
+    expect((await store.byLicenseId('L-cs_test_3'))?.session_id).toBe('cs_test_3');
+    expect((await store.forEmail(hash)).map((r) => r.session_id)).toEqual(['cs_test_3']);
   });
 
   it('does not write when creating fails', async () => {
-    const store = createLicenseStore(dir);
+    const store = createLicenseStore(t.db);
     await expect(
       store.issueOnce('cs_test_4', async () => {
         throw new Error('stripe down');
@@ -326,5 +331,30 @@ describe('store', () => {
     ).rejects.toThrow('stripe down');
     expect(await store.bySession('cs_test_4')).toBeNull();
     expect((await store.issueOnce('cs_test_4', async () => record('cs_test_4'))).created).toBe(true);
+  });
+
+  it('imports licenses.json once, leaves the file as it was, and keeps what the database has', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'licenses-'));
+    try {
+      const file = path.join(dir, 'licenses.json');
+      const old = [
+        { ...record('cs_live_a'), livemode: true, emailed_at: '2026-09-20T10:00:00.000Z', email_error: null },
+        { ...record('cs_live_b'), invoice_number: null },
+      ];
+      const text = `${JSON.stringify({ version: 1, licenses: old }, null, 1)}\n`;
+      await writeFile(file, text, { mode: 0o600 });
+      const store = createLicenseStore(t.db);
+      expect(await importLicenseFile(store, dir)).toEqual({ inFile: 2, imported: 2 });
+      expect(await importLicenseFile(store, dir)).toEqual({ inFile: 2, imported: 0 });
+      expect(await readFile(file, 'utf8')).toBe(text);
+      expect(await store.bySession('cs_live_a')).toMatchObject({ livemode: true, emailed_at: '2026-09-20T10:00:00.000Z', token: 'ATL1.x.y' });
+      expect(await store.founderCount()).toBe(0);
+      // No file: nothing to do. A broken file: an error, never a silent start-over.
+      expect(await importLicenseFile(store, path.join(dir, 'nope'))).toBeNull();
+      await writeFile(file, '{"version":2}');
+      await expect(importLicenseFile(store, dir)).rejects.toThrow('not a license store');
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });

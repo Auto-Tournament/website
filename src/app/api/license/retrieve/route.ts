@@ -1,3 +1,4 @@
+import { dbError } from '@/lib/db/errors';
 import { clientIp, createRateLimiter } from '@/lib/checkout';
 import { readCapped } from '@/lib/readCapped';
 import { emailHash } from '@/lib/license/format';
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
     if (!record) return notFound();
     return reply(200, { token: record.token, license: record.payload });
   } catch (err) {
-    console.error('[license] retrieve failed', err instanceof Error ? err.message : 'unknown error');
+    console.error('[license] retrieve failed', dbError(err));
     return reply(500, { error: 'Could not look up the license. Try again, or email us.' });
   }
 }

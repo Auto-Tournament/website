@@ -1,3 +1,4 @@
+import { dbError } from '@/lib/db/errors';
 import { after } from 'next/server';
 import { clientIp, createRateLimiter } from '@/lib/checkout';
 import { emailConfig } from '@/lib/email/postmark';
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
       after(() => emailLicense(record.session_id, mail, { again: true }));
     }
   } catch (err) {
-    console.error('[license] resend lookup failed', err instanceof Error ? err.message : 'unknown error');
+    console.error('[license] resend lookup failed', dbError(err));
     return reply(500, { error: 'Something went wrong. Try again, or email us.' });
   }
   return done();

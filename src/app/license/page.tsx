@@ -8,7 +8,8 @@ import { LicenseRetrieve } from '@/components/LicenseRetrieve';
 import { links } from '@/components/links';
 import { seller } from '@/components/seller';
 import { emailConfig } from '@/lib/email/postmark';
-import { accountEnabled } from '@/lib/account/service';
+import { consoleEnabled } from '@/lib/console/auth';
+import { consoleUrl } from '@/lib/console/urls';
 import { VerifyForm } from '@/components/VerifyForm';
 
 const { color } = tokens;
@@ -52,9 +53,9 @@ export default function LicensePage() {
             number on your Stripe receipt, and the email you paid with.
           </Typography>
           <LicenseRetrieve emailEnabled={emailEnabled} />
-          {accountEnabled() && (
+          {consoleEnabled() && (
             <Typography sx={{ mt: 3 }}>
-              Have more than one? <a href={links.account}>Sign in to your licenses</a> with the email you paid with to see them all, and which versions each
+              Have more than one? <a href={consoleUrl('/')}>Sign in to the console</a> with the email you paid with to see them all, and which versions each
               one covers.
             </Typography>
           )}

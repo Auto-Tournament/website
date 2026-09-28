@@ -7,6 +7,10 @@ import { checkSession, emailHash, payloadForSession, sessionEmail, signLicense, 
 import { emailLicense } from './deliver';
 import { licenseSigningKey } from './keys';
 import { licenseStore, type LicenseRecord } from './store';
+import { db } from '@/lib/db/client';
+import { dbError } from '@/lib/db/errors';
+import { licenseIssuedToOrg, orgForCheckout } from '@/lib/console/orgs';
+import { stripeLivemode } from '@/lib/stripeMode';
 
 /**
  * Issues the license key for a paid Checkout Session, once. Called by the
@@ -49,6 +53,9 @@ export async function issueForSession(session: Stripe.Checkout.Session, now: Dat
   const key = licenseSigningKey();
   if (!key) return { status: 'disabled' };
 
+  // Bought from the console: into that organization, when it still exists. Looked up
+  // before issueOnce, which holds a transaction (and its connection) while it runs.
+  const orgId = session.metadata?.org_id ? await orgForCheckout(db(), session.metadata.org_id) : null;
   const { record, created } = await licenseStore().issueOnce(session.id, async () => {
     // The limit the buyer paid for, from the session; Stripe's current pack as a fallback for older sessions.
     const maxServers = check.metadataMaxServers ?? packIn((await getPacks()).packs, check.packId).maxServers;
@@ -69,10 +76,16 @@ export async function issueForSession(session: Stripe.Checkout.Session, now: Dat
       dates_from_form: datesFromForm,
       payload,
       token: signLicense(payload, key),
+      org_id: orgId,
     };
   });
   if (created) {
-    console.info('[license] issued', { id: record.payload.id, kid: record.payload.kid, kind: record.payload.kind, livemode: record.livemode });
+    console.info('[license] issued', { id: record.payload.id, kid: record.payload.kid, kind: record.payload.kind, livemode: record.livemode, org: Boolean(record.org_id) });
+    if (record.org_id) {
+      await licenseIssuedToOrg(db(), record, stripeLivemode()).catch((err) =>
+        console.error('[license] could not record the organization purchase', { id: record.payload.id }, dbError(err)),
+      );
+    }
   }
   // Also on 'existing': a webhook retry (or one resent from the Stripe dashboard) sends it when an earlier try failed.
   const email = sessionEmail(session as unknown as SessionLike);

@@ -14,7 +14,8 @@ import { issueForSession, stripeServer } from '@/lib/license/issue';
 import { licenseSigningKey } from '@/lib/license/keys';
 import { emailConfig } from '@/lib/email/postmark';
 import { siteUrl } from '@/lib/site';
-import { accountEnabled } from '@/lib/account/service';
+import { consoleEnabled } from '@/lib/console/auth';
+import { consoleUrl } from '@/lib/console/urls';
 import { licenseStore, type LicenseRecord } from '@/lib/license/store';
 
 const { color } = tokens;
@@ -92,12 +93,12 @@ export default async function Thanks({ searchParams }: { searchParams: Promise<R
                   license page
                 </Box>{' '}
                 with the order reference above (or the invoice number on your receipt) and your email.
-                {accountEnabled() && (
+                {consoleEnabled() && (
                   <>
                     {' '}
                     Or sign in to{' '}
-                    <Box component="a" href="/account" sx={link}>
-                      your licenses
+                    <Box component="a" href={consoleUrl('/')} sx={link}>
+                      the console
                     </Box>{' '}
                     with that email to see all of them.
                   </>
