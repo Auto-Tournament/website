@@ -374,8 +374,14 @@ function MoneyStep({ draft, setDraft }: { draft: Answers; setDraft: (a: Answers)
 
 function ServersStep({ draft, setDraft, packs }: { draft: Answers; setDraft: (a: Answers) => void; packs: readonly Pack[] }) {
   const max = maxPackServers(packs);
-  const [text, setText] = useState(draft.servers !== undefined ? String(draft.servers) : '');
+  // Starts at 1 rather than empty, so Next works right away and the stepper has a number to move from.
+  const [text, setText] = useState(String(draft.servers ?? 1));
   const [teams, setTeams] = useState('16');
+  useEffect(() => {
+    if (draft.servers === undefined) setDraft({ ...draft, servers: 1 });
+    // Only on first show of this step.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const set = (n: number) => {
     const v = Math.min(Math.max(1, n), serversCap);
     setText(String(v));
