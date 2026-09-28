@@ -8,7 +8,7 @@
  * names are ours. Relative imports only: drizzle-kit reads this file too.
  */
 import { sql } from 'drizzle-orm';
-import { bigserial, boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { bigserial, boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import type { LicensePayload } from '../license/format';
 
 const at = (name: string) => timestamp(name, { withTimezone: true, mode: 'date' });
@@ -281,6 +281,49 @@ export const manualOrders = pgTable(
     paidAt: at('paid_at'),
   },
   (t) => [index('manual_orders_status_idx').on(t.status, t.createdAt)],
+);
+
+export type RefundRequestStatus = 'pending' | 'confirming' | 'confirmed' | 'cancelled' | 'expired';
+
+/**
+ * A refund asked for in the admin CRM, waiting for the admin to confirm it
+ * through a link emailed to their own verified address (src/lib/license/refundRequests.ts).
+ * No money moves until then. The link's token is kept as a SHA-256 only;
+ * single use, 15 minutes, only the admin who asked can confirm it. One pending
+ * request per license (a new one cancels the old). 'confirming' is the short
+ * moment the refund runs. Pruned by src/lib/db/prune.ts.
+ */
+export const refundRequests = pgTable(
+  'refund_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    licenseId: text('license_id').notNull(),
+    adminUserId: text('admin_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Minor units of `currency`: what is refunded on confirm (a blank amount is resolved to what was left when asked). */
+    amount: integer('amount').notNull(),
+    currency: text('currency').notNull(),
+    reason: text('reason').notNull(),
+    note: text('note'),
+    notifyBuyer: boolean('notify_buyer').notNull().default(false),
+    /** The buyer address typed in the form for the "refunded" email (checked against the license hash). Cleared once the request is done. */
+    sendTo: text('send_to'),
+    /** Manual (bank transfer) refunds: YYYY-MM-DD and the bank reference. */
+    refundedOn: text('refunded_on'),
+    reference: text('reference'),
+    tokenHash: text('token_hash').notNull().unique(),
+    status: text('status').$type<RefundRequestStatus>().notNull().default('pending'),
+    createdAt: at('created_at').notNull().defaultNow(),
+    expiresAt: at('expires_at').notNull(),
+    confirmedAt: at('confirmed_at'),
+    cancelledAt: at('cancelled_at'),
+    stripeRefundId: text('stripe_refund_id'),
+  },
+  (t) => [
+    index('refund_requests_license_idx').on(t.licenseId, t.createdAt),
+    uniqueIndex('refund_requests_one_pending').on(t.licenseId).where(sql`${t.status} in ('pending', 'confirming')`),
+  ],
 );
 
 /** Staff notes on a license or an organization. */
