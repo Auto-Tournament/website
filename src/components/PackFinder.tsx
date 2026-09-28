@@ -60,7 +60,7 @@ import {
 } from '@/components/findPack';
 import { links } from '@/components/links';
 import { seller } from '@/components/seller';
-import { startCheckout } from '@/lib/startCheckout';
+import { useCheckout } from '@/components/checkout/Checkout';
 
 const { color, radius, ease, duration } = tokens;
 
@@ -604,17 +604,20 @@ function PackResult({
     return () => window.removeEventListener('pageshow', onPageShow);
   }, []);
 
+  const { buy: startBuy } = useCheckout();
+
   const buy = async () => {
     if (loading || cardOff) return;
     setLoading(true);
     setError(null);
-    const result = await startCheckout(checkoutPayload(rec));
-    if (!result.ok) {
-      if (result.cardOff) setCardOff(true);
-      setError(result.error);
-      setLoading(false);
+    const outcome = await startBuy({ payload: checkoutPayload(rec), packName: rec.pack.name, period: rec.period, price: rec.price });
+    // Going to hosted Checkout: stay loading while the browser navigates.
+    if (outcome.kind === 'redirecting') return;
+    setLoading(false);
+    if (outcome.kind === 'failed') {
+      if (outcome.cardOff) setCardOff(true);
+      if (!outcome.shownInDialog) setError(outcome.error);
     }
-    // On success the browser is on its way to Stripe; stay loading.
   };
 
   const mailHref = (() => {

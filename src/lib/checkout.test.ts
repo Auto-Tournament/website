@@ -4,6 +4,8 @@ import {
   businessBuyerField,
   checkoutFormParams,
   checkoutPeriods,
+  checkoutSessionParams,
+  invoiceFooter,
   clientIp,
   createRateLimiter,
   derivePack,
@@ -257,5 +259,47 @@ describe('checkoutFormParams', () => {
       expect(f.key).toMatch(/^[a-z0-9]+$/i);
     }
     expect(new Set(custom_fields.map((f) => f.key)).size).toBe(custom_fields.length);
+  });
+});
+
+describe('checkoutSessionParams', () => {
+  const base = 'https://autotournament.gg';
+  const args = { base, priceId: 'price_1', description: 'Auto Tournament x', metadata: { pack: 'servers-m' }, buyer: { customer_creation: 'always' as const } };
+
+  it('embedded: ui_mode embedded_page and one return_url to the thanks page, no success/cancel URL', () => {
+    const p = checkoutSessionParams({ ...args, embedded: true });
+    expect(p).toMatchObject({ ui_mode: 'embedded_page', return_url: `${base}/pricing/thanks?session_id={CHECKOUT_SESSION_ID}` });
+    expect(p).not.toHaveProperty('success_url');
+    expect(p).not.toHaveProperty('cancel_url');
+  });
+
+  it('hosted: success and cancel URLs as before, no ui_mode', () => {
+    const p = checkoutSessionParams({ ...args, embedded: false });
+    expect(p).toMatchObject({ success_url: `${base}/pricing/thanks?session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${base}/pricing#guide` });
+    expect(p).not.toHaveProperty('ui_mode');
+    expect(p).not.toHaveProperty('return_url');
+  });
+
+  it('keeps every other field the same in both modes', () => {
+    const strip = ({ ui_mode, return_url, success_url, cancel_url, ...rest }: Record<string, unknown>) => rest;
+    const embedded = strip(checkoutSessionParams({ ...args, embedded: true }));
+    const hosted = strip(checkoutSessionParams({ ...args, embedded: false }));
+    expect(embedded).toEqual(hosted);
+    expect(embedded).toMatchObject({
+      mode: 'payment',
+      line_items: [{ price: 'price_1', quantity: 1 }],
+      customer_creation: 'always',
+      ...checkoutFormParams(base),
+      metadata: { pack: 'servers-m' },
+      payment_intent_data: { description: 'Auto Tournament x', metadata: { pack: 'servers-m' } },
+      invoice_creation: { enabled: true, invoice_data: { description: 'Auto Tournament x', metadata: { pack: 'servers-m' }, footer: invoiceFooter } },
+      allow_promotion_codes: true,
+    });
+  });
+
+  it('uses the console customer when there is one', () => {
+    const p = checkoutSessionParams({ ...args, buyer: { customer: 'cus_1', customer_update: { name: 'auto', address: 'auto' } }, embedded: true });
+    expect(p).toMatchObject({ customer: 'cus_1', customer_update: { name: 'auto', address: 'auto' } });
+    expect(p).not.toHaveProperty('customer_creation');
   });
 });

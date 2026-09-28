@@ -3,6 +3,8 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { founderSalesOpen } from '@/components/pricing';
 import { PackPricing } from '@/components/PackPricing';
+import { CheckoutProvider } from '@/components/checkout/Checkout';
+import { stripePublishableKey } from '@/lib/stripePublishable';
 import { PageTitle } from '@/components/console/ConsoleShell';
 import { canManage, verifiedEmail } from '@/lib/console/orgs';
 import { requireOrg } from '@/lib/console/session';
@@ -15,8 +17,8 @@ import { consoleHref } from '@/lib/console/urls';
 export const metadata: Metadata = { title: 'Buy' };
 export const dynamic = 'force-dynamic';
 
-// Buying from the console: the same packs and Stripe Checkout as the pricing
-// page, but /api/checkout sees who is signed in (the console's own host), so
+// Buying from the console: the same packs and Stripe Checkout (the embedded
+// dialog) as the pricing page, but /api/checkout sees who is signed in (the console's own host), so
 // the organization's Stripe customer (or your email) is filled in and the new
 // license lands in this organization.
 export default async function Buy() {
@@ -44,7 +46,9 @@ export default async function Buy() {
         Buy a license
       </PageTitle>
       <Box sx={{ mt: 2 }}>
-        <PackPricing packs={prices.packs} pricesAvailable={prices.source === 'stripe'} founderOpen={founderOpen} />
+        <CheckoutProvider publishableKey={prices.source === 'stripe' ? stripePublishableKey() : null}>
+          <PackPricing packs={prices.packs} pricesAvailable={prices.source === 'stripe'} founderOpen={founderOpen} />
+        </CheckoutProvider>
       </Box>
       <Typography sx={{ mt: 4, fontSize: '0.9375rem' }}>
         Buying for a client instead? <a href={consoleHref('/welcome')}>Add their organization</a> first and switch to it, so the license and invoice are theirs.

@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 import {
-  checkoutFormParams,
+  checkoutSessionParams,
   clientIp,
   createRateLimiter,
   describeLicense,
@@ -15,20 +15,18 @@ import { lookupKey } from '@/lib/stripePacks';
 import { getPacks, invalidatePacks } from '@/lib/stripePrices';
 import { readCapped } from '@/lib/readCapped';
 import { siteUrl } from '@/lib/site';
+import { stripePublishableKey } from '@/lib/stripePublishable';
 import { checkoutCustomerParams, consoleCheckoutPrefill } from '@/lib/console/checkout';
 
 // Starts a Stripe Checkout Session for a commercial license pack. Server only: the
 // secret key comes from STRIPE_SECRET_KEY at runtime and never reaches the
-// client. Without it, or while the prices come from the pricing.ts fallback
+// client. With STRIPE_PUBLISHABLE_KEY set it is an Embedded Checkout session
+// and the answer is { clientSecret } for the dialog (src/components/checkout);
+// without it, a hosted one and { url } to redirect to, as before. Without it, or while the prices come from the pricing.ts fallback
 // instead of Stripe, the route answers 503 and the guide and the pack cards fall back to
 // the email request.
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-// Seller details a Norwegian invoice needs (org number), and why no VAT is shown.
-const invoiceFooter =
-  'Gullberg Hansen Consulting (ENK) · Org. nr. 938 566 674 · Fredengvegen 15, 2817 Gjøvik, Norway · sivert@autotournament.gg\n' +
-  'No VAT added (seller not VAT-registered). Licenses are governed by the Commercial License Terms at https://autotournament.gg/terms';
 
 const allow = createRateLimiter({ limit: 10, windowMs: 60_000 });
 
@@ -137,23 +135,21 @@ export async function POST(request: Request) {
   const buyer = checkoutCustomerParams(await consoleCheckoutPrefill());
   const metadata = { ...licenseMetadata(order), max_servers: String(pack.maxServers), ...buyer.metadata };
 
+  // Embedded Checkout (on our page) once the publishable key is set; until
+  // then the hosted page, exactly as before.
+  const embedded = stripePublishableKey() !== null;
+
   try {
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      // The Stripe price found by its lookup key (<pack>_<period>). The amount
-      // is Stripe's and never comes from the client.
-      line_items: [{ price: priceId, quantity: 1 }],
-      ...(buyer.customer ? { customer: buyer.customer, customer_update: buyer.customer_update } : { customer_creation: buyer.customer_creation }),
-      ...(buyer.customer_email ? { customer_email: buyer.customer_email } : {}),
-      // Business name, B2B confirmation, event details and the terms checkbox.
-      ...checkoutFormParams(base),
-      metadata,
-      payment_intent_data: { description, metadata },
-      invoice_creation: { enabled: true, invoice_data: { description, metadata, footer: invoiceFooter } },
-      allow_promotion_codes: true,
-      success_url: `${base}/pricing/thanks?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${base}/pricing#guide`,
-    });
+    const session = await stripe.checkout.sessions.create(
+      checkoutSessionParams({ base, priceId, description, metadata, buyer, embedded }),
+    );
+    if (embedded) {
+      if (!session.client_secret) {
+        console.error('[checkout] embedded session created without a client secret', { id: session.id });
+        return reply(502, { error: "Couldn't start checkout. Try again, or request the license by email." });
+      }
+      return reply(200, { clientSecret: session.client_secret });
+    }
     if (!session.url) {
       console.error('[checkout] session created without a url', { id: session.id });
       return reply(502, { error: "Couldn't start checkout. Try again, or request the license by email." });
