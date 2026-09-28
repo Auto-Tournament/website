@@ -23,6 +23,10 @@ export const limits = {
   adminRefundRequest: createRateLimiter({ limit: 5, windowMs: 60 * 60_000 }),
   /** Opening actions from a refund confirmation link without a session (cancel), per IP. */
   refundLinkIp: createRateLimiter({ limit: 20, windowMs: 10 * 60_000 }),
+  /** Passkey links emailed (add a passkey, recovery), per admin. */
+  passkeyLink: createRateLimiter({ limit: 5, windowMs: 60 * 60_000 }),
+  /** Passkey ceremonies (options, registration, approvals), per admin. */
+  passkey: createRateLimiter({ limit: 60, windowMs: 10 * 60_000 }),
   /** The bookkeeping CSV export, per admin. */
   adminExport: createRateLimiter({ limit: 10, windowMs: 10 * 60_000 }),
 };

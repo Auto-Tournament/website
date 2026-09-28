@@ -12,7 +12,7 @@ import { toRow } from '@/lib/license/store';
 // way: 404 (pages, routes) or "Not found." (actions), before doing anything.
 // This walks the admin folder, so a new page or action is covered by default.
 
-const state: { user: ConsoleUser | null; fetchSite: string } = { user: null, fetchSite: 'same-origin' };
+const state: { user: ConsoleUser | null; fetchSite: string; gate: 'setup' | 'verify' | 'ok'; approval: string | null } = { user: null, fetchSite: 'same-origin', gate: 'ok', approval: null };
 
 vi.mock('@/lib/console/session', () => ({
   currentUser: async () => state.user,
@@ -26,6 +26,13 @@ vi.mock('next/cache', () => ({ revalidatePath: () => {} }));
 // Auth.js itself isn't loaded here (the session is mocked above); the console's on/off switch is.
 vi.mock('@/lib/console/auth', () => ({
   consoleEnabled: () => (process.env.AUTH_SECRET?.length ?? 0) >= 32 && Boolean(process.env.DATABASE_URL),
+}));
+// The passkey layer (tested in src/lib/admin/passkeys.test.ts and passkeys.routes.test.ts): switched here.
+vi.mock('@/lib/admin/approval', () => ({
+  gateFor: async () => state.gate,
+  approvalError: async () => state.approval,
+  currentSessionHash: async () => null,
+  gateText: { setup: 'Set up a passkey on the admin page first.', verify: 'Check your passkey on the admin page first (once per session, 12 hours).' },
 }));
 vi.mock('@/lib/vat/rate', () => ({
   eurNokRate: async () => ({ rate: 11, fallback: false }),
@@ -94,6 +101,8 @@ beforeEach(() => {
   vi.stubEnv('ADMIN_EMAILS', 'sivert@example.com');
   vi.spyOn(console, 'error').mockImplementation(() => {});
   state.fetchSite = 'same-origin';
+  state.gate = 'ok';
+  state.approval = null;
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -143,9 +152,9 @@ describe('admin area: non-admins get 404', () => {
       });
 
       it('every server action, before touching anything', async () => {
-        const actions = (await import('./actions')) as Record<string, unknown>;
+        const actions = { ...(await import('./actions')), ...(await import('./passkeyActions')) } as Record<string, unknown>;
         const names = Object.keys(actions).filter((k) => typeof actions[k] === 'function');
-        expect(names.length).toBeGreaterThanOrEqual(10);
+        expect(names.length).toBeGreaterThanOrEqual(18);
         const notesBefore = (await t.db.select().from(adminNotes)).length;
         for (const name of names) {
           const fd = new FormData();
@@ -190,11 +199,49 @@ describe('admin area: the admin', () => {
     expect((await t.db.select().from(adminNotes)).map((n) => [n.body, n.authorUserId])).toEqual([['Checked by phone.', adminRow.id]]);
   });
 
-  it('downloads the sales CSV', async () => {
-    const { GET } = await import('./export/sales/route');
-    const res = await GET(new Request('http://localhost:4611/console/admin/export/sales?from=2026-01-01&to=2026-12-31'));
+  it('downloads the sales CSV (a same-origin POST with a passkey approval)', async () => {
+    const { POST } = await import('./export/sales/route');
+    const req = () => {
+      const body = new FormData();
+      body.set('from', '2026-01-01');
+      body.set('to', '2026-12-31');
+      return new Request('http://localhost:4611/console/admin/export/sales', { method: 'POST', body, headers: { 'sec-fetch-site': 'same-origin' } });
+    };
+    state.approval = 'Approve this with your passkey first.';
+    expect((await POST(req())).status).toBe(403);
+    state.approval = null;
+    state.gate = 'verify';
+    expect((await POST(req())).status).toBe(403);
+    state.gate = 'ok';
+    const cross = new Request('http://localhost:4611/console/admin/export/sales', { method: 'POST', body: new FormData(), headers: { 'sec-fetch-site': 'cross-site' } });
+    expect((await POST(cross)).status).toBe(403);
+    const res = await POST(req());
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toMatch(/text\/csv/);
     expect(await res.text()).toMatch(/^date,license_id,licensee,country,amount,currency,amount_nok,payment_ref,eur_nok_rate\r\n2026-09-01,L-route123,/);
+  });
+});
+
+describe('admin area: the passkey gate', () => {
+  beforeEach(() => {
+    state.user = asUser(adminRow);
+  });
+
+  it('without a passkey (or a checked session), /admin shows only that, and writes are refused', async () => {
+    const { default: Layout } = await import('./layout');
+    const { addLicenseNoteAction, reissueAction } = await import('./actions');
+    const fd = new FormData();
+    fd.set('licenseId', 'L-route123');
+    fd.set('body', 'blocked');
+    for (const gate of ['setup', 'verify'] as const) {
+      state.gate = gate;
+      const tree = JSON.stringify(await Layout({ children: 'SECRET-CHILDREN' }), (_k, v) => (typeof v === 'function' ? v.name : v));
+      expect(tree).not.toContain('SECRET-CHILDREN');
+      expect(tree).toContain(gate === 'setup' ? 'PasskeySetup' : 'PasskeyCheck');
+      expect(await addLicenseNoteAction(null, fd)).toEqual({ error: expect.stringMatching(gate === 'setup' ? /Set up a passkey/ : /Check your passkey/) });
+    }
+    state.gate = 'ok';
+    state.approval = 'Approve this with your passkey first.';
+    expect(await reissueAction(null, fd)).toEqual({ error: 'Approve this with your passkey first.' });
   });
 });

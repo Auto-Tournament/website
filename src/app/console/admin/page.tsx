@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Box from '@mui/material/Box';
 import { PageTitle } from '@/components/console/ConsoleShell';
-import { Badge, DataTable, FilterBar, Muted, Progress, SectionHead, Stat } from '@/components/admin/AdminUi';
+import { SalesExport } from '@/components/admin/Passkeys';
+import { Badge, DataTable, Muted, Progress, SectionHead, Stat } from '@/components/admin/AdminUi';
 import { day, leadLabel, leadTone, money } from '@/components/admin/format';
 import { db } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/admin/guard';
@@ -133,15 +134,7 @@ export default async function AdminOverview() {
       />
 
       <SectionHead title="Bookkeeping export" />
-      <FilterBar action={href('/admin/export/sales')} label="Export paid sales">
-        <label>
-          From <input type="date" name="from" defaultValue={`${today.slice(0, 4)}-01-01`} />
-        </label>
-        <label>
-          To <input type="date" name="to" defaultValue={today} />
-        </label>
-        <button type="submit">Download paid sales (CSV)</button>
-      </FilterBar>
+      <SalesExport from={`${today.slice(0, 4)}-01-01`} to={today} url={href('/admin/export/sales')} />
 
       <SectionHead title="Open leads">
         <a href={href('/admin/leads')}>All leads</a>

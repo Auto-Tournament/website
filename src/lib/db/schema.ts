@@ -8,7 +8,7 @@
  * names are ours. Relative imports only: drizzle-kit reads this file too.
  */
 import { sql } from 'drizzle-orm';
-import { bigserial, boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { bigint, bigserial, boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import type { LicensePayload } from '../license/format';
 
 const at = (name: string) => timestamp(name, { withTimezone: true, mode: 'date' });
@@ -325,6 +325,90 @@ export const refundRequests = pgTable(
     uniqueIndex('refund_requests_one_pending').on(t.licenseId).where(sql`${t.status} in ('pending', 'confirming')`),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// Admin passkeys (src/lib/admin/passkeys.ts)
+
+/**
+ * WebAuthn passkeys of admins (Touch ID, Face ID, a security key). Only the
+ * public key is kept. Adding one needs a link emailed to the admin's own
+ * address; one added through recovery (all passkeys lost) works only from
+ * usable_from, 24 hours later.
+ */
+export const adminPasskeys = pgTable(
+  'admin_passkeys',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** base64url, as the browser reports it. */
+    credentialId: text('credential_id').notNull().unique(),
+    /** The COSE public key, base64url. */
+    publicKey: text('public_key').notNull(),
+    counter: bigint('counter', { mode: 'number' }).notNull().default(0),
+    transports: jsonb('transports').$type<string[]>().notNull().default([]),
+    name: text('name').notNull(),
+    createdAt: at('created_at').notNull().defaultNow(),
+    /** When it starts to work: at once, or 24 hours after a recovery. */
+    usableFrom: at('usable_from').notNull().defaultNow(),
+    lastUsedAt: at('last_used_at'),
+  },
+  (t) => [index('admin_passkeys_user_idx').on(t.userId)],
+);
+
+export type PasskeyLinkPurpose = 'register' | 'recover';
+
+/** Emailed links that allow adding a passkey. The token is kept as a SHA-256 only. Single use, 15 minutes. */
+export const adminPasskeyLinks = pgTable(
+  'admin_passkey_links',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    purpose: text('purpose').$type<PasskeyLinkPurpose>().notNull(),
+    tokenHash: text('token_hash').notNull().unique(),
+    createdAt: at('created_at').notNull().defaultNow(),
+    expiresAt: at('expires_at').notNull(),
+    usedAt: at('used_at'),
+  },
+  (t) => [index('admin_passkey_links_user_idx').on(t.userId)],
+);
+
+/**
+ * WebAuthn challenges the server handed out: each bound to a user, a purpose
+ * and (for an approval) the action and its target. Single use, short-lived.
+ */
+export const webauthnChallenges = pgTable(
+  'webauthn_challenges',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    challenge: text('challenge').notNull().unique(),
+    purpose: text('purpose').$type<'register' | 'approve'>().notNull(),
+    action: text('action').notNull(),
+    target: text('target').notNull(),
+    createdAt: at('created_at').notNull().defaultNow(),
+    expiresAt: at('expires_at').notNull(),
+    usedAt: at('used_at'),
+  },
+  (t) => [index('webauthn_challenges_expires_idx').on(t.expiresAt)],
+);
+
+/** A console session that passed the admin passkey check (valid 12 hours). Keyed by the session's hash; goes with the session. */
+export const adminSessionChecks = pgTable('admin_session_checks', {
+  sessionHash: text('session_hash')
+    .primaryKey()
+    .references(() => sessions.sessionToken, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  passkeyId: uuid('passkey_id'),
+  verifiedAt: at('verified_at').notNull(),
+});
 
 /** Staff notes on a license or an organization. */
 export const adminNotes = pgTable(

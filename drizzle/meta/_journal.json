@@ -36,6 +36,13 @@
       "when": 1790597124744,
       "tag": "0004_refund_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790597864855,
+      "tag": "0005_admin_passkeys",
+      "breakpoints": true
     }
   ]
 }

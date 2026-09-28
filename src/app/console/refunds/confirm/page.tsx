@@ -5,9 +5,11 @@ import { tokens } from '@/theme/tokens';
 import { PageTitle } from '@/components/console/ConsoleShell';
 import { DetailList } from '@/components/LicenseKeyView';
 import { AdminForm } from '@/components/admin/AdminClient';
+import { ApprovedForm } from '@/components/admin/Passkeys';
 import { dayTime } from '@/components/admin/format';
 import { db } from '@/lib/db/client';
 import { isAdminUser } from '@/lib/admin/access';
+import { gateFor } from '@/lib/admin/approval';
 import { licenseById } from '@/lib/admin/licenses';
 import { consoleEnabled } from '@/lib/console/auth';
 import { moneyText, REFUND_REASON_TEXT } from '@/lib/console/emails';
@@ -117,6 +119,18 @@ export default async function ConfirmRefund({ searchParams }: { searchParams: Pr
     );
   }
 
+  if ((await gateFor(user!)) !== 'ok') {
+    return (
+      <>
+        <PageTitle>Confirm refund</PageTitle>
+        <Typography sx={{ maxWidth: '62ch' }}>
+          Check your passkey on the <a href={consoleHref('/admin')}>admin page</a> first (once per session), then open the link in the email again.
+        </Typography>
+        <CancelForms token={token} emphasis={false} />
+      </>
+    );
+  }
+
   const record = await licenseById(db(), request.licenseId).catch(() => null);
   const rows: [string, React.ReactNode][] = [
     ['License', <a key="l" href={consoleHref(`/admin/licenses/${request.licenseId}`)}>{request.licenseId}</a>],
@@ -132,12 +146,19 @@ export default async function ConfirmRefund({ searchParams }: { searchParams: Pr
 
   return (
     <>
-      <PageTitle sub="Check the details. Confirm makes the refund: through Stripe for a card payment, or records it for a bank transfer. It can't be undone.">Confirm refund</PageTitle>
+      <PageTitle sub="Check the details. Confirm asks for your passkey, then makes the refund: through Stripe for a card payment, or records it for a bank transfer. It can't be undone.">Confirm refund</PageTitle>
       <DetailList rows={rows} />
       <Box sx={{ mt: 3 }}>
-        <AdminForm action={confirmRefundAction} submitLabel={`Confirm the refund of ${moneyText(request.amount, request.currency)}`} pendingLabel="Refunding…" tone="error" testId="confirm-refund">
+        <ApprovedForm
+          action={confirmRefundAction}
+          approval={{ action: 'refund.confirm', target: request.id }}
+          submitLabel={`Confirm the refund of ${moneyText(request.amount, request.currency)}`}
+          pendingLabel="Refunding…"
+          tone="error"
+          testId="confirm-refund"
+        >
           <input type="hidden" name="token" value={token} />
-        </AdminForm>
+        </ApprovedForm>
       </Box>
       <CancelForms token={token} emphasis={false} />
     </>

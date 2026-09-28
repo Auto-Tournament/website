@@ -16,6 +16,7 @@ import { EMAIL, type ConsoleUser } from '@/lib/console/orgs';
 import { currentUser } from '@/lib/console/session';
 import { consoleHref, consoleOrigin, consoleUrl } from '@/lib/console/urls';
 import { isAdminUser } from '@/lib/admin/access';
+import { approvalError, gateFor, gateText } from '@/lib/admin/approval';
 import {
   addNote,
   AdminError,
@@ -39,6 +40,7 @@ import {
   confirmRefundRequest,
   createRefundRequest,
   REFUND_TOKEN,
+  requestByToken,
   REFUNDS_NEED_EMAIL,
   withdrawRefundRequest,
   type Confirmed,
@@ -61,6 +63,12 @@ import type { ActionState } from '../actions';
  * verified email, and that email in ADMIN_EMAILS); anyone else gets "Not
  * found.", as the pages answer 404. Writes go into audit_log with the admin as
  * the actor. Nothing here logs an email address, key or token.
+ *
+ * Passkeys (src/lib/admin/passkeys.ts): every action needs the admin's
+ * passkey gate passed (a passkey set up, this session checked within 12
+ * hours), and the ones that sign keys, move money or mark licenses need a
+ * fresh passkey approval bound to the action and its target (the `passkey`
+ * field, from ApprovedForm).
  */
 
 const text = (fd: FormData, key: string, max = 400): string => {
@@ -82,6 +90,9 @@ async function adminWriter(kind: Kind = 'write'): Promise<{ user: ConsoleUser } 
   if (kind !== 'write' && !limits.adminSensitive(user.id, now)) return { error: 'Too many of these at once. Wait a few minutes.' };
   if (kind === 'refund-request' && !limits.adminRefundRequest(user.id, now)) return { error: 'Too many refund requests in the last hour. Wait a while.' };
   if (kind === 'refund' && !limits.adminRefund(user.id, now)) return { error: 'Too many refunds in the last hour. Wait a while.' };
+  // The passkey gate: a passkey set up, and this session checked with it (12 hours).
+  const gate = await gateFor(user);
+  if (gate !== 'ok') return { error: gateText[gate] };
   return { user };
 }
 
@@ -163,6 +174,8 @@ export async function addOrgNoteAction(_prev: ActionState, fd: FormData): Promis
 export async function reissueAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const w = await adminWriter('sensitive');
   if ('error' in w) return { error: w.error };
+  const approval = await approvalError(w.user, 'license.reissue', text(fd, 'licenseId', 80), fd);
+  if (approval) return { error: approval };
   const key = licenseSigningKey();
   if (!key) return { error: 'License signing is not set up (LICENSE_SIGNING_KEY), so no key can be issued.' };
   const terms = checkTerms(termsFrom(fd), { defaultMaxServers: await packLimits() });
@@ -199,6 +212,8 @@ export async function reissueAction(_prev: ActionState, fd: FormData): Promise<A
 export async function revokeAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const w = await adminWriter('sensitive');
   if ('error' in w) return { error: w.error };
+  const approval = await approvalError(w.user, 'license.revoke', text(fd, 'licenseId', 80), fd);
+  if (approval) return { error: approval };
   const reason = text(fd, 'reason', 20);
   if (reason !== 'refunded' && reason !== 'revoked') return { error: 'Choose refunded or revoked.' };
   try {
@@ -316,6 +331,11 @@ export async function confirmRefundAction(_prev: ActionState, fd: FormData): Pro
   if ('error' in w) return { error: w.error };
   const token = text(fd, 'token', 64);
   if (!REFUND_TOKEN.test(token)) return { error: 'This confirmation link isn’t valid. Nothing was refunded.' };
+  // A passkey approval too, bound to this request (the email link alone isn't enough).
+  const pending = await requestByToken(db(), token).catch(() => null);
+  if (!pending) return { error: 'This confirmation link isn’t valid. Nothing was refunded.' };
+  const approval = await approvalError(w.user, 'refund.confirm', pending.id, fd);
+  if (approval) return { error: approval };
   let confirmed: Confirmed;
   try {
     confirmed = await confirmRefundRequest(db(), w.user, token, { stripe: stripeServer() as RefundClient | null });
@@ -380,6 +400,8 @@ export async function resendAction(_prev: ActionState, fd: FormData): Promise<Ac
 export async function createManualAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const w = await adminWriter('sensitive');
   if ('error' in w) return { error: w.error };
+  const approval = await approvalError(w.user, 'license.create', 'new', fd);
+  if (approval) return { error: approval };
   const terms = checkTerms(termsFrom(fd), { defaultMaxServers: await packLimits() });
   if (typeof terms === 'string') return { error: terms };
   if (!terms.licensee) return { error: 'Enter the licensee.' };
@@ -411,6 +433,8 @@ export async function createManualAction(_prev: ActionState, fd: FormData): Prom
 export async function markPaidAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const w = await adminWriter('sensitive');
   if ('error' in w) return { error: w.error };
+  const approval = await approvalError(w.user, 'order.paid', text(fd, 'orderId', 64), fd);
+  if (approval) return { error: approval };
   const key = licenseSigningKey();
   if (!key) return { error: 'License signing is not set up (LICENSE_SIGNING_KEY), so no key can be issued.' };
   const paidOn = text(fd, 'paidOn', 20).trim() || null;

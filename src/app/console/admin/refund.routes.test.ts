@@ -27,6 +27,13 @@ vi.mock('next/headers', () => ({
 vi.mock('next/cache', () => ({ revalidatePath: () => {} }));
 vi.mock('@/lib/console/auth', () => ({ consoleEnabled: () => true }));
 vi.mock('@/lib/license/issue', () => ({ stripeServer: () => state.stripe }));
+// The passkey gate and approval pass here (tested in passkeys.routes.test.ts).
+vi.mock('@/lib/admin/approval', () => ({
+  gateFor: async () => 'ok',
+  approvalError: async () => null,
+  currentSessionHash: async () => null,
+  gateText: { setup: 'setup', verify: 'verify' },
+}));
 
 let t: Awaited<ReturnType<typeof testDb>>;
 let memberRow: typeof users.$inferSelect;

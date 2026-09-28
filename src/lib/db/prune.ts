@@ -1,5 +1,6 @@
 import { lt, or, and, eq, isNotNull, ne, sql } from 'drizzle-orm';
 import type { Db } from './client';
+import { prunePasskeyRows } from '../admin/passkeys';
 import { auditLog, invites, leads, refundRequests, sessions, verificationTokens } from './schema';
 
 /** How long the console keeps what it no longer needs (also in the privacy policy, section 4). */
@@ -31,7 +32,7 @@ export function monthsBefore(now: Date, months: number): Date {
 export async function pruneExpired(db: Db, now = new Date()): Promise<Record<string, number>> {
   const daysAgo = (days: number) => new Date(now.getTime() - days * 24 * 60 * 60_000);
   const inviteCutoff = daysAgo(INVITE_RETENTION_DAYS);
-  const [s, v, i, a, l, r] = await Promise.all([
+  const [s, v, i, a, l, r, p] = await Promise.all([
     db.delete(sessions).where(lt(sessions.expires, now)).returning({ x: sessions.userId }),
     db.delete(verificationTokens).where(lt(verificationTokens.expires, now)).returning({ x: verificationTokens.expires }),
     db
@@ -55,6 +56,7 @@ export async function pruneExpired(db: Db, now = new Date()): Promise<Record<str
         ),
       )
       .returning({ x: refundRequests.id }),
+    prunePasskeyRows(db, now),
   ]);
-  return { sessions: s.length, signInLinks: v.length, invites: i.length, auditLog: a.length, leads: l.length, refundRequests: r.length };
+  return { sessions: s.length, signInLinks: v.length, invites: i.length, auditLog: a.length, leads: l.length, refundRequests: r.length, passkeyRows: p };
 }

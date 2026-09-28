@@ -462,11 +462,57 @@ rate-limited (20 per 10 minutes).
   Deleted 24 months after the last activity (`src/lib/db/prune.ts`).
 - **Free LANs**: the register of free LAN confirmations, from a lead or by hand.
 - **Audit log**: filter by actor (email, user id or `system`) and action prefix.
-- **Bookkeeping export**: `/admin/export/sales?from=YYYY-MM-DD&to=YYYY-MM-DD`,
-  paid sales as CSV (date, license id, licensee, country, amount, currency,
+- **Bookkeeping export**: the Export button on the overview (a same-origin
+  `POST /admin/export/sales` with `from`, `to` and a passkey approval), paid
+  sales as CSV (date, license id, licensee, country, amount, currency,
   NOK amount, payment reference, rate). NOK amounts use Norges Bank's EUR/NOK
   rate of each sale's day (the business day before on weekends), fetched in
   one request; the latest rate if that fails.
+- **Passkeys**: see below.
+
+#### Admin passkeys
+
+On top of the console sign-in, the admin CRM needs a passkey (Touch ID, Face
+ID, Windows Hello or a security key; WebAuthn through SimpleWebAuthn, logic in
+`src/lib/admin/passkeys.ts`). The relying party is the console's origin
+(`AUTH_URL`): RP ID `console.autotournament.gg`, `localhost` in development.
+Only the public key is stored (`admin_passkeys`).
+
+- **First passkey**: an admin without one sees only "Set up a passkey" on
+  /admin, and every admin action and the export are refused. Adding a passkey
+  always goes through a link emailed to the admin's own verified address
+  (`/passkeys/add`, single use, 15 minutes, token stored as SHA-256), opened
+  while signed in as that admin, so a stolen console session alone can't add
+  one. With a passkey already, adding another also needs this session to have
+  passed the passkey check. An email goes out whenever a passkey is added.
+  Several passkeys are allowed; rename them on /admin/passkeys; removing one
+  needs a passkey approval, and the last working one can't be removed.
+- **Once per session**: /admin asks for the passkey once per console session;
+  the check holds 12 hours (`admin_session_checks`, tied to the session row,
+  so signing out ends it).
+- **Approvals**: right before confirming a refund (on the email-link page,
+  on top of the link), reissuing, marking refunded/revoked, creating a manual
+  license, marking an order paid, the sales export and removing a passkey,
+  the browser asks for a fresh passkey check. The server's challenge is bound
+  to the admin, the action and its target (license, order, refund request,
+  passkey), lasts 2 minutes and works once; user verification is required and
+  the signature counter must move forward.
+- **Recovery** (every passkey lost): "Recover by email" on the passkey check
+  sends the same kind of link (the address must still be in `ADMIN_EMAILS`).
+  The passkey it adds starts to work **24 hours later**, and a warning email
+  goes out at once. A hijacked inbox plus a console session gives no instant
+  access; the real admin has a day to remove the recovery passkey with a
+  passkey they still have, and to sign out everywhere (/admin/passkeys). If an
+  admin is locked out for good, removing their address from `ADMIN_EMAILS`
+  and adding it back doesn't skip this; delete their `admin_passkeys` rows in
+  the database only after checking with them by another channel.
+- Without Postmark in production no passkey link can be sent, so admins can't
+  set up passkeys (in development the link goes to the server log, like the
+  sign-in link).
+- Audit log: `admin.passkey_link`, `admin.passkey_register`,
+  `admin.passkey_recover`, `admin.passkey_rename`, `admin.passkey_remove`,
+  `admin.passkey_approve` (action and target), `admin.passkey_counter_refused`,
+  `auth.signout_everywhere`. Never credential data.
 
 ### Database
 

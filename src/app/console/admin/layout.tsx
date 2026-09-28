@@ -3,6 +3,10 @@ import Box from '@mui/material/Box';
 import { tokens } from '@/theme/tokens';
 import { AdminNav } from '@/components/admin/AdminClient';
 import { requireAdmin } from '@/lib/admin/guard';
+import { gateFor } from '@/lib/admin/approval';
+import { passkeysOf } from '@/lib/admin/passkeys';
+import { PasskeyCheck, PasskeySetup } from '@/components/admin/Passkeys';
+import { db } from '@/lib/db/client';
 import { consoleBase } from '@/lib/console/urls';
 
 const { color } = tokens;
@@ -12,8 +16,20 @@ export const dynamic = 'force-dynamic';
 
 // The admin CRM: Auto Tournament staff only (ADMIN_EMAILS). Everyone else gets
 // a 404. Each page and action checks again: a layout alone doesn't guard them.
+// Then the passkey gate (src/lib/admin/passkeys.ts): no passkey yet → only
+// "Set up a passkey"; this session not checked in 12 hours → only the check.
+// The actions and the export check the gate themselves too.
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  await requireAdmin();
+  const user = await requireAdmin();
+  const gate = await gateFor(user);
+  if (gate !== 'ok') {
+    const waiting = gate === 'setup' ? (await passkeysOf(db(), user.id)).find((k) => k.usableFrom.getTime() > Date.now()) : undefined;
+    return (
+      <Box data-admin-wide sx={{ minWidth: 0 }}>
+        {gate === 'setup' ? <PasskeySetup waiting={waiting ? `${waiting.usableFrom.toISOString().slice(0, 16).replace('T', ' ')} UTC` : null} /> : <PasskeyCheck />}
+      </Box>
+    );
+  }
   return (
     <Box data-admin-wide sx={{ minWidth: 0 }}>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 1.5, mb: 2 }}>

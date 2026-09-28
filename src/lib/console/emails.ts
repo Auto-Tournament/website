@@ -101,3 +101,30 @@ export function refundConfirmEmail(input: {
     html: layout(subject, [intro, ...facts, how], { label: `Confirm the refund of ${money}`, href: input.confirmLink }, after, { label: 'Cancel it (and sign out everywhere)', href: input.cancelLink }),
   };
 }
+
+/** To an admin's own address: the link that lets them add a passkey (or recover after losing them all). */
+export function passkeyLinkEmail(input: { link: string; purpose: 'register' | 'recover' }): Mail {
+  const recover = input.purpose === 'recover';
+  const subject = recover ? 'Recover your Auto Tournament admin passkey' : 'Add a passkey to your Auto Tournament admin account';
+  const intro = recover
+    ? 'Someone signed in as you asked to recover admin access because all passkeys were lost. Open this link, signed in to the console, to add a new passkey. It will start to work 24 hours after you add it.'
+    : 'Open this link, signed in to the console, to add a passkey (Touch ID, Face ID or a security key) to your admin account.';
+  const after = ['It works once, for 15 minutes.', "If this wasn't you, don't open the link: someone may have your console session. Sign out everywhere from the admin page and tell the other admins."];
+  const text = [intro, '', input.link, '', ...after, '', '-- ', ...footer, ''].join('\n');
+  return { subject, text, html: layout(subject, [intro], { label: recover ? 'Recover with a new passkey' : 'Add a passkey', href: input.link }, after) };
+}
+
+/** To an admin's own address, at once when a passkey was added (a recovery one gets a louder warning). */
+export function passkeyAddedEmail(input: { name: string; recovery: boolean; usableFrom: Date; manageLink: string }): Mail {
+  const when = `${input.usableFrom.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+  const name = input.name.slice(0, 60);
+  const subject = input.recovery ? 'Warning: a recovery passkey was added to your admin account' : 'A passkey was added to your admin account';
+  const intro = input.recovery
+    ? `A passkey named "${name}" was added to your Auto Tournament admin account through email recovery. It starts to work at ${when}.`
+    : `A passkey named "${name}" was added to your Auto Tournament admin account.`;
+  const after = input.recovery
+    ? ["If this wasn't you, someone has your email and a console session. Before that time, sign in with a passkey you still have and remove it on the Passkeys page, then sign out everywhere and secure your email account."]
+    : ["If this wasn't you, remove it on the Passkeys page and tell the other admins."];
+  const text = [intro, '', input.manageLink, '', ...after, '', '-- ', ...footer, ''].join('\n');
+  return { subject, text, html: layout(subject, [intro], { label: 'Open the Passkeys page', href: input.manageLink }, after) };
+}
