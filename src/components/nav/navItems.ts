@@ -10,7 +10,7 @@ import { links } from '../links';
  * Pure data and helpers, no React, so the tests can read them.
  */
 
-export type NavIcon = 'features' | 'games' | 'docs' | 'github' | 'discord' | 'console' | 'verify' | 'contact';
+export type NavIcon = 'features' | 'games' | 'pricing' | 'docs' | 'github' | 'discord' | 'console' | 'verify' | 'contact';
 
 export type NavLink = {
   label: string;
@@ -43,6 +43,13 @@ export const menus: NavMenu[] = [
         items: [
           { label: 'Features', href: '/#features', note: 'Map veto, server allocation, brackets and stats.', icon: 'features' },
           { label: 'Games', href: '/#games', note: 'CS2 built in. More games as modules.', icon: 'games' },
+        ],
+      },
+      {
+        heading: 'Licenses',
+        items: [
+          { label: 'Pricing', href: links.pricing, note: 'Free if nobody earns money. Otherwise one price.', icon: 'pricing' },
+          { label: 'Console', href: links.account, note: 'Your licenses, keys, team and invoices.', icon: 'console' },
           { label: 'Check a license', href: links.verify, note: 'See whether a license id is valid.', icon: 'verify' },
         ],
       },
@@ -66,10 +73,8 @@ export const menus: NavMenu[] = [
   },
 ];
 
-/** Plain links: Pricing in the bar; Console and Install on the right. */
+/** The one plain link outside the menus: the Install button on the right. */
 export const barLinks = {
-  pricing: { label: 'Pricing', href: links.pricing },
-  console: { label: 'Console', href: links.account },
   install: { label: 'Install', href: links.install },
 } as const;
 
