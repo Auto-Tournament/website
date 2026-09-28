@@ -285,6 +285,44 @@ and never "blocked". Warning codes: `updates_expired` (line date after
 codes: `malformed`, `unknown_kid`, `bad_signature`, `unsupported_version`.
 Tests: `src/lib/license/license.test.ts` (throwaway keys made at runtime).
 
+## VAT threshold alerts
+
+Sivert's ENK must register for Norwegian VAT (Merverdiavgiftsregisteret) once
+rolling 12-month license revenue passes NOK 50,000. `src/lib/vat/threshold.ts`
+sums every live-mode paid license's `amount_total` (EUR, on the `licenses`
+row) from the trailing 365 days, converts it to NOK with Norges Bank's daily
+EUR/NOK rate (`src/lib/vat/rate.ts`, no key needed, cached 12h; a conservative
+12.0 fallback if Norges Bank can't be reached), and emails the seller
+(`seller.email`, `src/components/seller.ts`) through Postmark the first time
+the rolling total crosses 70%, 90% and 100% of the threshold. The email lists
+the rolling total (NOK and EUR), the rate used, every sale in the window, and
+the next step (register via Altinn, then update the "No VAT added" text and
+Stripe tax settings). Each threshold is tracked in the `vat_alerts` table and
+fires again if the total later drops back below it (old sales leaving the
+window) and re-crosses.
+
+The check runs after every issued live-mode paid license (the webhook and the
+thanks page both go through `issueForSession`) and once a day at server start
+(`src/lib/db/startup.ts`). It never blocks or fails license issuing or
+startup: a failure is only logged.
+
+Env, in `.env` (both optional):
+
+- `VAT_THRESHOLD_NOK`: default `50000`.
+- `VAT_ALERTS`: default on; set to `off` to disable the check entirely.
+
+Without `POSTMARK_SERVER_TOKEN`, a crossed threshold is only logged (the
+percentage, never an amount or the email).
+
+All sales are converted with the latest rate rather than each sale's own
+day's rate — the rate moves little day to day, and per-day conversion would
+need one Norges Bank request per unique day. The rate used is always shown in
+the alert email. Refunds aren't tracked on a license row yet, so a refunded
+sale still counts toward the total; see the TODO in `threshold.ts`.
+
+Tests: `src/lib/vat/threshold.test.ts`, `src/lib/vat/rate.test.ts`,
+`src/lib/vat/email.test.ts`.
+
 ## Console (console.autotournament.gg)
 
 The customer area: sign in, organizations with members, their licenses and

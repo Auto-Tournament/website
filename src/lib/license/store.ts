@@ -35,6 +35,12 @@ export type LicenseRecord = {
   email_error?: string | null;
   /** The console organization the license belongs to, when it was added to one. */
   org_id?: string | null;
+  /** The Checkout Session's amount_total, in minor units of `currency`. Null on rows issued before this column existed. */
+  amount_total?: number | null;
+  /** Lowercase ISO 4217, e.g. 'eur'. Null alongside a null amount_total. */
+  currency?: string | null;
+  /** When Stripe considers the session paid (ISO 8601). Falls back to payload.issued_at when unknown. */
+  paid_at?: string | null;
 };
 
 export interface LicenseStore {
@@ -85,6 +91,9 @@ export function fromRow(row: Row): LicenseRecord {
     emailed_at: iso(row.emailedAt),
     email_error: row.emailError,
     org_id: row.orgId,
+    amount_total: row.amountTotal,
+    currency: row.currency,
+    paid_at: iso(row.paidAt),
   };
 }
 
@@ -103,6 +112,9 @@ export function toRow(r: LicenseRecord): typeof licenses.$inferInsert {
     emailedAt: r.emailed_at ? new Date(r.emailed_at) : null,
     emailError: r.email_error ?? null,
     orgId: r.org_id ?? null,
+    amountTotal: r.amount_total ?? null,
+    currency: r.currency ?? null,
+    paidAt: r.paid_at ? new Date(r.paid_at) : null,
   };
 }
 
