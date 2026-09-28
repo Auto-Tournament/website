@@ -6,7 +6,7 @@
  * Relative imports on purpose: vitest runs this file without the `@/` alias.
  */
 import { seller } from '../../components/seller';
-import { coverageText, packName, periodText, productContents, updatesText } from './describe';
+import { coverageText, licenseDurationText, packName, productContents, updatesText } from './describe';
 import type { LicensePayload } from './format';
 
 export type LicenseEmailInput = {
@@ -30,7 +30,7 @@ function detailRows(r: LicenseEmailInput): [string, string][] {
     ...(p.licensee ? ([['Licensee', p.licensee]] as [string, string][]) : []),
     ['Pack', `${packName(p)}: ${productContents(p.product)}`],
     ['Servers', `Up to ${p.max_servers} game servers set up at any one time, spares included`],
-    ['Period', periodText(p)],
+    ['License duration', licenseDurationText(p)],
     ['Updates', updatesText(p)],
     ['Order reference', r.session_id],
     ...(r.invoice_number ? ([['Invoice', r.invoice_number]] as [string, string][]) : []),

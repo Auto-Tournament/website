@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { emailConfig, sendEmail, DEFAULT_EMAIL_FROM, POSTMARK_URL } from '../email/postmark';
 import { emailLicense } from './deliver';
-import { coverageText, formatDay, periodText, updatesText } from './describe';
+import { coverageText, licenseDurationText, updatesText } from './describe';
 import { escapeHtml, licenseEmail } from './email';
 import { emailHash, type LicensePayload } from './format';
 import { createLicenseStore, type LicenseRecord } from './store';
@@ -44,15 +44,13 @@ const record = (sessionId = 'cs_test_1', over: Partial<LicenseRecord> = {}): Lic
 const okResponse = () => Response.json({ ErrorCode: 0, Message: 'OK', MessageID: 'msg-1', To: 'buyer@example.com' });
 
 describe('describe', () => {
-  it('formats days and periods', () => {
-    expect(formatDay('2026-10-03')).toBe('3 October 2026');
-    expect(formatDay('soon')).toBe('soon');
-    expect(periodText(payload())).toBe('One event, 3 October 2026 to 5 October 2026');
-    expect(periodText(payload({ kind: 'year', valid_from: undefined, valid_to: undefined, updates_until: '2027-09-28' }))).toBe(
-      'Yearly, 28 September 2026 to 28 September 2027',
+  it('formats license durations and updates (full coverage in describe.test.ts)', () => {
+    expect(licenseDurationText(payload())).toBe('One event: 3–5 October 2026 (3 days)');
+    expect(licenseDurationText(payload({ kind: 'year', valid_from: undefined, valid_to: undefined, updates_until: '2027-09-28' }))).toBe(
+      '12 months: 28 September 2026 – 27 September 2027',
     );
-    expect(periodText(payload({ kind: 'founder', updates_until: '9999-12-31' }))).toBe('Founding supporter, lifetime updates');
-    expect(updatesText({ updates_until: '9999-12-31' })).toBe('For life');
+    expect(licenseDurationText(payload({ kind: 'founder', updates_until: '9999-12-31' }))).toBe('Lifetime (founding supporter)');
+    expect(updatesText({ updates_until: '9999-12-31' })).toBe('Includes all future versions (lifetime updates)');
     expect(coverageText({ kind: 'year', updates_until: '2027-09-28' })).toContain('Renew yearly');
   });
 });
@@ -65,7 +63,7 @@ describe('license email', () => {
       expect(body).toContain('ATL1.payload.sig');
       expect(body).toContain('Platform L');
       expect(body).toContain('Up to 40 game servers');
-      expect(body).toContain('One event, 3 October 2026 to 5 October 2026');
+      expect(body).toContain('One event: 3–5 October 2026 (3 days)');
       expect(body).toContain('cs_test_1');
       expect(body).toContain('ABCD1234-0001');
       expect(body).toContain(`${site}/license`);

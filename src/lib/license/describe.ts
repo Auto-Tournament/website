@@ -4,7 +4,7 @@
  *
  * Relative imports on purpose: vitest runs this file without the `@/` alias.
  */
-import { LIFETIME, type LicensePayload } from './format';
+import { addDays, LIFETIME, type LicensePayload } from './format';
 
 const MONTH_NAMES = [
   'January',
@@ -21,12 +21,45 @@ const MONTH_NAMES = [
   'December',
 ];
 
-/** 2026-10-03 → "3 October 2026". Anything else is returned as is. */
+function monthName(month: number): string {
+  return MONTH_NAMES[month - 1] ?? '';
+}
+
+function toUtcMs(day: string): number {
+  const [y, m, d] = day.split('-').map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+
+/** Whole days from `from` to `to`, inclusive of both ends (same day is 1). */
+function dayCount(from: string, to: string): number {
+  return Math.round((toUtcMs(to) - toUtcMs(from)) / 86_400_000) + 1;
+}
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/** 2026-10-16 → "16 October 2026" (English, UTC, no weekday). Anything else is returned as is. */
 export function formatDay(day: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
   if (!m) return day;
-  const month = MONTH_NAMES[Number(m[2]) - 1];
-  return month ? `${Number(m[3])} ${month} ${m[1]}` : day;
+  const date = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(date);
+}
+
+/**
+ * A date range for buyers: "16 October 2026" for a single day, "16–18
+ * October 2026" within a month, "30 October – 2 November 2026" across
+ * months, "30 December 2026 – 2 January 2027" across years.
+ */
+export function formatRange(from: string, to: string): string {
+  if (from === to) return formatDay(from);
+  const fm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(from);
+  const tm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(to);
+  if (!fm || !tm) return `${formatDay(from)} – ${formatDay(to)}`;
+  const [, fy, fmo, fd] = fm;
+  const [, ty, tmo, td] = tm;
+  if (fy !== ty) return `${formatDay(from)} – ${formatDay(to)}`;
+  if (fmo === tmo) return `${Number(fd)}–${Number(td)} ${monthName(Number(fmo))} ${fy}`;
+  return `${Number(fd)} ${monthName(Number(fmo))} – ${Number(td)} ${monthName(Number(tmo))} ${fy}`;
 }
 
 export const kindNames: Record<LicensePayload['kind'], string> = {
@@ -47,20 +80,34 @@ export function productContents(product: LicensePayload['product']): string {
     : 'CS2 Server Manager and Ready Up';
 }
 
-/** "One event, 3 October 2026 to 5 October 2026" / "Yearly, 28 September 2026 to 28 September 2027" / "Founding supporter, lifetime updates" */
-export function periodText(license: Pick<LicensePayload, 'kind' | 'issued_at' | 'updates_until' | 'valid_from' | 'valid_to'>): string {
-  if (license.kind === 'founder') return 'Founding supporter, lifetime updates';
+/**
+ * The "License duration" line, for the buyer:
+ * - event: "One event: 16 October 2026 (1 day)" / "One event: 16–18 October 2026 (3 days)"
+ * - yearly: "12 months: 28 September 2026 – 27 September 2027"
+ * - founder: "Lifetime (founding supporter)"
+ */
+export function licenseDurationText(license: Pick<LicensePayload, 'kind' | 'issued_at' | 'updates_until' | 'valid_from' | 'valid_to'>): string {
+  if (license.kind === 'founder') return 'Lifetime (founding supporter)';
   if (license.kind === 'event') {
     const from = license.valid_from ?? license.issued_at.slice(0, 10);
     const to = license.valid_to ?? license.updates_until;
-    return `One event, ${formatDay(from)} to ${formatDay(to)}`;
+    return `One event: ${formatRange(from, to)} (${plural(dayCount(from, to), 'day')})`;
   }
-  return `Yearly, ${formatDay(license.issued_at.slice(0, 10))} to ${formatDay(license.updates_until)}`;
+  const start = license.issued_at.slice(0, 10);
+  const end = addDays(license.updates_until, -1);
+  return `12 months: ${formatRange(start, end)}`;
 }
 
-/** "Release lines up to 28 September 2027" / "For life" */
+/**
+ * The "Updates" line, for the buyer:
+ * "Includes every version released up to 16 October 2026, and later
+ * bugfixes for those versions" / "Includes all future versions (lifetime
+ * updates)".
+ */
 export function updatesText(license: Pick<LicensePayload, 'updates_until'>): string {
-  return license.updates_until === LIFETIME ? 'For life' : `Release lines that came out by ${formatDay(license.updates_until)}`;
+  return license.updates_until === LIFETIME
+    ? 'Includes all future versions (lifetime updates)'
+    : `Includes every version released up to ${formatDay(license.updates_until)}, and later bugfixes for those versions`;
 }
 
 /** What the license lets the buyer do, in a sentence or three (Commercial License Terms, sections 5 to 8). */
@@ -114,6 +161,25 @@ export function statusText(license: Pick<LicensePayload, 'kind' | 'updates_until
   }
   if (status === 'updates-ended') return `Updates ended ${formatDay(license.updates_until)}. The versions it covers stay licensed.`;
   return `Active, updates until ${formatDay(license.updates_until)}`;
+}
+
+/**
+ * A short relative hint to put next to the status: "starts in 18 days",
+ * "ends in 5 days", "ends today", "ended 3 days ago". Founder licenses have
+ * no hint (there is nothing to count down). Computed against `now` so it is
+ * testable.
+ */
+export function statusHint(license: Pick<LicensePayload, 'kind' | 'issued_at' | 'updates_until' | 'valid_from' | 'valid_to'>, now: Date = new Date()): string {
+  if (license.kind === 'founder') return '';
+  const today = todayUtc(now);
+  const start = license.kind === 'event' ? (license.valid_from ?? license.updates_until) : license.issued_at.slice(0, 10);
+  const end = license.kind === 'event' ? (license.valid_to ?? license.updates_until) : license.updates_until;
+  if (today < start) return `starts in ${plural(dayCount(today, start) - 1, 'day')}`;
+  if (today <= end) {
+    const left = dayCount(today, end) - 1;
+    return left === 0 ? 'ends today' : `ends in ${plural(left, 'day')}`;
+  }
+  return `ended ${plural(dayCount(end, today) - 1, 'day')} ago`;
 }
 
 /** UTC today, YYYY-MM-DD. */
