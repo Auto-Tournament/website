@@ -10,6 +10,7 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import { ArrowUpRight } from '@phosphor-icons/react/dist/csr/ArrowUpRight';
 import { CaretDown } from '@phosphor-icons/react/dist/csr/CaretDown';
+import { BookOpen } from '@phosphor-icons/react/dist/csr/BookOpen';
 import { ChatCircle } from '@phosphor-icons/react/dist/csr/ChatCircle';
 import { DiscordLogo } from '@phosphor-icons/react/dist/csr/DiscordLogo';
 import { DownloadSimple } from '@phosphor-icons/react/dist/csr/DownloadSimple';
@@ -21,6 +22,7 @@ import { Pulse } from '@phosphor-icons/react/dist/csr/Pulse';
 import { Scales } from '@phosphor-icons/react/dist/csr/Scales';
 import { SealCheck } from '@phosphor-icons/react/dist/csr/SealCheck';
 import { Trophy } from '@phosphor-icons/react/dist/csr/Trophy';
+import { UserCircle } from '@phosphor-icons/react/dist/csr/UserCircle';
 import { X } from '@phosphor-icons/react/dist/csr/X';
 import type { CompatStatus } from '@/lib/compat/document';
 import { tokens } from '@/theme/tokens';
@@ -49,9 +51,11 @@ const icons: Record<NavIcon, typeof Trophy> = {
   games: GameController,
   compat: Pulse,
   install: DownloadSimple,
+  docs: BookOpen,
   licensing: Scales,
   github: GithubLogo,
   discord: DiscordLogo,
+  console: UserCircle,
   key: Key,
   verify: SealCheck,
   contact: ChatCircle,
@@ -569,7 +573,6 @@ export function SiteNav() {
           <Box component="ul" ref={barRef} onKeyDown={onBarKeyDown} sx={{ listStyle: 'none', m: 0, p: 0, display: 'flex', alignItems: 'center', gap: 0.25, fontSize: '0.875rem' }}>
             <li>{trigger(product)}</li>
             <li>{plainBarLink(barLinks.pricing)}</li>
-            <li>{plainBarLink(barLinks.docs)}</li>
             <li>{trigger(resources)}</li>
           </Box>
         </Box>
@@ -584,9 +587,6 @@ export function SiteNav() {
             {barLinks.pricing.label}
           </Box>
           <CompatNavStatus status={status} />
-          <Box component="a" href={barLinks.console.href} sx={{ ...quietLink, display: { xs: 'none', md: 'inline' }, px: 0.5 }}>
-            {barLinks.console.label}
-          </Box>
           <Button variant="contained" size="small" href={barLinks.install.href} {...externalProps(barLinks.install.href)} endIcon={<ArrowUpRight size={12} weight="bold" aria-hidden />} sx={{ whiteSpace: 'nowrap', '& .MuiButton-endIcon': { ml: 0.5 } }}>
             {barLinks.install.label}
             <Box component="span" sx={visuallyHidden}>
@@ -724,7 +724,7 @@ export function SiteNav() {
         >
           <Box component="nav" aria-label="Menu" sx={{ maxWidth: '36rem', mx: 'auto', display: 'grid', gap: 3 }}>
             <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', borderBottom: `1px solid ${color.rule}` }}>
-              {[barLinks.pricing, barLinks.docs, barLinks.console].map((l) => (
+              {[barLinks.pricing].map((l) => (
                 <li key={l.label}>
                   <Box
                     component="a"
