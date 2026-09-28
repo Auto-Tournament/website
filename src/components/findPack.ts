@@ -116,7 +116,7 @@ export const stepTitles: Record<StepId, string> = {
   money: 'Does anyone earn money from your events?',
   servers: 'How many game servers at once?',
   freq: 'How often?',
-  result: 'Your answer',
+  result: 'Result',
 };
 
 /** Short labels for the progress dots and the answer summary. */

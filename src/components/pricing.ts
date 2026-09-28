@@ -220,7 +220,7 @@ export function founderTerms(packs: readonly Pack[]): string[] {
  * Shown in the pricing guide's free answer.
  */
 export const freeUseHelp =
-  'Free when nobody earns money from it: all entry fees and sponsor money go back into the event, and no organizer, volunteer or helper is paid or takes profit.';
+  'Free when nobody earns money from your events: all entry fees and sponsor money go back into the event, and no organizer, volunteer or helper is paid or takes profit.';
 
 /** The organizations PolyForm Noncommercial 1.0.0 lets use the software free, in plain words. */
 export const freeOrganizations =

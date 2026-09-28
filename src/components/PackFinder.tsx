@@ -747,11 +747,11 @@ function Result({ rec, answers, pricesAvailable }: { rec: Recommendation; answer
     return (
       <Box sx={{ display: 'grid', gap: 2 }}>
         <Typography sx={big} data-testid="guide-headline">
-          Free for you
+          €0 · no license needed
         </Typography>
         <Typography sx={{ color: color.ink2, maxWidth: '64ch' }}>
           {freeUseHelp} No license, no payment and no registration. If that changes, for example the event makes a profit or someone gets paid, you&apos;d need a
-          pack.
+          license.
         </Typography>
         <FreeLanConfirmation compact headingLevel="h3" />
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25 }}>
@@ -897,18 +897,21 @@ export function PackFinder({
   const prev = previousStep(answers, ctx, step);
   const answered = steps.filter((s) => s !== 'result' && s !== step && steps.indexOf(s) < steps.indexOf(step) && isAnswered(s, answers, ctx));
   const rec = step === 'result' ? recommend(answers, ctx) : null;
+  // The result heading says what it means for them, not "your answer".
+  const resultTitle =
+    rec?.kind === 'pack' ? 'You need a license' : rec?.kind === 'quote' ? 'You need a custom quote' : 'Free to use';
   const liveText =
     rec?.kind === 'pack'
-      ? `Your answer: ${headline(rec)}`
+      ? `You need a license: ${headline(rec)}`
       : rec?.kind === 'free-plugin'
-        ? 'Your answer: free, with MatchZy Enhanced'
+        ? 'Free to use, with MatchZy Enhanced'
         : rec?.kind === 'free'
-          ? 'Your answer: free'
+          ? 'Free to use'
           : rec?.kind === 'quote'
-            ? 'Your answer: contact us for a quote'
+            ? 'Contact us for a quote'
             : '';
 
-  const title = step === 'result' ? stepTitles.result : stepTitles[step];
+  const title = step === 'result' ? resultTitle : stepTitles[step];
 
   const body =
     step === 'games' ? (
