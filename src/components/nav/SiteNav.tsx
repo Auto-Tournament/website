@@ -17,6 +17,7 @@ import { GameController } from '@phosphor-icons/react/dist/csr/GameController';
 import { GithubLogo } from '@phosphor-icons/react/dist/csr/GithubLogo';
 import { List } from '@phosphor-icons/react/dist/csr/List';
 import { SealCheck } from '@phosphor-icons/react/dist/csr/SealCheck';
+import { Tag } from '@phosphor-icons/react/dist/csr/Tag';
 import { Trophy } from '@phosphor-icons/react/dist/csr/Trophy';
 import { UserCircle } from '@phosphor-icons/react/dist/csr/UserCircle';
 import { X } from '@phosphor-icons/react/dist/csr/X';
@@ -49,6 +50,7 @@ const icons: Record<NavIcon, typeof Trophy> = {
   github: GithubLogo,
   discord: DiscordLogo,
   console: UserCircle,
+  pricing: Tag,
   verify: SealCheck,
   contact: ChatCircle,
 };
@@ -65,13 +67,6 @@ const visuallyHidden = {
   overflow: 'hidden',
   clip: 'rect(0 0 0 0)',
   whiteSpace: 'nowrap',
-} as const;
-
-const quietLink = {
-  color: color.ink2,
-  textDecoration: 'none',
-  whiteSpace: 'nowrap',
-  '&:hover': { color: color.ink },
 } as const;
 
 /** false while the server renders and during hydration, true after: the menus only become buttons once their script runs. */
@@ -224,7 +219,7 @@ function focusables(root: HTMLElement | null): HTMLElement[] {
 type Geometry = { left: number; top: number; width: number; height: number };
 
 /*
- * N5 floating pill with an N11 panel: Product ▾ · Pricing · Docs · Resources ▾
+ * N5 floating pill with an N11 panel: Product ▾ · Resources ▾, then the CS2 status and Install
  * in the bar; the two menus share one panel that moves under the trigger,
  * resizes to the menu, and slides the contents in the direction of travel.
  * Below md the bar collapses to a menu button that opens a full-width sheet.
@@ -511,13 +506,6 @@ export function SiteNav() {
     );
   };
 
-  const plainBarLink = (l: { label: string; href: string }) => (
-    <Box component="a" href={l.href} {...externalProps(l.href)} data-bar-item="" onPointerEnter={scheduleClose} sx={barItemSx(false)}>
-      {l.label}
-      <ExternalMark href={l.href} />
-    </Box>
-  );
-
   const [product, resources] = menus;
   const panelOpen = open !== null;
   const shownIndex = menus.findIndex((m) => m.id === shown);
@@ -564,30 +552,12 @@ export function SiteNav() {
         <Box component="nav" aria-label="Main" sx={{ display: { xs: 'none', md: 'block' } }}>
           <Box component="ul" ref={barRef} onKeyDown={onBarKeyDown} sx={{ listStyle: 'none', m: 0, p: 0, display: 'flex', alignItems: 'center', gap: 0.25, fontSize: '0.875rem' }}>
             <li>{trigger(product)}</li>
-            <li>{plainBarLink(barLinks.pricing)}</li>
             <li>{trigger(resources)}</li>
           </Box>
         </Box>
 
         <Box ref={rightRef} onPointerEnter={scheduleClose} sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 }, ml: 'auto', fontSize: '0.875rem' }}>
-          {/* Phones from 360px keep Pricing in the bar; the rest is in the sheet. */}
-          <Box
-            component="a"
-            href={barLinks.pricing.href}
-            sx={{ ...quietLink, display: 'none', '@media (min-width: 360px) and (max-width: 899.95px)': { display: 'inline' } }}
-          >
-            {barLinks.pricing.label}
-          </Box>
           <CompatNavStatus status={status} />
-          <Button
-            variant="text"
-            size="small"
-            href={barLinks.console.href}
-            startIcon={<UserCircle size={16} aria-hidden />}
-            sx={{ display: { xs: 'none', md: 'inline-flex' }, whiteSpace: 'nowrap', color: color.ink, '& .MuiButton-startIcon': { mr: 0.5 } }}
-          >
-            {barLinks.console.label}
-          </Button>
           <Button variant="contained" size="small" href={barLinks.install.href} {...externalProps(barLinks.install.href)} endIcon={<ArrowUpRight size={12} weight="bold" aria-hidden />} sx={{ whiteSpace: 'nowrap', '& .MuiButton-endIcon': { ml: 0.5 } }}>
             {barLinks.install.label}
             <Box component="span" sx={visuallyHidden}>
@@ -724,37 +694,6 @@ export function SiteNav() {
           }}
         >
           <Box component="nav" aria-label="Menu" sx={{ maxWidth: '36rem', mx: 'auto', display: 'grid', gap: 3 }}>
-            <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', borderBottom: `1px solid ${color.rule}` }}>
-              {[barLinks.pricing, barLinks.console].map((l) => (
-                <li key={l.label}>
-                  <Box
-                    component="a"
-                    href={l.href}
-                    {...externalProps(l.href)}
-                    onClick={() => setSheet(false)}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 0.75,
-                      minHeight: 48,
-                      px: 1.25,
-                      color: color.ink,
-                      textDecoration: 'none',
-                      fontFamily: fontDisplay,
-                      fontWeight: 600,
-                      fontSize: '1.125rem',
-                      whiteSpace: 'nowrap',
-                      borderRadius: `${radius.md}px`,
-                      '&:hover': { bgcolor: color.paper2 },
-                      '&:active': { bgcolor: color.paper3 },
-                    }}
-                  >
-                    {l.label}
-                    <ExternalMark href={l.href} size={14} />
-                  </Box>
-                </li>
-              ))}
-            </Box>
             {menus.map((m) => (
               <Box component="section" key={m.id} aria-labelledby={`sheet-${m.id}`}>
                 <Box component="h2" id={`sheet-${m.id}`} sx={{ m: 0, mb: 0.5, px: 1.25, color: color.muted, fontSize: '0.8125rem', fontWeight: 500, fontFamily: 'inherit' }}>
