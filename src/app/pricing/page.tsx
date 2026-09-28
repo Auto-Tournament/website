@@ -12,22 +12,30 @@ import {
   earnMoneyRule,
   formatEuro,
   founderBadge,
+  founderSalesOpen,
+  founderLifetime,
+  founderShutdownPromise,
   founderTerms,
   founderUpdateWarning,
   freeOrganizations,
   freeUseHelp,
   maxPackServers,
+  neverLockOut,
   packIn,
   packRules,
   pricingVersion,
   serverLimitRule,
   vatNote,
+  yearlyAfterExpiry,
+  yearlyCs2Note,
+  yearlyUpdates,
   type Pack,
   type PackId,
   type Period,
 } from '@/components/pricing';
 import { getPacks } from '@/lib/stripePrices';
 import { PackPricing } from '@/components/PackPricing';
+import { licenseStore } from '@/lib/license/store';
 import { PriceCalculator } from '@/components/PriceCalculator';
 import { FreeLanConfirmation } from '@/components/FreeLanConfirmation';
 
@@ -95,17 +103,17 @@ function examplesFor(packs: readonly Pack[]): { scenario: string; verdict: strin
       why: `The organizer earns money from it, so it is commercial use. 4 servers fit the S pack (up to ${upTo('platform-s')}), for one event.`,
     },
     {
-      scenario: 'A freelancer uses CS2 Server Manager to install and run MatchZy Enhanced on 8 servers (6 + 2 spares) at a volunteer LAN where nobody else earns money.',
+      scenario: 'A freelancer uses CS2 Server Manager to install and run MatchZy Enhanced on 10 servers (8 + 2 spares) for a 16-team volunteer LAN where nobody else earns money.',
       verdict: `Servers M, ${price('servers-m', 'event')}`,
-      why: `The freelancer earns money from it, so the freelancer pays, even though the event itself is free. Spares count, so 8 servers need the M pack (up to ${upTo('servers-m')}). CS2 Server Manager needs a license for commercial use, even though MatchZy Enhanced itself is MIT.`,
+      why: `The freelancer earns money from it, so the freelancer pays, even though the event itself is free. Spares count, so 10 servers need the M pack (up to ${upTo('servers-m')}). CS2 Server Manager needs a license for commercial use, even though MatchZy Enhanced itself is MIT.`,
     },
     {
-      scenario: 'A freelancer runs 34 servers (32 + 2 spares) with CS2 Server Manager for a paying client.',
+      scenario: 'A freelancer runs 34 servers (32 + 2 spares) with CS2 Server Manager for a paying client, once a year.',
       verdict: `Servers L, ${price('servers-l', 'event')}`,
-      why: `34 servers fit the L pack (up to ${upTo('servers-l')}): ${price('servers-l', 'event')} for one event. As a founding supporter it is ${price('servers-l', 'founder')} once, for every version released in the next 12 months.`,
+      why: `34 servers fit the L pack (up to ${upTo('servers-l')}): ${price('servers-l', 'event')} for one event. Running several client events a year? The yearly pack (${price('servers-l', 'year')}) covers events you operate for clients too.`,
     },
     {
-      scenario: 'An esports org runs events all year on 10 servers with the platform.',
+      scenario: 'An esports org runs 32-team events all year on 18 servers with the platform.',
       verdict: `Platform M, ${price('platform-m', 'year')} / yr`,
       why: `Running events all year round fits the yearly Platform M pack (up to ${upTo('platform-m')} servers) rather than paying per event.`,
     },
@@ -177,8 +185,20 @@ function faqFor(packs: readonly Pack[]): { q: string; a: React.ReactNode }[] {
       a: `Email us before you set them up. You upgrade to the next size and pay the difference, and we send an updated license confirmation. Above ${max} servers, we work out a custom quote with you.`,
     },
     {
-      q: 'What happens after the first 12 months of a founding supporter pack?',
-      a: `You keep commercial use of every version released in those 12 months, for good. Renewing updates is optional, at the yearly price of the same pack, and brings you back to the latest version. ${founderUpdateWarning}.`,
+      q: 'What happens when a yearly pack ends?',
+      a: `${yearlyUpdates} ${yearlyAfterExpiry} ${yearlyCs2Note}`,
+    },
+    {
+      q: 'What does “lifetime updates” mean for a founding supporter pack?',
+      a: `You pay once and get every new version, ${founderLifetime}: fixes, CS2 compatibility updates and new features, with no yearly fee. The pack size is fixed; moving to a bigger size costs the difference between the founder prices. ${founderUpdateWarning}.`,
+    },
+    {
+      q: 'What if Auto Tournament stops being sold?',
+      a: `Founding supporters are covered. ${founderShutdownPromise}`,
+    },
+    {
+      q: 'Can a license lock me out?',
+      a: `No. ${neverLockOut}`,
     },
     {
       q: 'Do game packs need their own license?',
@@ -218,6 +238,12 @@ function faqFor(packs: readonly Pack[]): { q: string; a: React.ReactNode }[] {
 export default async function Pricing() {
   // Plain numbers only go to the client components; the Stripe price ids stay here.
   const priceSource = await getPacks();
+  let founderOpen = true;
+  try {
+    founderOpen = founderSalesOpen(await licenseStore().founderCount());
+  } catch {
+    founderOpen = founderSalesOpen(0);
+  }
   const { packs } = priceSource;
   const pricesAvailable = priceSource.source === 'stripe';
   const examples = examplesFor(packs);
@@ -244,7 +270,7 @@ export default async function Pricing() {
         </Box>
 
         <Container maxWidth="lg" component="section" id="packs" aria-label="Packs" sx={{ pb: { xs: 6, md: 10 } }}>
-          <PackPricing packs={packs} pricesAvailable={pricesAvailable} />
+          <PackPricing packs={packs} pricesAvailable={pricesAvailable} founderOpen={founderOpen} />
         </Container>
 
         <Section id="free" title="Free if…" lede="No license, no payment, no registration.">
@@ -296,7 +322,7 @@ export default async function Pricing() {
               <Chip size="small" variant="outlined" label={founderBadge} />
             </Box>
             <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2 }}>
-              {[...founderTerms(packs), `${founderUpdateWarning}.`].map((item) => (
+              {[...founderTerms(packs), `${founderUpdateWarning}.`, neverLockOut].map((item) => (
                 <Box key={item} component="li" sx={bullet}>
                   {item}
                 </Box>

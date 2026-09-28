@@ -286,6 +286,20 @@ describe('store', () => {
     expect(made).toBe(1);
   });
 
+  it('counts only live founder licenses for the founder cap', async () => {
+    const store = createLicenseStore(dir);
+    const make = (id: string, kind: 'founder' | 'year', livemode: boolean) => async () => ({
+      ...record(id),
+      livemode,
+      payload: { ...payload(), kind },
+    });
+    await store.issueOnce('cs_live_f1', make('cs_live_f1', 'founder', true));
+    await store.issueOnce('cs_live_f2', make('cs_live_f2', 'founder', true));
+    await store.issueOnce('cs_test_f', make('cs_test_f', 'founder', false));
+    await store.issueOnce('cs_live_y', make('cs_live_y', 'year', true));
+    expect(await store.founderCount()).toBe(2);
+  });
+
   it('keeps the file private and without the email', async () => {
     const store = createLicenseStore(dir);
     await store.issueOnce('cs_test_2', async () => record('cs_test_2'));

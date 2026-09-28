@@ -40,7 +40,7 @@ export default function TermsOfSale() {
 
       <H2 id="order">3. What you buy</H2>
       <p>
-        A commercial license pack (Servers or Platform, size S, M or L) for the period you choose (one event, yearly, or founding supporter), on the{' '}
+        A commercial license pack (Servers or Platform, size S, M or L) for the period you choose (one event, yearly, or founding supporter: pay once, lifetime updates), on the{' '}
         <a href={links.terms}>Commercial License Terms</a>. By paying you accept the Commercial License Terms and these Terms of Sale.
       </p>
 
@@ -58,8 +58,9 @@ export default function TermsOfSale() {
 
       <H2 id="delivery">6. Delivery</H2>
       <p>
-        Nothing is shipped: the software is downloaded from its public repositories. We check your order details and email your license confirmation within 2
-        working days of payment. If we can&apos;t verify your details, we refuse the order and refund you in full.
+        Nothing is shipped: the software is downloaded from its public repositories. For card payments your license key is shown right after checkout and can be
+        retrieved later on the license page; for invoice orders we email it once the invoice is paid. If an order turns out to be wrong (for example the wrong
+        pack), we correct it or refund you in full.
       </p>
 
       <H2 id="refunds">7. Refunds</H2>

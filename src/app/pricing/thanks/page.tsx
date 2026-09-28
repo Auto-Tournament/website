@@ -85,8 +85,7 @@ export default async function Thanks({ searchParams }: { searchParams: Promise<R
                 <Box component="a" href="/license" sx={link}>
                   license page
                 </Box>{' '}
-                with the order reference above (or the invoice number on your receipt) and your email. We also check your order details and email your license
-                confirmation within 2 working days.
+                with the order reference above (or the invoice number on your receipt) and your email.
               </Typography>
             </>
           )}
@@ -99,7 +98,7 @@ export default async function Thanks({ searchParams }: { searchParams: Promise<R
 
           {state.kind === 'none' && (
             <Typography sx={{ mt: 3, maxWidth: '52ch', color: color.ink2, fontSize: '1.125rem' }}>
-              We&apos;ll check your details and email your license confirmation within 2 working days.
+              Your license key appears here once your payment is confirmed. If it doesn&apos;t, email us with your order reference and we&apos;ll send it.
             </Typography>
           )}
 

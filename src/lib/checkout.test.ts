@@ -49,10 +49,10 @@ describe('deriveProduct', () => {
 describe('derivePack', () => {
   const cases: [number, string | null][] = [
     [1, 's'],
-    [5, 's'],
-    [6, 'm'],
-    [15, 'm'],
-    [16, 'l'],
+    [6, 's'],
+    [7, 'm'],
+    [20, 'm'],
+    [21, 'l'],
     [40, 'l'],
     [41, null],
   ];
@@ -100,7 +100,7 @@ describe('validateCheckoutRequest', () => {
     }
     expect(validateCheckoutRequest({ ...valid, pack: 'platform-s', servers: 1 }, packs).ok).toBe(true);
     expect(validateCheckoutRequest({ ...valid, pack: 'platform-l', servers: 40 }, packs).ok).toBe(true);
-    expect(validateCheckoutRequest({ ...valid, pack: 'servers-m', period: 'year', servers: 6, tools: ['csm'] }, packs).ok).toBe(true);
+    expect(validateCheckoutRequest({ ...valid, pack: 'servers-m', period: 'year', servers: 7, tools: ['csm'] }, packs).ok).toBe(true);
     expect(validateCheckoutRequest({ ...valid, pack: 'servers-l', period: 'founder', servers: 34, tools: ['csm'] }, packs).ok).toBe(true);
   });
 
@@ -135,9 +135,9 @@ describe('validateCheckoutRequest', () => {
     ['pack as upper case', { ...valid, pack: 'Platform-L' }],
     ['product not matching tools', { ...valid, pack: 'servers-l' }],
     ['platform pack for servers tools', { ...valid, pack: 'platform-l', tools: ['csm'] }],
-    ['pack too small for servers', { ...valid, pack: 'platform-m', servers: 16 }],
+    ['pack too small for servers', { ...valid, pack: 'platform-m', servers: 21 }],
     ['pack bigger than needed', { ...valid, pack: 'platform-l', servers: 15 }],
-    ['pack S for 6 servers', { ...valid, pack: 'platform-s', servers: 6 }],
+    ['pack S for 7 servers', { ...valid, pack: 'platform-s', servers: 7 }],
     ['period yearly (API takes year)', { ...valid, period: 'yearly' }],
     ['unknown period', { ...valid, period: 'lifetime' }],
     ['servers 0', { ...valid, servers: 0 }],
@@ -163,14 +163,14 @@ describe('validateCheckoutRequest', () => {
 
 describe('fallback packs', () => {
   const expected: [string, number, number, number, number][] = [
-    ['servers-s', 5, 1900, 4900, 7900],
-    ['servers-m', 15, 4900, 12900, 19900],
-    ['servers-l', 40, 9900, 27900, 39900],
-    ['platform-s', 5, 3900, 9900, 14900],
-    ['platform-m', 15, 7900, 21900, 32900],
-    ['platform-l', 40, 14900, 42900, 59900],
+    ['servers-s', 6, 1900, 4900, 14900],
+    ['servers-m', 20, 5900, 14900, 44900],
+    ['servers-l', 40, 9900, 27900, 84900],
+    ['platform-s', 6, 3900, 9900, 29900],
+    ['platform-m', 20, 9900, 24900, 74900],
+    ['platform-l', 40, 15900, 42900, 129900],
   ];
-  it('match the Pricing v2 table (and the seed script)', () => {
+  it('match the Pricing v3 table (and the seed script)', () => {
     expect(FALLBACK_PACKS.map((p) => [p.id, p.maxServers, p.prices.event, p.prices.year, p.prices.founder])).toEqual(expected);
   });
 });
@@ -178,8 +178,8 @@ describe('fallback packs', () => {
 describe('license text', () => {
   const pack = (id: string) => packs.find((p) => p.id === id) as Pack;
   it('names each period with the pack limit', () => {
-    expect(lineItemName(pack('platform-s'), 'year')).toBe('Platform S license — yearly (up to 5 servers)');
-    expect(lineItemName(pack('servers-m'), 'founder')).toBe('Servers M license — founding supporter (up to 15 servers)');
+    expect(lineItemName(pack('platform-s'), 'year')).toBe('Platform S license — yearly (up to 6 servers)');
+    expect(lineItemName(pack('servers-m'), 'founder')).toBe('Servers M license — founding supporter (up to 20 servers)');
     expect(lineItemName({ ...pack('servers-l'), maxServers: 25 }, 'event')).toBe('Servers L license — per event (up to 25 servers)');
   });
   it('describes the order', () => {

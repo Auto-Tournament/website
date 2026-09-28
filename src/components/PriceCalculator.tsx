@@ -15,6 +15,8 @@ import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
 import {
   founderBadge,
+  founderPitch,
+  founderShutdownPromise,
   founderUpdateWarning,
   formatEuro,
   freeUseHelp,
@@ -26,6 +28,9 @@ import {
   useTypeLabels,
   useTypeOrder,
   vatNote,
+  vatShort,
+  yearlyAfterExpiry,
+  yearlyUpdates,
   type Pack,
   type PackProduct,
   type Period,
@@ -166,7 +171,7 @@ export function PriceCalculator({ packs, pricesAvailable = true }: { packs: read
       `Use: ${useLabel}`,
       `Period: ${periodLabel}`,
       `Servers, spares included: ${servers}`,
-      `Price: ${formatEuro(price)}. ${vatNote}`,
+      `Price: ${formatEuro(price)} ${vatShort}.`,
       '',
       'Name / company: ',
       'Org number / VAT ID: ',
@@ -379,14 +384,18 @@ export function PriceCalculator({ packs, pricesAvailable = true }: { packs: read
               {quote.pack.name}: <span data-testid="quote-price">{formatEuro(price)}</span> {periodPriceSuffix[period]}
             </Typography>
             <Typography sx={{ color: color.ink2 }}>
-              Up to {quote.pack.maxServers} game servers set up at any one time, spares included. {vatNote}.
+              Up to {quote.pack.maxServers} game servers set up at any one time, spares included. Prices {vatShort}.
             </Typography>
+            {period === 'year' && (
+              <Typography sx={{ mt: 1, color: color.ink2, fontSize: '0.875rem' }}>
+                {yearlyUpdates} {yearlyAfterExpiry}
+              </Typography>
+            )}
             {period === 'founder' && (
               <Box sx={{ mt: 1, display: 'grid', gap: 0.75, justifyItems: 'start' }}>
                 <Chip size="small" color="primary" label={founderBadge} />
                 <Typography sx={{ color: color.ink2, fontSize: '0.875rem' }}>
-                  Pay once. Every version released in the 12 months after you buy is yours to use commercially, for good. Renewing updates after
-                  that is optional, at {formatEuro(quote.pack.prices.year)} a year.
+                  {founderPitch} The pack size is fixed; a bigger size costs the difference. {founderShutdownPromise}
                 </Typography>
                 <Typography sx={{ color: color.ink, fontSize: '0.875rem', fontWeight: 600 }}>{founderUpdateWarning}.</Typography>
               </Box>

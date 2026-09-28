@@ -40,6 +40,8 @@ export interface LicenseStore {
   find(reference: string, emailSha256: string): Promise<LicenseRecord | null>;
   /** Returns the session's record, creating it with `create` only when there is none. */
   issueOnce(sessionId: string, create: () => Promise<LicenseRecord>): Promise<{ record: LicenseRecord; created: boolean }>;
+  /** Live-mode founding supporter licenses issued so far (the founder cap). */
+  founderCount(): Promise<number>;
 }
 
 function sameHash(a: string | null, b: string): boolean {
@@ -108,6 +110,9 @@ export function createLicenseStore(dir: string): LicenseStore {
         const match = (await current()).find((r) => r.session_id === ref || (r.invoice_number !== null && r.invoice_number.toUpperCase() === upper));
         return match && sameHash(match.email_sha256, emailSha256) ? match : null;
       });
+    },
+    founderCount() {
+      return serial(async () => (await current()).filter((r) => r.livemode && r.payload.kind === 'founder').length);
     },
     issueOnce(sessionId, create) {
       return serial(async () => {

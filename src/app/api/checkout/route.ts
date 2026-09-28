@@ -8,7 +8,8 @@ import {
   maxBodyBytes,
   validateCheckoutRequest,
 } from '@/lib/checkout';
-import { packIn } from '@/components/pricing';
+import { founderSalesOpen, packIn } from '@/components/pricing';
+import { licenseStore } from '@/lib/license/store';
 import { lookupKey } from '@/lib/stripePacks';
 import { getPacks, invalidatePacks } from '@/lib/stripePrices';
 import { readCapped } from '@/lib/readCapped';
@@ -69,6 +70,16 @@ function siteUrl(): string | null {
   }
 }
 
+/** The founder cap: first founderLimit live licenses, until founderLastDay. An unreadable store never blocks a sale. */
+async function founderOpenNow(): Promise<boolean> {
+  try {
+    return founderSalesOpen(await licenseStore().founderCount());
+  } catch (error) {
+    console.error('[checkout] could not count founder licenses', error);
+    return founderSalesOpen(0);
+  }
+}
+
 export async function POST(request: Request) {
   if (!allow(clientIp(request.headers), Date.now())) {
     return reply(429, { error: 'Too many checkout attempts. Try again in a minute.' });
@@ -108,6 +119,10 @@ export async function POST(request: Request) {
     return reply(503, { error: "Card payment isn't available right now. Request the license by email instead." });
   }
 
+  if (order.period === 'founder' && !(await founderOpenNow())) {
+    return reply(409, { error: 'Founding supporter packs are sold out.' });
+  }
+
   const priceKey = lookupKey(order.pack, order.period);
   const priceId = prices.priceIds[priceKey];
   if (!priceId) {
@@ -125,8 +140,7 @@ export async function POST(request: Request) {
   const stripe = stripeFor(secretKey);
 
   const description = describeLicense(pack, order.period);
-  // Founder orders carry founder=true. The first-25 / 31 March 2027 limit is not
-  // enforced in code: the owner checks it by hand before sending the license.
+  // Founder orders carry founder=true. The first-25 / 31 March 2027 cap is checked above.
   // max_servers: the limit paid for, which goes into the license key (lib/license).
   const metadata = { ...licenseMetadata(order), max_servers: String(pack.maxServers) };
 
