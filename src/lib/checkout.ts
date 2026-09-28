@@ -158,14 +158,33 @@ export const businessBuyerField = {
 } as const;
 
 /**
+ * Which Checkout the session is for:
+ * - `custom`: our own form on our page (ui_mode `elements`, Stripe's Payment
+ *   Element inside it). The default once STRIPE_PUBLISHABLE_KEY is set.
+ * - `hosted`: checkout.stripe.com, the fallback while it isn't, or when the
+ *   custom form could not start in the browser.
+ */
+export type CheckoutMode = 'custom' | 'hosted';
+
+/**
  * The parts of the Checkout Session that set up the form: who the buyer is,
  * the event, and acceptance of the terms. Structural types only (no Stripe
  * import); the route passes the result straight to Stripe.
  *
+ * Hosted: Stripe's page collects all of it.
  * - The business name is Stripe's own field, made required. It isn't a custom
  *   "Company name" field too, because custom fields are capped at 3.
  * - Terms acceptance needs the Terms of service URL set in the Stripe
  *   Dashboard (Settings → Public details), or session creation fails.
+ *
+ * Custom (ui_mode `elements`): Stripe refuses custom_fields and custom_text
+ * there, and its Terms and business-name UI is in private beta, so our form
+ * collects them (src/components/checkout/CheckoutForm.tsx) and
+ * /api/checkout/details writes them to the session metadata under the same
+ * keys as the hosted custom fields (see checkoutDetailsMetadata). The billing
+ * address (with the company as its name) and the email go in with
+ * checkout.confirm(), the VAT ID with checkout.updateTaxIdInfo(), which
+ * tax_id_collection allows in elements mode.
  */
 export function checkoutFormParams(base: string) {
   return {
@@ -204,22 +223,30 @@ export function checkoutFormParams(base: string) {
   };
 }
 
+/** The custom-mode part of checkoutFormParams: what Stripe still collects itself there. */
+export function customFormParams() {
+  return {
+    billing_address_collection: 'required' as const,
+    tax_id_collection: { enabled: true },
+  };
+}
+
 /** Seller details a Norwegian invoice needs (org number), and why no VAT is shown. */
 export const invoiceFooter =
   'Gullberg Hansen Consulting (ENK) · Org. nr. 938 566 674 · Fredengvegen 15, 2817 Gjøvik, Norway · sivert@autotournament.gg\n' +
   'No VAT added (seller not VAT-registered). Licenses are governed by the Commercial License Terms at https://autotournament.gg/terms';
 
 /**
- * Where Stripe sends the buyer. Embedded Checkout (on our own page) has one
- * return_url, which Stripe opens after paying; there is no cancel URL, since
- * the buyer never left. Hosted Checkout (the fallback while
- * STRIPE_PUBLISHABLE_KEY is unset) has a success and a cancel URL. Both end
- * on the same thanks page with the session id.
+ * Where Stripe sends the buyer. The custom form (on our own page) has one
+ * return_url, which Stripe.js opens after paying (and after 3-D Secure);
+ * there is no cancel URL, since the buyer never left. Hosted Checkout has a
+ * success and a cancel URL. Both end on the same thanks page with the
+ * session id.
  */
-export function checkoutReturnParams(base: string, embedded: boolean) {
+export function checkoutReturnParams(base: string, mode: CheckoutMode) {
   const thanks = `${base}/pricing/thanks?session_id={CHECKOUT_SESSION_ID}`;
-  return embedded
-    ? { ui_mode: 'embedded_page' as const, return_url: thanks }
+  return mode === 'custom'
+    ? { ui_mode: 'elements' as const, return_url: thanks }
     : { success_url: thanks, cancel_url: `${base}/pricing#guide` };
 }
 
@@ -232,9 +259,10 @@ export type CheckoutBuyer = {
 };
 
 /**
- * Every Checkout Session field, in one place so the embedded and the hosted
- * session differ only in checkoutReturnParams. Structural types only; the
- * route passes the result straight to Stripe.
+ * Every Checkout Session field, in one place so the custom and the hosted
+ * session differ only in checkoutReturnParams and in who collects the form
+ * (checkoutFormParams). Structural types only; the route passes the result
+ * straight to Stripe.
  */
 export function checkoutSessionParams({
   base,
@@ -242,14 +270,14 @@ export function checkoutSessionParams({
   description,
   metadata,
   buyer,
-  embedded,
+  mode,
 }: {
   base: string;
   priceId: string;
   description: string;
   metadata: Record<string, string>;
   buyer: CheckoutBuyer;
-  embedded: boolean;
+  mode: CheckoutMode;
 }) {
   return {
     mode: 'payment' as const,
@@ -258,14 +286,142 @@ export function checkoutSessionParams({
     line_items: [{ price: priceId, quantity: 1 }],
     ...(buyer.customer ? { customer: buyer.customer, customer_update: buyer.customer_update } : { customer_creation: buyer.customer_creation }),
     ...(buyer.customer_email ? { customer_email: buyer.customer_email } : {}),
-    // Business name, B2B confirmation, event details and the terms checkbox.
-    ...checkoutFormParams(base),
+    // Business name, B2B confirmation, event details and the terms checkbox
+    // (hosted: Stripe's fields; custom: ours, see checkoutFormParams).
+    ...(mode === 'custom' ? customFormParams() : checkoutFormParams(base)),
     metadata,
     payment_intent_data: { description, metadata },
     invoice_creation: { enabled: true, invoice_data: { description, metadata, footer: invoiceFooter } },
     allow_promotion_codes: true,
-    ...checkoutReturnParams(base, embedded),
+    ...checkoutReturnParams(base, mode),
   };
+}
+
+/* ------------------------------------------------ custom form: our fields */
+
+/** Limits for the fields our custom form sends to /api/checkout/details. */
+export const detailLimits = {
+  company: { min: 2, max: 120 },
+  eventName: { min: 2, max: 200 },
+  eventDates: { min: 4, max: 100 },
+  vatId: { max: 40 },
+} as const;
+
+/** What our form collects that Stripe's elements mode can't: see checkoutFormParams. */
+export type CheckoutDetails = {
+  sessionId: string;
+  company: string;
+  eventName: string;
+  eventDates: string;
+  /** Empty when not given. */
+  vatId: string;
+  business: true;
+  terms: true;
+};
+
+export type DetailsValidation = { ok: true; value: CheckoutDetails } | { ok: false; error: string; field?: keyof CheckoutDetails };
+
+const detailKeys = ['sessionId', 'company', 'eventName', 'eventDates', 'vatId', 'business', 'terms'] as const;
+
+/** cs_test_… / cs_live_…; the same shape the thanks page accepts. */
+const sessionIdPattern = /^cs_(?:live|test)_[A-Za-z0-9]{10,250}$/;
+// eslint-disable-next-line no-control-regex
+const controlChars = /[\u0000-\u001f\u007f]/;
+const vatPattern = /^[A-Za-z0-9 .\-]*$/;
+
+/**
+ * Strict, like validateCheckoutRequest: every key present, no extra keys,
+ * trimmed text within limits, no control characters, and both boxes ticked.
+ * Used by the form (inline errors) and by /api/checkout/details.
+ */
+export function validateCheckoutDetails(body: unknown): DetailsValidation {
+  const fail = (error: string, field?: keyof CheckoutDetails): DetailsValidation => ({ ok: false, error, ...(field ? { field } : {}) });
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) return fail('Expected a JSON object.');
+  const obj = body as Record<string, unknown>;
+  const keys = Object.keys(obj);
+  if (keys.length !== detailKeys.length || !detailKeys.every((k) => Object.prototype.hasOwnProperty.call(obj, k))) {
+    return fail('Unexpected or missing fields.');
+  }
+  if (typeof obj.sessionId !== 'string' || !sessionIdPattern.test(obj.sessionId)) return fail('Invalid session.', 'sessionId');
+
+  const text = (key: 'company' | 'eventName' | 'eventDates', label: string): string | DetailsValidation => {
+    const raw = obj[key];
+    if (typeof raw !== 'string' || controlChars.test(raw)) return fail(`Enter ${label}.`, key);
+    const value = raw.trim().replace(/\s+/g, ' ');
+    const { min, max } = detailLimits[key];
+    if (value.length < min) return fail(`Enter ${label}.`, key);
+    if (value.length > max) return fail(`Keep ${label} under ${max} characters.`, key);
+    return value;
+  };
+  const company = text('company', 'the company or organization name');
+  if (typeof company !== 'string') return company;
+  const eventName = text('eventName', 'the event or client name');
+  if (typeof eventName !== 'string') return eventName;
+  const eventDates = text('eventDates', 'the event date(s), or the start date');
+  if (typeof eventDates !== 'string') return eventDates;
+
+  if (typeof obj.vatId !== 'string') return fail('Invalid VAT ID.', 'vatId');
+  const vatId = obj.vatId.trim().toUpperCase();
+  if (vatId.length > detailLimits.vatId.max || !vatPattern.test(vatId)) return fail('Enter the VAT ID as letters and numbers only.', 'vatId');
+
+  if (obj.business !== true) return fail('Confirm that you are buying for a business.', 'business');
+  if (obj.terms !== true) return fail('Accept the terms to continue.', 'terms');
+  return { ok: true, value: { sessionId: obj.sessionId, company, eventName, eventDates, vatId, business: true, terms: true } };
+}
+
+/**
+ * The session metadata /api/checkout/details writes. The keys match the
+ * hosted custom fields (eventname, eventdates, buyertype) so an order reads
+ * the same in the dashboard whichever form took it. Only these keys are
+ * sent, and Stripe merges metadata by key, so pack, period, max_servers and
+ * founder (set when the session was created) can't be changed through it.
+ * `accepted` is the server's time, not the browser's.
+ */
+export function checkoutDetailsMetadata(details: CheckoutDetails, accepted: Date): Record<string, string> {
+  return {
+    company: details.company,
+    eventname: details.eventName,
+    eventdates: details.eventDates,
+    buyertype: businessBuyerField.optionValue,
+    ...(details.vatId ? { vat_id: details.vatId } : {}),
+    terms_accepted_at: accepted.toISOString(),
+  };
+}
+
+/** The session-creation keys details must never overwrite. */
+export const protectedMetadataKeys = ['pack', 'period', 'servers', 'tools', 'founder', 'max_servers'] as const;
+
+/** Whether /api/checkout/details may write to this session: our own, custom-mode, still open. */
+export function sessionTakesDetails(session: { status: string | null; ui_mode?: string | null; metadata: Record<string, string> | null }): boolean {
+  const pack = session.metadata?.pack;
+  return session.status === 'open' && session.ui_mode === 'elements' && typeof pack === 'string' && (packIds as readonly string[]).includes(pack);
+}
+
+const euVat: Record<string, string> = {
+  AT: 'AT', BE: 'BE', BG: 'BG', HR: 'HR', CY: 'CY', CZ: 'CZ', DK: 'DK', EE: 'EE', FI: 'FI', FR: 'FR', DE: 'DE', GR: 'EL', HU: 'HU',
+  IE: 'IE', IT: 'IT', LV: 'LV', LT: 'LT', LU: 'LU', MT: 'MT', NL: 'NL', PL: 'PL', PT: 'PT', RO: 'RO', SK: 'SK', SI: 'SI', ES: 'ES', SE: 'SE',
+};
+
+/**
+ * The Stripe tax ID for a VAT number typed in our form, by the billing
+ * country: EU VAT (with the country prefix added when missing), and the
+ * European non-EU VAT types. Null for other countries: the number then only
+ * goes in the metadata (vat_id).
+ */
+export function stripeTaxId(country: string, raw: string): { type: 'eu_vat' | 'no_vat' | 'gb_vat' | 'ch_vat' | 'is_vat' | 'li_vat'; value: string } | null {
+  const v = raw.toUpperCase().replace(/[\s.\-]/g, '');
+  if (!v) return null;
+  const prefix = euVat[country];
+  if (prefix) return { type: 'eu_vat', value: /^[A-Z]{2}/.test(v) ? v : `${prefix}${v}` };
+  if (country === 'NO') {
+    const m = /^(?:NO)?(\d{9})(?:MVA)?$/.exec(v);
+    return { type: 'no_vat', value: m ? `${m[1]}MVA` : v };
+  }
+  if (country === 'GB') return { type: 'gb_vat', value: /^GB/.test(v) ? v : `GB${v}` };
+  if (country === 'CH') return { type: 'ch_vat', value: raw.trim().toUpperCase() };
+  if (country === 'IS') return { type: 'is_vat', value: v };
+  if (country === 'LI') return { type: 'li_vat', value: v };
+  return null;
 }
 
 /** Client IP behind the Cloudflare tunnel; falls back to the first X-Forwarded-For hop. */

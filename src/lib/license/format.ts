@@ -226,8 +226,13 @@ export function sessionEmail(session: SessionLike): string | null {
   return email ? email : null;
 }
 
+/**
+ * A hosted-form custom field, or (custom checkout form, which has no Stripe
+ * custom fields) the metadata key /api/checkout/details wrote under the same
+ * name. The hosted field wins.
+ */
 function customField(session: SessionLike, key: string): string | undefined {
-  const value = session.custom_fields?.find((f) => f.key === key)?.text?.value;
+  const value = session.custom_fields?.find((f) => f.key === key)?.text?.value ?? session.metadata?.[key];
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
@@ -239,7 +244,8 @@ export function payloadForSession(
   const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
   const customer = customerId || sessionEmail(session);
   if (!customer) throw new Error('the session has no customer or email');
-  const licensee = (session.collected_information?.business_name ?? session.customer_details?.business_name ?? '').trim().slice(0, 200);
+  // Hosted: Stripe's business name field. Custom form: the company it wrote to metadata.
+  const licensee = (session.collected_information?.business_name ?? session.customer_details?.business_name ?? session.metadata?.company ?? '').trim().slice(0, 200);
   const { product, size } = packFromId[input.packId];
   // The period counts from the payment day (the session's creation is within a day of it).
   const purchaseDay = isoDay(input.now);

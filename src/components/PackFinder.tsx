@@ -610,7 +610,7 @@ function PackResult({
     if (loading || cardOff) return;
     setLoading(true);
     setError(null);
-    const outcome = await startBuy({ payload: checkoutPayload(rec), packName: rec.pack.name, period: rec.period, price: rec.price });
+    const outcome = await startBuy({ payload: checkoutPayload(rec), packName: rec.pack.name, maxServers: rec.pack.maxServers, period: rec.period, price: rec.price });
     // Going to hosted Checkout: stay loading while the browser navigates.
     if (outcome.kind === 'redirecting') return;
     setLoading(false);

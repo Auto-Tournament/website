@@ -51,35 +51,50 @@ the console's Buy page) starts a Stripe Checkout Session through
   `https://autotournament.gg`.
 - `STRIPE_PUBLISHABLE_KEY`: the publishable key (`pk_live_…`, public by
   design) in the same mode as `STRIPE_SECRET_KEY`. With it, every Buy button
-  opens **Stripe Embedded Checkout** in a dialog on our own page (full screen
-  on phones), and after paying Stripe opens
+  opens **our own checkout form** in a dialog on our page (full screen on
+  phones): a Checkout Session in custom UI mode (`ui_mode: 'elements'`) with
+  Stripe's Payment Element for the card, and after paying Stripe.js opens
   `/pricing/thanks?session_id=…` as before. It is read at runtime and passed
   to the page as a prop, not as `NEXT_PUBLIC_…` (the Docker image is built
   without `.env`). Unset, not a `pk_` key, or in the other mode (live/test)
-  than the secret key: checkout falls back to the hosted Stripe page
-  (checkout.stripe.com), exactly as before.
+  than the secret key, or the custom form can't start in the browser:
+  checkout falls back to the hosted Stripe page (checkout.stripe.com),
+  exactly as before (`POST /api/checkout?mode=hosted`).
 
 After editing `.env`, run `docker compose up -d` to restart the container
 with the new values.
 
-Checkout asks the buyer to accept the Commercial License Terms and Terms of
-Sale (`consent_collection.terms_of_service`). Stripe needs a Terms of service
-URL in Dashboard → Settings → Public details first
-(`https://autotournament.gg/terms`); without it, creating a Checkout Session
-fails and the calculator falls back to the email request.
+Both forms ask the buyer to accept the Commercial License Terms and Terms
+of Sale, confirm they buy for a business, and give the company, the event
+or client and the event dates. Hosted Checkout uses Stripe's fields for it
+(`consent_collection.terms_of_service`, `name_collection`, three custom
+fields); Stripe needs a Terms of service URL in Dashboard → Settings →
+Public details first (`https://autotournament.gg/terms`), or creating a
+hosted session fails. Custom UI mode doesn't allow custom fields or custom
+text, and its Terms element is in private beta, so our form collects these
+and `POST /api/checkout/details` writes them to the session metadata right
+before paying: `company`, `eventname`, `eventdates`, `buyertype`, `vat_id`
+and `terms_accepted_at` (server time). The license reads the event dates
+and the licensee from there when the hosted fields are absent. The VAT ID
+also goes to Stripe as a tax ID (`checkout.updateTaxIdInfo`), and the
+company is the billing address name, so it is on the Stripe customer and
+the invoice.
 
-Embedded Checkout needs, in the Stripe Dashboard:
+The custom form needs, in the Stripe Dashboard:
 
 - Settings → Payment method domains: add `autotournament.gg` and
   `console.autotournament.gg` (the console's Buy page), or Apple Pay and
-  Google Pay don't show in the embedded form. Cards work either way.
-- Settings → Branding: the form uses these colours, so match the site
-  (dark background, the brand orange).
+  Google Pay don't show in the Payment Element. Cards work either way.
+
+The Payment Element's colours, font and radius are set in code
+(`src/components/checkout/appearance.ts`), not in Stripe's Branding
+settings.
 
 The site sends no script-src/frame-src CSP, so nothing blocks Stripe.js. The
 console's `Permissions-Policy` allows `payment` for Stripe's frames
 (`src/proxy.ts`), for the wallets. `/dev/checkout` (development only)
-shows the dialog in every state with a mock of Stripe's form.
+shows the dialog in every state: our form with a mocked Stripe session and
+Payment Element (promo code `PREVIEW10`).
 
 `yarn test` runs the checkout, Stripe price, license key, license email, console (on an in-memory Postgres, PGlite) and CS2 compatibility tests.
 
