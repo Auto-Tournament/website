@@ -255,7 +255,7 @@ function faqFor(packs: readonly Pack[]): { q: string; a: React.ReactNode }[] {
     },
     {
       q: 'I’m paid to run servers at a volunteer event. Do I need a license?',
-      a: 'Yes, at the full price. You earn money from it, so your use is commercial, even when the event itself is free.',
+      a: 'Yes. You earn money from it, so you need a license, even when the event itself is free.',
     },
     {
       q: 'Do players or teams need a license?',
@@ -311,9 +311,9 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
             <Box sx={{ maxWidth: '52rem', mx: 'auto', display: 'grid', gap: { xs: 3, md: 4 } }}>
               <div>
                 <Typography id="pricing-title" variant="h1" sx={{ fontSize: 'clamp(2rem, 2.4vw + 1rem, 3.25rem)', maxWidth: '22ch' }}>
-                  Free if nobody earns money from it.{' '}
+                  Free if nobody earns money from your events.{' '}
                   <Box component="span" sx={{ color: color.accent }}>
-                    If you do, one fixed price.
+                    If someone does, one fixed price.
                   </Box>
                 </Typography>
                 <Typography sx={{ mt: 2, maxWidth: '58ch', color: color.ink2, fontSize: { xs: '1rem', md: '1.125rem' } }}>
@@ -328,7 +328,7 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
                   See all packs
                 </Box>{' '}
                 or{' '}
-                <Box component="a" href={`${links.contact}?topic=quote`} sx={underline}>
+                <Box component="a" href={`${links.contact}?topic=quote`} target="_blank" rel="noopener" sx={underline}>
                   ask us
                 </Box>
                 .
@@ -384,7 +384,7 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
           <PackPricing packs={packs} pricesAvailable={pricesAvailable} founderOpen={founderOpen} />
           <Typography sx={{ mt: 3, maxWidth: '62ch', color: color.muted, fontSize: '0.875rem' }}>
             {pricingVersion}. If a price doesn&apos;t fit your case,{' '}
-            <Box component="a" href={`${links.contact}?topic=quote`} sx={underline}>
+            <Box component="a" href={`${links.contact}?topic=quote`} target="_blank" rel="noopener" sx={underline}>
               contact us
             </Box>{' '}
             and we&apos;ll work it out.
@@ -446,7 +446,7 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
 
             <Disclosure id="commercial-use" title="What counts as commercial use">
               <Typography sx={{ mb: 2 }}>
-                If you earn money from it, you pay full price. Any of the following with the platform, CS2 Server Manager, Ready Up or a game pack needs a license. A
+                If you earn money from it, you need a license. Any of the following with the platform, CS2 Server Manager, Ready Up or a game pack needs a license. A
                 Platform pack covers the game packs used with it.
               </Typography>
               <Box component="ul" sx={list}>

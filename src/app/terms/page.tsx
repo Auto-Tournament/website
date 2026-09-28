@@ -168,7 +168,7 @@ export default async function Terms() {
 
       <H2 id="who-pays">11. Who needs a license</H2>
       <p>
-        If you earn money from it, you pay full price. That includes an organizer who makes a profit, any business, and a paid operator or contractor, even one
+        If you earn money from it, you need a license. That includes an organizer who makes a profit, any business, and a paid operator or contractor, even one
         hired by an event that is itself free.
       </p>
       <p>

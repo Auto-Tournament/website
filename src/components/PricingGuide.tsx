@@ -227,7 +227,7 @@ function alternatives(packs: readonly Pack[]): Alternative[] {
       examples: 'MatchZy with G5API and G5V, eBot, LinuxGSM, Pterodactyl, Pelican',
       cost: 'Free, including for commercial use.',
       body: 'Good tools, and a fair choice if you have the time. You connect the pieces yourself, and keeping them working after CS2 updates is your job.',
-      ours: 'Auto Tournament is free too, as long as nobody earns money from it.',
+      ours: 'Auto Tournament is free too, as long as nobody earns money from your events.',
       sources: [
         ['MatchZy', 'https://github.com/shobhit-pathak/MatchZy'],
         ['G5API', 'https://github.com/PhlexPlexico/G5API'],

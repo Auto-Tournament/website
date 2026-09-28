@@ -19,7 +19,6 @@ import {
   formatEuro,
   founderBadge,
   founderLifetime,
-  freeOrganizations,
   freeUseHelp,
   maxPackServers,
   packFor,
@@ -126,6 +125,8 @@ function Tile({
         // Visually hidden but still a real input: clicking the label toggles it, and keyboards and screen readers use it natively.
         '& > input': { position: 'absolute', width: '1px', height: '1px', p: 0, m: '-1px', overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0 },
         '& > .tile': {
+          boxSizing: 'border-box',
+          '& *': { boxSizing: 'border-box' },
           display: 'grid',
           gridTemplateColumns: indicator ? 'minmax(0,1fr) 20px' : 'minmax(0,1fr)',
           alignItems: 'center',
@@ -242,6 +243,8 @@ function GamesStep({ draft, setDraft }: { draft: Answers; setDraft: (a: Answers)
   const featured = packGames.filter((g) => featuredGameSlugs.includes(g.slug));
   const rest = packGames.filter((g) => !featuredGameSlugs.includes(g.slug));
   const restPicked = rest.some((g) => draft.games.includes(g.slug));
+  // Opened by the visitor (or by a picked game on load), it stays open: unticking a game must not fold the list away.
+  const [showAll, setShowAll] = useState(restPicked);
   const smallTile = (slug: string, name: string) => (
     <Tile key={slug} type="checkbox" name="g" value={slug} label={name} checked={draft.games.includes(slug)} onChange={(on) => toggle(slug, on)}>
       <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
@@ -274,7 +277,8 @@ function GamesStep({ draft, setDraft }: { draft: Answers; setDraft: (a: Answers)
         </Box>
         <Box
           component="details"
-          open={restPicked || undefined}
+          open={showAll || undefined}
+          onToggle={(e: React.SyntheticEvent<HTMLDetailsElement>) => setShowAll(e.currentTarget.open)}
           sx={{
             '& > summary': {
               cursor: 'pointer',
@@ -298,7 +302,7 @@ function GamesStep({ draft, setDraft }: { draft: Answers; setDraft: (a: Answers)
       {draft.games.includes(otherGame) && (
         <Note>
           Not in the list? The platform can often still run it, with the teams reporting results by hand.{' '}
-          <Box component="a" href={`${links.contact}?topic=other`} sx={underline}>
+          <Box component="a" href={`${links.contact}?topic=other`} target="_blank" rel="noopener" sx={underline}>
             Tell us which game
           </Box>{' '}
           and we&apos;ll check, or add a game pack for it.
@@ -342,25 +346,27 @@ function MoneyStep({ draft, setDraft }: { draft: Answers; setDraft: (a: Answers)
       {draft.money === 'unsure' && (
         <Note>
           <Box component="span" sx={{ display: 'block', color: color.ink, fontWeight: 600, mb: 0.75 }}>
-            It&apos;s free when nobody earns money from it.
+            It&apos;s free when nobody earns money from your events.
           </Box>
           <Box component="ul" sx={{ m: 0, pl: 2.25, display: 'grid', gap: 0.75 }}>
             <li>
-              <strong>Free:</strong> a volunteer LAN that charges entry, where every euro goes back into the event and nobody is paid.
-            </li>
-            <li>
-              <strong>Free:</strong> {freeOrganizations}
+              <strong>Free:</strong> a volunteer LAN that charges entry, where all the money it takes in goes back into the event and nobody is paid.
             </li>
             <li>
               <strong>Pay:</strong> {earnMoneyRule}
             </li>
           </Box>
-          <Box component="span" sx={{ display: 'block', mt: 1 }}>
-            Then pick Yes or No above. The{' '}
-            <Box component="a" href={links.terms} sx={underline}>
-              license terms
-            </Box>{' '}
-            have the exact wording.
+          <Box component="span" sx={{ display: 'block', mt: 1.25 }}>
+            If one of these fits, pick Yes or No above. Still not sure? Tell us about your event and we&apos;ll tell you whether it&apos;s free or which pack
+            you need.
+          </Box>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5, mt: 1.5 }}>
+            <Button variant="contained" href={`${links.contact}?topic=license`} target="_blank" rel="noopener" sx={oneLine}>
+              Ask us what you need
+            </Button>
+            <Box component="a" href={links.terms} target="_blank" rel="noopener" sx={{ ...underline, fontSize: '0.875rem' }}>
+              Exact wording: the license terms
+            </Box>
           </Box>
         </Note>
       )}
@@ -678,7 +684,7 @@ function PackResult({
         <Button variant="outlined" href={`#packs-${rec.product}`} sx={oneLine}>
           Compare all packs
         </Button>
-        <Button variant="text" href={`${links.contact}?topic=quote`} sx={{ ...oneLine, color: color.ink }}>
+        <Button variant="text" href={`${links.contact}?topic=quote`} target="_blank" rel="noopener" sx={{ ...oneLine, color: color.ink }}>
           Ask us
         </Button>
       </Box>
@@ -694,11 +700,11 @@ function PackResult({
           ? "Card payment isn't available right now, so request it by email and we'll send an invoice. "
           : 'Secure checkout by Stripe, with an invoice. '}
         We check every order before sending the license. For businesses and organizations only. By paying you accept the{' '}
-        <Box component="a" href={links.terms} sx={underline}>
+        <Box component="a" href={links.terms} target="_blank" rel="noopener" sx={underline}>
           Commercial License Terms
         </Box>{' '}
         and{' '}
-        <Box component="a" href={links.termsOfSale} sx={underline}>
+        <Box component="a" href={links.termsOfSale} target="_blank" rel="noopener" sx={underline}>
           Terms of Sale
         </Box>
         .
@@ -729,7 +735,7 @@ function Result({ rec, answers, pricesAvailable }: { rec: Recommendation; answer
           <Button variant="outlined" href="#packs" sx={oneLine}>
             Compare all packs
           </Button>
-          <Button variant="text" href={links.contact} sx={{ ...oneLine, color: color.ink }}>
+          <Button variant="text" href={links.contact} target="_blank" rel="noopener" sx={{ ...oneLine, color: color.ink }}>
             Ask us
           </Button>
         </Box>
@@ -752,7 +758,7 @@ function Result({ rec, answers, pricesAvailable }: { rec: Recommendation; answer
           <Button variant="contained" href={links.install} target="_blank" rel="noopener noreferrer" sx={oneLine}>
             Install it ↗
           </Button>
-          <Button variant="text" href={links.contact} sx={{ ...oneLine, color: color.ink }}>
+          <Button variant="text" href={links.contact} target="_blank" rel="noopener" sx={{ ...oneLine, color: color.ink }}>
             Ask us
           </Button>
         </Box>
@@ -770,7 +776,7 @@ function Result({ rec, answers, pricesAvailable }: { rec: Recommendation; answer
           Our biggest pack covers {rec.max} game servers at once. Tell us about your setup and we&apos;ll send you a quote.
         </Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25 }}>
-          <Button variant="contained" href={`${links.contact}?topic=quote`} sx={oneLine}>
+          <Button variant="contained" href={`${links.contact}?topic=quote`} target="_blank" rel="noopener" sx={oneLine}>
             Ask for a quote
           </Button>
           <Button variant="outlined" href="#packs" sx={oneLine}>
@@ -1051,7 +1057,7 @@ export function PackFinder({
 
       {view.held && step !== 'result' && (
         <Typography id="guide-held" role="alert" sx={{ color: color.ban, fontSize: '0.9375rem', mt: -1 }}>
-          {step === 'money' && draft.money === 'unsure' ? 'Read the note above, then pick Yes or No.' : heldHint[step]}
+          {step === 'money' && draft.money === 'unsure' ? 'Pick Yes or No, or ask us what you need.' : heldHint[step]}
         </Typography>
       )}
 
@@ -1075,6 +1081,8 @@ export function PackFinder({
           >
             Start over
           </Button>
+        ) : step === 'money' && draft.money === 'unsure' ? (
+          <span />
         ) : (
           <Button type="submit" name="at" value={nextStep(step)} variant="contained" data-testid="guide-next" sx={oneLine}>
             {nextStep(step) === 'result' || steps.indexOf(step) === steps.length - 2 ? 'See my answer' : 'Next'}

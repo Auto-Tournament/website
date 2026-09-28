@@ -146,7 +146,7 @@ export const yearlyCs2Note =
 
 /** An event pack counts toward a yearly pack bought soon after. */
 export const eventCreditRule =
-  'Bought an event pack in the last 90 days? Its full price counts toward a yearly pack of the same product and size.';
+  'Bought an event pack in the last 90 days? Its price counts toward a yearly pack of the same product and size.';
 
 /** Paid operators and contractors (e.g. someone hired to run the servers at a LAN). */
 export const operatorRule =
@@ -216,7 +216,7 @@ export function founderTerms(packs: readonly Pack[]): string[] {
 }
 
 /**
- * The rule behind every price: if you earn money from it, you pay full price.
+ * The rule behind every price: if you earn money from it, you need a license.
  * Shown in the pricing guide's free answer.
  */
 export const freeUseHelp =
@@ -226,9 +226,9 @@ export const freeUseHelp =
 export const freeOrganizations =
   'Charities, schools and universities, public research, public safety or health and environmental protection organizations, and government bodies are free, even when they charge entry.';
 
-/** Who pays: anyone who earns money from it, at the full price. */
+/** Who pays: anyone who earns money from it, one price for everyone. */
 export const earnMoneyRule =
-  'If you earn money from it, you pay full price: an organizer who makes a profit, any business, or a paid operator or contractor, even one hired by a zero-profit event.';
+  'If you earn money from it, you need a license: an organizer who makes a profit, any business, or a paid operator or contractor, even one hired by a zero-profit event.';
 
 /**
  * The optional free LAN confirmation. PolyForm already allows non-commercial

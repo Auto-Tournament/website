@@ -113,7 +113,7 @@ export type StepId = (typeof stepIds)[number];
 export const stepTitles: Record<StepId, string> = {
   games: 'Which games will you run?',
   job: 'What do you want Auto Tournament to do?',
-  money: 'Does anyone earn money from it?',
+  money: 'Does anyone earn money from your events?',
   servers: 'How many game servers at once?',
   freq: 'How often?',
   result: 'Your answer',
