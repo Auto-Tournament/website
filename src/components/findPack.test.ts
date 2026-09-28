@@ -134,9 +134,9 @@ describe('recommend', () => {
   it('founder', () => {
     const r = rec('g=cs2&do=platform&money=yes&servers=6&freq=founder');
     if (r.kind !== 'pack') throw new Error(r.kind);
-    expect(headline(r)).toBe('Platform S · paid once · €299');
+    expect(headline(r)).toBe('Platform S · paid once · €399');
     expect(whyThisSize(r, q('g=cs2').answers)).toContain("It's the smallest pack.");
-    expect(priceTip(r)).toContain('3 years of yearly');
+    expect(priceTip(r)).toContain('4 years of yearly');
   });
 
   it('above the biggest pack is a quote', () => {
