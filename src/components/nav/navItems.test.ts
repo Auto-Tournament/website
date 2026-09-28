@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { barLinks, isExternal, menus, nextIndex, panelLeft } from './navItems';
+import { barLinks, isExternal, menus, menusFor, nextIndex, panelLeft, siteHref } from './navItems';
 
 describe('site nav items', () => {
   it('keeps every destination reachable: each link is a site path or an https URL', () => {
@@ -57,5 +57,54 @@ describe('nextIndex', () => {
     expect(nextIndex(0, 'End', 4)).toBe(3);
     expect(nextIndex(1, 'Enter', 4)).toBeNull();
     expect(nextIndex(0, 'ArrowRight', 0)).toBeNull();
+  });
+});
+
+describe('site links from the console', () => {
+  const site = 'https://autotournament.gg';
+  const items = (m: typeof menus) => m.flatMap((x) => x.groups.flatMap((g) => g.items));
+
+  it('keeps site paths relative on the main site and in development', () => {
+    expect(siteHref('/pricing')).toBe('/pricing');
+    expect(siteHref('/#features', '')).toBe('/#features');
+  });
+
+  it('makes site paths absolute on the console host; URLs and anchors pass through', () => {
+    expect(siteHref('/pricing', site)).toBe('https://autotournament.gg/pricing');
+    expect(siteHref('/#features', site)).toBe('https://autotournament.gg/#features');
+    expect(siteHref('/', site)).toBe('https://autotournament.gg/');
+    expect(siteHref('/verify', `${site}/`)).toBe('https://autotournament.gg/verify');
+    expect(siteHref('https://docs.autotournament.gg', site)).toBe('https://docs.autotournament.gg');
+    expect(siteHref('#site-links', site)).toBe('#site-links');
+    expect(siteHref('//evil.example', site)).toBe('//evil.example');
+  });
+
+  it('keeps absolute links to the main site in the tab', () => {
+    expect(isExternal('https://autotournament.gg/pricing', site)).toBe(false);
+    expect(isExternal('https://autotournament.gg', site)).toBe(false);
+    expect(isExternal('https://autotournament.gg.evil.example/x', site)).toBe(true);
+    expect(isExternal('https://docs.autotournament.gg', site)).toBe(true);
+  });
+
+  it('on the main site: the menus as they are, Console inside Product', () => {
+    expect(menusFor()).toEqual(menus);
+    expect(items(menusFor()).some((i) => i.icon === 'console')).toBe(true);
+  });
+
+  it('on the console host: every site link absolute, no Console entry (the account menu has it), no duplicate hrefs', () => {
+    const m = menusFor({ site, inConsole: true });
+    const all = items(m);
+    expect(all.some((i) => i.icon === 'console')).toBe(false);
+    for (const i of all) expect(i.href).toMatch(/^https:\/\//);
+    expect(all.find((i) => i.label === 'Features')?.href).toBe('https://autotournament.gg/#features');
+    expect(all.find((i) => i.label === 'Pricing')?.href).toBe('https://autotournament.gg/pricing');
+    expect(m.find((x) => x.id === 'product')?.fallbackHref).toBe('https://autotournament.gg/#features');
+    const hrefs = [barLinks.install.href, ...all.map((i) => i.href)];
+    expect(new Set(hrefs).size).toBe(hrefs.length);
+  });
+
+  it('in development the console keeps relative links', () => {
+    const all = items(menusFor({ site: '', inConsole: true }));
+    expect(all.find((i) => i.label === 'Pricing')?.href).toBe('/pricing');
   });
 });

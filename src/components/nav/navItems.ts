@@ -78,9 +78,41 @@ export const barLinks = {
   install: { label: 'Install', href: links.install },
 } as const;
 
-/** Links that leave the site open in a new tab and carry an arrow. */
-export function isExternal(href: string): boolean {
+/**
+ * Links that leave the site open in a new tab and carry an arrow. `site` is the
+ * main site's origin when the nav renders on the console's own host: links to
+ * it are absolute there but still the same site, so they stay in the tab.
+ */
+export function isExternal(href: string, site = ''): boolean {
+  if (site && (href === site || href.startsWith(`${site}/`))) return false;
   return /^https?:\/\//.test(href);
+}
+
+/**
+ * A site link as it must be written on the current host. On the main site
+ * (and on /console in development) `site` is '' and paths stay relative; on
+ * the console's own host `site` is the main site's origin and every site path
+ * becomes absolute (https://autotournament.gg/pricing). Absolute URLs and
+ * in-page anchors (#site-links) pass through.
+ */
+export function siteHref(href: string, site = ''): string {
+  if (!site || !href.startsWith('/') || href.startsWith('//')) return href;
+  return `${site.replace(/\/$/, '')}${href}`;
+}
+
+/**
+ * The menus as a host shows them. In the console the account menu on the
+ * right replaces the Product menu's Console entry, so it is left out there.
+ */
+export function menusFor({ site = '', inConsole = false }: { site?: string; inConsole?: boolean } = {}): NavMenu[] {
+  return menus.map((m) => ({
+    ...m,
+    fallbackHref: siteHref(m.fallbackHref, site),
+    groups: m.groups.map((g) => ({
+      ...g,
+      items: g.items.filter((item) => !(inConsole && item.icon === 'console')).map((item) => ({ ...item, href: siteHref(item.href, site) })),
+    })),
+  }));
 }
 
 /**

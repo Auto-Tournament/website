@@ -28,7 +28,9 @@ import { AtIcon } from '../AtIcon';
 import { CompatDot, compatSummaryTone } from '../compat/CompatDot';
 import { CompatNavStatus, useCompatStatus } from '../compat/CompatNavStatus';
 import { overallLabel } from '../compat/labels';
-import { barLinks, isExternal, menus, nextIndex, panelLeft, type NavIcon, type NavLink, type NavMenu } from './navItems';
+import { links } from '../links';
+import { AccountMenu, type NavAccount } from './AccountMenu';
+import { barLinks, isExternal, menusFor, nextIndex, panelLeft, siteHref, type NavIcon, type NavLink, type NavMenu } from './navItems';
 
 const { color, radius, ease, duration } = tokens;
 
@@ -104,12 +106,12 @@ function useScrollingDown(threshold = 80) {
   return down;
 }
 
-function externalProps(href: string) {
-  return isExternal(href) ? { target: '_blank', rel: 'noopener noreferrer' } : {};
+function externalProps(href: string, site = '') {
+  return isExternal(href, site) ? { target: '_blank', rel: 'noopener noreferrer' } : {};
 }
 
-function ExternalMark({ href, size = 12 }: { href: string; size?: number }) {
-  if (!isExternal(href)) return null;
+function ExternalMark({ href, site = '', size = 12 }: { href: string; site?: string; size?: number }) {
+  if (!isExternal(href, site)) return null;
   return (
     <>
       <ArrowUpRight size={size} weight="bold" aria-hidden style={{ flex: 'none', opacity: 0.7 }} />
@@ -121,14 +123,14 @@ function ExternalMark({ href, size = 12 }: { href: string; size?: number }) {
 }
 
 /** One destination in a panel or the phone sheet: icon, label, one line of what it is. */
-function MenuItem({ item, status, onNavigate, width }: { item: NavLink; status: CompatStatus; onNavigate?: () => void; width?: string }) {
+function MenuItem({ item, status, site, onNavigate, width }: { item: NavLink; status: CompatStatus; site: string; onNavigate?: () => void; width?: string }) {
   const Icon = icons[item.icon];
   const tone = compatSummaryTone(status.overall);
   return (
     <Box
       component="a"
       href={item.href}
-      {...externalProps(item.href)}
+      {...externalProps(item.href, site)}
       onClick={onNavigate}
       data-nav-item=""
       sx={{
@@ -162,7 +164,7 @@ function MenuItem({ item, status, onNavigate, width }: { item: NavLink; status: 
           <Box component="span" sx={{ whiteSpace: 'nowrap' }}>
             {item.label}
           </Box>
-          <ExternalMark href={item.href} />
+          <ExternalMark href={item.href} site={site} />
         </Box>
         <Box component="span" sx={{ color: color.muted, fontSize: '0.8125rem', lineHeight: 1.45 }}>
           {item.note}
@@ -184,7 +186,7 @@ function MenuItem({ item, status, onNavigate, width }: { item: NavLink; status: 
 }
 
 /** The contents of one menu in the desktop panel. */
-function PanelSection({ menu, status }: { menu: NavMenu; status: CompatStatus }) {
+function PanelSection({ menu, status, site }: { menu: NavMenu; status: CompatStatus; site: string }) {
   const many = menu.groups.length > 1;
   return (
     <Box sx={{ display: 'grid', gridAutoFlow: 'column', gap: 2, p: 1.5 }}>
@@ -202,7 +204,7 @@ function PanelSection({ menu, status }: { menu: NavMenu; status: CompatStatus })
           >
             {group.items.map((item) => (
               <li key={item.label}>
-                <MenuItem item={item} status={status} />
+                <MenuItem item={item} status={status} site={site} />
               </li>
             ))}
           </Box>
@@ -223,11 +225,18 @@ type Geometry = { left: number; top: number; width: number; height: number };
  * in the bar; the two menus share one panel that moves under the trigger,
  * resizes to the menu, and slides the contents in the direction of travel.
  * Below md the bar collapses to a menu button that opens a full-width sheet.
+ *
+ * The console renders the same nav with `site` (the main site's origin on the
+ * console's own host, '' in development) so every site link leads back to
+ * autotournament.gg, and `account`, the account menu on the right, which takes
+ * the place of the Product menu's Console entry.
  */
-export function SiteNav() {
+export function SiteNav({ site = '', account }: { site?: string; account?: NavAccount } = {}) {
   const hydrated = useHydrated();
-  const status = useCompatStatus();
+  const status = useCompatStatus(site);
   const scrollingDown = useScrollingDown();
+  const menus = menusFor({ site, inConsole: account !== undefined });
+  const [accountOpen, setAccountOpen] = useState(false);
 
   // `moving` is true when one open menu hands over to another: only then do
   // the panel's position, size and contents animate. Opening from closed places
@@ -238,7 +247,7 @@ export function SiteNav() {
 
   const open = menu.open;
   const shown = open ?? menu.last;
-  const compact = scrollingDown && open === null && !sheet;
+  const compact = scrollingDown && open === null && !sheet && !accountOpen;
 
   const headerRef = useRef<HTMLElement>(null);
   const pillRef = useRef<HTMLDivElement>(null);
@@ -258,12 +267,21 @@ export function SiteNav() {
   const clearTimer = () => window.clearTimeout(timer.current);
 
   const openMenu = useCallback((id: MenuId) => {
+    setAccountOpen(false);
     setMenu((m) => (m.open === id ? m : { open: id, last: id, moving: m.open !== null }));
   }, []);
   const closeMenu = useCallback(() => {
     window.clearTimeout(timer.current);
     setMenu((m) => (m.open === null ? m : { ...m, open: null, moving: false }));
   }, []);
+
+  const onAccountOpenChange = useCallback(
+    (next: boolean) => {
+      if (next) closeMenu();
+      setAccountOpen(next);
+    },
+    [closeMenu],
+  );
 
   // Place and size the panel for the open menu. Layout offsets, not
   // getBoundingClientRect, so the pill's compact scale never skews them.
@@ -537,7 +555,7 @@ export function SiteNav() {
       >
         <Box
           component="a"
-          href="/"
+          href={siteHref('/', site)}
           aria-label="Auto Tournament, home"
           onPointerEnter={scheduleClose}
           sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: { md: 1 }, textDecoration: 'none', color: 'inherit', fontFamily: fontDisplay, fontWeight: 600, whiteSpace: 'nowrap' }}
@@ -557,13 +575,21 @@ export function SiteNav() {
         </Box>
 
         <Box ref={rightRef} onPointerEnter={scheduleClose} sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 }, ml: 'auto', fontSize: '0.875rem' }}>
-          <CompatNavStatus status={status} />
-          <Button variant="contained" size="small" href={barLinks.install.href} {...externalProps(barLinks.install.href)} endIcon={<ArrowUpRight size={12} weight="bold" aria-hidden />} sx={{ whiteSpace: 'nowrap', '& .MuiButton-endIcon': { ml: 0.5 } }}>
+          <CompatNavStatus status={status} href={siteHref(links.compatibility, site)} />
+          <Button variant="contained" size="small" href={barLinks.install.href} {...externalProps(barLinks.install.href, site)} endIcon={<ArrowUpRight size={12} weight="bold" aria-hidden />} sx={{ whiteSpace: 'nowrap', '& .MuiButton-endIcon': { ml: 0.5 } }}>
             {barLinks.install.label}
             <Box component="span" sx={visuallyHidden}>
               (opens in a new tab)
             </Box>
           </Button>
+          {account && (
+            <AccountMenu
+              account={account}
+              hydrated={hydrated}
+              open={accountOpen}
+              onOpenChange={onAccountOpenChange}
+            />
+          )}
           {hydrated ? (
             <Box
               component="button"
@@ -572,7 +598,10 @@ export function SiteNav() {
               aria-expanded={sheet}
               aria-controls="site-menu-sheet"
               aria-label={sheet ? 'Close menu' : 'Menu'}
-              onClick={() => setSheet((s) => !s)}
+              onClick={() => {
+                setAccountOpen(false);
+                setSheet((s) => !s);
+              }}
               sx={{ ...menuButtonSx, display: { xs: 'grid', md: 'none' } }}
             >
               {sheet ? <X size={18} weight="bold" aria-hidden /> : <List size={18} weight="bold" aria-hidden />}
@@ -659,7 +688,7 @@ export function SiteNav() {
                     ...noMotion,
                   }}
                 >
-                  <PanelSection menu={m} status={status} />
+                  <PanelSection menu={m} status={status} site={site} />
                 </Box>
               );
             })}
@@ -702,7 +731,7 @@ export function SiteNav() {
                 <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', gap: 0.25 }}>
                   {m.groups.flatMap((g) => g.items).map((item) => (
                     <li key={item.label}>
-                      <MenuItem item={item} status={status} onNavigate={() => setSheet(false)} />
+                      <MenuItem item={item} status={status} site={site} onNavigate={() => setSheet(false)} />
                     </li>
                   ))}
                 </Box>
