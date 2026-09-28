@@ -69,7 +69,6 @@ export function Nav() {
           pr: 1,
           pl: 2,
           bgcolor: color.navGlass,
-          backdropFilter: 'blur(14px)',
           border: `1px solid ${color.rule}`,
           borderRadius: `${radius.pill}px`,
         }}
