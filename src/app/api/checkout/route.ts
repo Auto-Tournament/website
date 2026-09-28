@@ -10,10 +10,12 @@ import {
 } from '@/lib/checkout';
 import { founderSalesOpen, packIn } from '@/components/pricing';
 import { licenseStore } from '@/lib/license/store';
+import { dbError } from '@/lib/db/errors';
 import { lookupKey } from '@/lib/stripePacks';
 import { getPacks, invalidatePacks } from '@/lib/stripePrices';
 import { readCapped } from '@/lib/readCapped';
 import { siteUrl } from '@/lib/site';
+import { checkoutCustomerParams, consoleCheckoutPrefill } from '@/lib/console/checkout';
 
 // Starts a Stripe Checkout Session for a commercial license pack. Server only: the
 // secret key comes from STRIPE_SECRET_KEY at runtime and never reaches the
@@ -63,7 +65,7 @@ async function founderOpenNow(): Promise<boolean> {
   try {
     return founderSalesOpen(await licenseStore().founderCount());
   } catch (error) {
-    console.error('[checkout] could not count founder licenses', error);
+    console.error('[checkout] could not count founder licenses', dbError(error));
     return founderSalesOpen(0);
   }
 }
@@ -130,7 +132,10 @@ export async function POST(request: Request) {
   const description = describeLicense(pack, order.period);
   // Founder orders carry founder=true. The first-25 / 31 March 2027 cap is checked above.
   // max_servers: the limit paid for, which goes into the license key (lib/license).
-  const metadata = { ...licenseMetadata(order), max_servers: String(pack.maxServers) };
+  // From the console's Buy page (signed in): the organization, and its Stripe
+  // customer or the user's email. Guests: exactly as before.
+  const buyer = checkoutCustomerParams(await consoleCheckoutPrefill());
+  const metadata = { ...licenseMetadata(order), max_servers: String(pack.maxServers), ...buyer.metadata };
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -138,7 +143,8 @@ export async function POST(request: Request) {
       // The Stripe price found by its lookup key (<pack>_<period>). The amount
       // is Stripe's and never comes from the client.
       line_items: [{ price: priceId, quantity: 1 }],
-      customer_creation: 'always',
+      ...(buyer.customer ? { customer: buyer.customer, customer_update: buyer.customer_update } : { customer_creation: buyer.customer_creation }),
+      ...(buyer.customer_email ? { customer_email: buyer.customer_email } : {}),
       // Business name, B2B confirmation, event details and the terms checkbox.
       ...checkoutFormParams(base),
       metadata,

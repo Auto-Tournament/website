@@ -6,6 +6,8 @@ const config: NextConfig = {
   reactStrictMode: true,
   output: 'standalone',
   poweredByHeader: false,
+  // The console's forms (Server Actions) are small: cap their bodies.
+  experimental: { serverActions: { bodySizeLimit: '32kb' } },
   async headers() {
     return [
       // Brand assets rarely change; let browsers and Cloudflare keep them a week.

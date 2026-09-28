@@ -8,22 +8,49 @@ services:
     container_name: autotournament-website
     # Server-side secrets (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SITE_URL,
     # COMPAT_INGEST_TOKEN, LICENSE_SIGNING_KEY, POSTMARK_SERVER_TOKEN,
-    # ACCOUNT_SESSION_SECRET)
-    # live in .env next to this file, read at runtime and never baked into the
-    # image. Optional: without it card checkout is off and the calculator
-    # falls back to the email request. Needs Docker Compose 2.24 or newer.
+    # AUTH_SECRET, AUTH_URL, AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET,
+    # POSTGRES_PASSWORD) live in .env next to this file, read at runtime and
+    # never baked into the image. Needs Docker Compose 2.24 or newer.
     env_file:
       - path: .env
         required: false
+    environment:
+      # The console's database (the db service below). POSTGRES_PASSWORD comes
+      # from .env; compose refuses to build or start until it is set.
+      DATABASE_URL: postgres://autotournament:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/autotournament
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
     ports:
-      # The astro Cloudflare tunnel routes autotournament.gg to dev.lan:31236.
-      # Its connectors run on several LAN hosts, so bind on all interfaces.
+      # The astro Cloudflare tunnel routes autotournament.gg and
+      # console.autotournament.gg to dev.lan:31236. Its connectors run on
+      # several LAN hosts, so bind on all interfaces.
       - "0.0.0.0:31236:3000"
     volumes:
-      # Ready Up compatibility runs (/compatibility) and issued license keys
-      # (data/licenses), kept across rebuilds.
+      # Ready Up compatibility runs (/compatibility) and the old licenses.json
+      # (data/licenses: imported into Postgres at startup, kept as a backup).
       - compat-data:/app/data
+
+  # Postgres for the console and the license keys. Not published on the host:
+  # only the website container reaches it, over the compose network.
+  db:
+    image: postgres:17-alpine
+    container_name: autotournament-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: autotournament
+      POSTGRES_USER: autotournament
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autotournament -d autotournament"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
 volumes:
   compat-data:
+  db-data:

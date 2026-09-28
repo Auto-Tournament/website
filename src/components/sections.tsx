@@ -339,7 +339,7 @@ export function Footer() {
             ['Pricing', links.pricing],
             ['CS2 compatibility', links.compatibility],
             ['License keys', links.license],
-            ['Your licenses', links.account],
+            ['Console', links.account],
             ['Docs', links.docs],
             ['GitHub', links.github],
             ['Discord', links.discord],

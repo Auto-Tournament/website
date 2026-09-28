@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { readCapped } from '@/lib/readCapped';
 import { issueForSession } from '@/lib/license/issue';
+import { dbError } from '@/lib/db/errors';
 
 // Stripe webhook: issues the license key when a checkout is paid. Register
 // https://autotournament.gg/api/stripe/webhook in Stripe (Developers →
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
     }
     return reply(200, { received: true, license: result.status });
   } catch (err) {
-    console.error('[license] issuing failed; Stripe will retry', { session: session.id }, err instanceof Error ? err.message : 'unknown error');
+    console.error('[license] issuing failed; Stripe will retry', { session: session.id }, dbError(err));
     return reply(500, { error: 'Could not issue the license' });
   }
 }

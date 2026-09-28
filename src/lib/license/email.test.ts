@@ -1,12 +1,11 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { emailConfig, sendEmail, DEFAULT_EMAIL_FROM, POSTMARK_URL } from '../email/postmark';
 import { emailLicense } from './deliver';
 import { coverageText, licenseDurationText, updatesText } from './describe';
 import { escapeHtml, licenseEmail } from './email';
 import { emailHash, type LicensePayload } from './format';
+import { testDb } from '../db/testing';
+import { licenses } from '../db/schema';
 import { createLicenseStore, type LicenseRecord } from './store';
 
 const site = 'https://autotournament.gg';
@@ -121,9 +120,9 @@ describe('postmark', () => {
 });
 
 describe('sending the key once', () => {
-  let dir: string;
+  let t: Awaited<ReturnType<typeof testDb>>;
   beforeEach(async () => {
-    dir = await mkdtemp(path.join(tmpdir(), 'licenses-email-'));
+    t = await testDb();
     vi.stubEnv('POSTMARK_SERVER_TOKEN', 'test-token');
     vi.stubEnv('SITE_URL', '');
     vi.spyOn(console, 'info').mockImplementation(() => {});
@@ -133,11 +132,11 @@ describe('sending the key once', () => {
   afterEach(async () => {
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
-    await rm(dir, { recursive: true, force: true });
+    await t.close();
   });
 
   it('claims a license for one send at a time, and not again once emailed', async () => {
-    const store = createLicenseStore(dir);
+    const store = createLicenseStore(t.db);
     await store.issueOnce('cs_test_1', async () => record());
     const [a, b] = await Promise.all([store.claimEmail('cs_test_1'), store.claimEmail('cs_test_1')]);
     expect([a, b].filter(Boolean)).toHaveLength(1);
@@ -152,13 +151,13 @@ describe('sending the key once', () => {
     expect(await store.claimEmail('cs_test_1', { again: true })).not.toBeNull();
     await store.finishEmail('cs_test_1', { ok: true, at: '2026-09-28T11:00:00Z' });
 
-    const saved = await createLicenseStore(dir).bySession('cs_test_1');
-    expect(saved).toMatchObject({ emailed_at: '2026-09-28T10:01:00Z', email_error: null });
-    expect(await readFile(store.file, 'utf8')).not.toContain('buyer@example.com');
+    const saved = await createLicenseStore(t.db).bySession('cs_test_1');
+    expect(saved).toMatchObject({ emailed_at: '2026-09-28T10:01:00.000Z', email_error: null });
+    expect(JSON.stringify(await t.db.select().from(licenses))).not.toContain('buyer@example.com');
   });
 
   it('webhook, retries and the thanks page together send one email', async () => {
-    const store = createLicenseStore(dir);
+    const store = createLicenseStore(t.db);
     await store.issueOnce('cs_test_1', async () => record());
     const fetchImpl = vi.fn(async () => okResponse());
     const results = await Promise.all([
@@ -173,7 +172,7 @@ describe('sending the key once', () => {
   });
 
   it('a failed send is recorded, logged without the address, and sent on the next try', async () => {
-    const store = createLicenseStore(dir);
+    const store = createLicenseStore(t.db);
     await store.issueOnce('cs_test_1', async () => record());
     const failing = vi.fn(async () => Response.json({ ErrorCode: 406, Message: 'buyer@example.com is inactive' }, { status: 422 }));
     expect(await emailLicense('cs_test_1', 'buyer@example.com', { store, fetchImpl: failing })).toBe('failed');
@@ -186,7 +185,7 @@ describe('sending the key once', () => {
   });
 
   it('never sends to an address the license was not bought with', async () => {
-    const store = createLicenseStore(dir);
+    const store = createLicenseStore(t.db);
     await store.issueOnce('cs_test_1', async () => record());
     const fetchImpl = vi.fn(async () => okResponse());
     expect(await emailLicense('cs_test_1', 'someone@else.com', { store, fetchImpl, again: true })).toBe('failed');
@@ -195,7 +194,7 @@ describe('sending the key once', () => {
 
   it('is off without POSTMARK_SERVER_TOKEN', async () => {
     vi.stubEnv('POSTMARK_SERVER_TOKEN', '');
-    const store = createLicenseStore(dir);
+    const store = createLicenseStore(t.db);
     await store.issueOnce('cs_test_1', async () => record());
     const fetchImpl = vi.fn(async () => okResponse());
     expect(await emailLicense('cs_test_1', 'buyer@example.com', { store, fetchImpl })).toBe('disabled');

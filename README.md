@@ -43,7 +43,8 @@ Session through `POST /api/checkout`. Set these in a `.env` file next to
 `env_file` with `required: false` needs Docker Compose 2.24 or newer):
 
 - `STRIPE_SECRET_KEY`: a Stripe restricted key with Checkout Sessions write,
-  Prices read and Products read (and optionally Invoices read, see License keys). Unset means card checkout is off: the route
+  Prices read and Products read (optionally Invoices read, see License keys,
+  and Customer portal write, see Console). Unset means card checkout is off: the route
   answers 503 and the calculator offers the email request instead.
 - `SITE_URL`: base URL for Stripe's return links. Defaults to
   `https://autotournament.gg`.
@@ -57,7 +58,7 @@ URL in Dashboard → Settings → Public details first
 (`https://autotournament.gg/terms`); without it, creating a Checkout Session
 fails and the calculator falls back to the email request.
 
-`yarn test` runs the checkout, Stripe price, license key, license email, account and CS2 compatibility tests.
+`yarn test` runs the checkout, Stripe price, license key, license email, console (on an in-memory Postgres, PGlite) and CS2 compatibility tests.
 
 ## Prices live in Stripe
 
@@ -134,10 +135,13 @@ blocks**: a problem is a warning in the product, never a lockout.
    paid with. "Email it to me again" there sends it to that address, only when
    it is the one the license was bought with.
 
-Issued keys live in `licenses.json` in `LICENSE_DATA_DIR` (default
-`./data/licenses`, `/app/data/licenses` on the same `compat-data` volume),
-written atomically, mode 600, with a SHA-256 of the buyer's email instead of
-the email.
+Issued keys live in Postgres (the `licenses` table, see Console), with a
+SHA-256 of the buyer's email instead of the email. Until the console they
+lived in `licenses.json` in `LICENSE_DATA_DIR` (default `./data/licenses`,
+`/app/data/licenses` on the `compat-data` volume). At every start the site
+imports the licenses from that file that aren't in the database yet (log:
+`[license] licenses.json import { inFile, imported }`) and never changes the
+file, so it stays as a backup of the keys issued before the move.
 
 ### Setup (once)
 
@@ -172,8 +176,8 @@ Checkout Session's email through Postmark's HTTP API: the key, pack, period,
 what it covers, order reference and invoice number, and the seller footer.
 Replies go to sivert@autotournament.gg. Open and click tracking are off.
 
-Exactly once per license: the send is claimed in the store and `emailed_at` is
-written to the license's record in `licenses.json` when it works. A failed send
+Exactly once per license: the send is claimed in the database and `emailed_at` is
+written to the license's row when it works. A failed send
 never fails the webhook or the key; it logs `[license] email failed` with the
 license id and the error (never the address) and keeps it in `email_error`. It
 is tried again when Stripe delivers the event again (Stripe Dashboard →
@@ -203,44 +207,13 @@ Postmark setup (once), in this order:
 5. Put the token in `.env` and `docker compose up -d`.
 6. Optional: a DMARC record (`_dmarc` TXT) once DKIM passes.
 
-### Your licenses (/account)
-
-Buyers sign in with an emailed link (no password) and see every license bought
-with that email, newest first: licensee, pack, kind, period, status, license
-id, order reference, the key, the public check link, and the versions covered.
-
-- `POST /api/account/link { email }` emails a single-use link valid 15 minutes,
-  only when a license has that email's hash. Same answer either way; sent
-  after the response. Limits: 5 per IP per 10 minutes, 3 per email per hour.
-- The link opens `/account/signin?token=…`, which only shows a button (mail
-  scanners that open links don't use it up). The button posts to
-  `/api/account/signin`, which sets the session cookie (`__Host-at-account`:
-  HttpOnly, Secure, SameSite=Lax, 30 days, HMAC-signed) and goes to `/account`.
-  `/api/account/signout` ends the session.
-- Tokens and sessions are kept in `account.json` next to `licenses.json`, as
-  SHA-256 hashes with the email hash (never the email), mode 600, expired
-  entries dropped on every write. Deleting the file signs everyone out.
-- Versions covered come from the GitHub releases of Ready Up and CS2 Server
-  Manager (plus the platform for Platform packs), public API, cached an hour.
-  When GitHub can't be read, the section is hidden.
-
-Env, in `.env` on the server:
-
-- `ACCOUNT_SESSION_SECRET`: at least 32 characters, for signing the session
-  cookie. Make one with `openssl rand -base64 48`. Changing it signs everyone
-  out.
-
-/account is on only when both `ACCOUNT_SESSION_SECRET` and
-`POSTMARK_SERVER_TOKEN` are set; otherwise it says sign-in isn't available and
-the routes answer 404.
-
 ### Public license check (/verify)
 
 `/verify/<license id>` shows the licensee, pack and server limit, kind,
 period, updates until, and a status: valid, upcoming, expired, test, or not
 found (the same for every unknown id). Never the key, email, customer id or
 order reference. 30 checks per IP per minute, not indexed. `/license` has a
-"Check a license" form; the thanks page and /account show each license's check
+"Check a license" form; the thanks page and the console show each license's check
 link. Always on.
 
 **Rotating:** run the keygen again, add the new public key to
@@ -311,6 +284,123 @@ and never "blocked". Warning codes: `updates_expired` (line date after
 (event window), `wrong_product` (a Servers key in the platform). Invalid
 codes: `malformed`, `unknown_kid`, `bad_signature`, `unsupported_version`.
 Tests: `src/lib/license/license.test.ts` (throwaway keys made at runtime).
+
+## Console (console.autotournament.gg)
+
+The customer area: sign in, organizations with members, their licenses and
+keys, and invoices. It will grow into the license CRM. Same app and
+container as the site: `src/proxy.ts` maps the host `console.autotournament.gg`
+onto the routes in `src/app/console` (`/licenses` is `src/app/console/(org)/licenses`),
+and the main site's `/account` redirects there. When `AUTH_URL` is a
+localhost URL (development), the console is at `/console` on the same host
+instead.
+
+- **Sign-in** (Auth.js / next-auth v5, `src/lib/console/auth.ts`): an emailed
+  link (Postmark, single use, 15 minutes; the link opens a page with a button,
+  so mail scanners don't use it up, and carries only the token, not the
+  address) or Google. No passwords. Database sessions for 30 days, stored as a
+  SHA-256 of the cookie. Cookies are host-only (`__Host-` session cookie), so
+  they belong to the console's host alone. Google accounts are accepted only
+  when Google says the email is verified, and are then linked to an existing
+  user with that email. Without `POSTMARK_SERVER_TOKEN`, email links are off in
+  production; in development (`yarn dev`) the link is printed to the log.
+- **Organizations**: name, org number, VAT ID, country, billing address.
+  Roles owner, admin and member. Members see the licenses; owners and admins
+  invite (email link, 7 days, single use, only for the invited address, token
+  kept as a hash), change roles, remove members and open billing; only owners
+  make owners, and the last owner can't leave. One person can be in several
+  organizations (operators working for clients): the switcher at the top.
+- **Licenses**: each organization's licenses, with the key, the public check
+  link, status and the versions covered. "Licenses bought with your email"
+  lists licenses whose email hash matches the signed-in user's verified email
+  and that aren't in an organization yet, with "Add to <org>". Checkout stays
+  guest-friendly: no account needed to buy.
+- **Billing**: "Invoices and payment details" opens a Stripe customer portal
+  session for the organization's Stripe customer (taken from the first
+  license with a Stripe customer added to it, in the same mode as the key).
+  Needs the key permission below; without it the page says it isn't
+  available yet.
+- **Buy**: the pack cards, with checkout through the same `/api/checkout`. On
+  the console's host the route sees the session, so checkout gets the
+  organization's Stripe customer (owners and admins; otherwise the user's
+  verified email) and
+  `metadata.org_id`, and the webhook issues the license straight into the
+  organization. From the main site, checkout is exactly as before.
+- **Audit log**: every write (and sign-in) goes into `audit_log`: actor, action,
+  organization, target, time, details. Never tokens.
+- `users.is_admin` marks Auto Tournament staff for the admin CRM that comes
+  later. Set it by hand for now:
+  `ssh <host> "docker exec autotournament-db psql -U autotournament -d autotournament -c \"update users set is_admin = true where email = 'you@example.com'\""`.
+
+Retention (also in the privacy policy): expired sessions and sign-in links are
+deleted at startup and daily, invites 30 days after they are used, withdrawn or
+expired, and audit log entries after 2 years.
+
+### Database
+
+Postgres 17 runs as the `db` service in `docker-compose.yml` (volume
+`db-data`, not published on the host, health-checked; the website waits for
+it). The website gets `DATABASE_URL` from compose. Schema:
+`src/lib/db/schema.ts` (Drizzle ORM). After a schema change, run
+`yarn db:generate` and commit the new file in `drizzle/`; the app applies
+pending migrations itself at startup (`src/instrumentation.ts`), so a deploy
+needs nothing else. Look for `[db]` in the container log.
+
+A backup, from your Mac:
+
+```bash
+ssh <host> 'docker exec autotournament-db pg_dump -U autotournament -Fc autotournament' > autotournament-$(date +%F).dump
+```
+
+### Env
+
+In `.env` next to `docker-compose.yml` on the server:
+
+- `POSTGRES_PASSWORD`: the database password. `openssl rand -hex 32` (hex, so
+  it is safe inside `DATABASE_URL`). Required: without it `docker compose`
+  refuses to build or start, so the running container stays as it is.
+- `AUTH_SECRET`: at least 32 characters; signs Auth.js's cookies and hashes
+  the email-link tokens. `openssl rand -base64 48`. Changing it signs
+  everyone out and voids open sign-in links. Unset: the console says sign-in
+  isn't available and `/api/auth` answers 404.
+- `AUTH_URL`: `https://console.autotournament.gg`.
+- `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`: the Google OAuth client (below).
+  Unset: only the email link.
+- `POSTMARK_SERVER_TOKEN`: as for the license email; the console sends the
+  sign-in links and invites through it (tags `console-signin`, `console-invite`).
+
+`ACCOUNT_SESSION_SECRET` (the old `/account` page) is no longer used: remove it
+from `.env`. The old `account.json` next to `licenses.json` can be deleted.
+
+For local development, a throwaway Postgres and `.env.local`:
+
+```bash
+docker run -d --name at-console-pg -e POSTGRES_USER=at -e POSTGRES_PASSWORD=localtest -e POSTGRES_DB=at -p 127.0.0.1:55432:5432 postgres:17-alpine
+printf 'DATABASE_URL=postgres://at:localtest@127.0.0.1:55432/at\nAUTH_SECRET=%s\nAUTH_URL=http://localhost:4611\nSITE_URL=http://localhost:4611\n' "$(openssl rand -base64 48)" > .env.local
+yarn dev   # the console is at http://localhost:4611/console; sign-in links are printed in the log
+```
+
+### Setup (once)
+
+1. **Cloudflare tunnel**: in the astro tunnel (Zero Trust → Networks →
+   Tunnels → astro → Public hostnames), add `console.autotournament.gg` →
+   `http://dev.lan:31236`, the same service as `autotournament.gg`. Cloudflare
+   creates the DNS record.
+2. **Google OAuth client**: Google Cloud Console → APIs & Services → OAuth
+   consent screen: External, app name "Auto Tournament", support email,
+   authorized domain `autotournament.gg`, scopes `openid`, `email`,
+   `profile` only; publish it. Then Credentials → Create credentials → OAuth
+   client ID → Web application: authorized JavaScript origin
+   `https://console.autotournament.gg`, authorized redirect URI
+   `https://console.autotournament.gg/api/auth/callback/google`. Put the
+   client id and secret in `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`.
+3. **Stripe**: give the site's restricted key **Customer portal: Write**
+   (Developers → API keys → the key → Edit), and set up the portal once
+   (Settings → Billing → Customer portal: turn on invoice history and
+   updating billing details and payment methods; save). Until then the
+   billing page says invoices aren't available yet.
+4. Add the env vars above to `.env` and `docker compose up -d`. The first
+   start creates the tables and imports `licenses.json`.
 
 ## CS2 compatibility
 
