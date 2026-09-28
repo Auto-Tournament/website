@@ -89,9 +89,9 @@ export const productIntro: Record<PackProduct, { title: string; line: string }> 
 
 /** What each size fits, on the pack cards. */
 export const packGoodFor: Record<PackSize, string> = {
-  S: 'Small LAN: an 8-team bracket plus spares',
-  M: 'Regional LAN: 16- or 32-team brackets plus spares',
-  L: 'Large LAN: a 64-team bracket plus spares',
+  S: 'Small LAN: one tournament, plus a spare or practice server',
+  M: 'Mid-size LAN: a few tournaments at once, plus practice and spare servers',
+  L: 'Big LAN: many tournaments at once, plus practice and spare servers',
 };
 
 export const popularSize: PackSize = 'M';
