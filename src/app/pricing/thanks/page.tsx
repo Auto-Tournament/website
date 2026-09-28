@@ -88,19 +88,17 @@ export default async function Thanks({ searchParams }: { searchParams: Promise<R
                 checkUrl={`${siteUrl() ?? ''}/verify/${state.record.payload.id}`}
               />
               <Typography sx={{ mt: 3, maxWidth: '60ch', color: color.ink2 }}>
-                Lost it? Get it again on the{' '}
-                <Box component="a" href="/license" sx={link}>
-                  license page
-                </Box>{' '}
-                with the order reference above (or the invoice number on your receipt) and your email.
-                {consoleEnabled() && (
+                {consoleEnabled() ? (
                   <>
-                    {' '}
-                    Or sign in to{' '}
+                    Lost it?{' '}
                     <Box component="a" href={consoleUrl('/')} sx={link}>
-                      the console
+                      Sign in to the console
                     </Box>{' '}
-                    with that email to see all of them.
+                    with the email you paid with to see your licenses and keys any time.
+                  </>
+                ) : (
+                  <>
+                    Lost it? Email us with the order reference above (or the invoice number on your receipt) and we&apos;ll send it again.
                   </>
                 )}
               </Typography>

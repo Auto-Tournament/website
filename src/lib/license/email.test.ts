@@ -65,7 +65,7 @@ describe('license email', () => {
       expect(body).toContain('One event: 3–5 October 2026 (3 days)');
       expect(body).toContain('cs_test_1');
       expect(body).toContain('ABCD1234-0001');
-      expect(body).toContain(`${site}/license`);
+      expect(body).toContain('console.autotournament.gg');
       expect(body).toContain(`${site}/terms`);
       expect(body).toContain('938 566 674');
     }

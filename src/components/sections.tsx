@@ -254,7 +254,7 @@ export function Footer() {
           {[
             ['Pricing', links.pricing],
             ['CS2 compatibility', links.compatibility],
-            ['License keys', links.license],
+            ['Check a license', links.verify],
             ['Console', links.account],
             ['Contact', links.contact],
             ['Docs', links.docs],

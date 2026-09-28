@@ -9,6 +9,14 @@ describe('site nav items', () => {
     expect(new Set(labels).size).toBe(labels.length);
   });
 
+  it('never points two places at the same destination: no href repeats across the bar and the menus', () => {
+    const all = [...Object.values(barLinks), ...menus.flatMap((m) => m.groups.flatMap((g) => g.items))];
+    const hrefs = all.map((l) => l.href);
+    expect(new Set(hrefs).size).toBe(hrefs.length);
+    // The Install button is the only link to the install guide.
+    expect(menus.flatMap((m) => m.groups.flatMap((g) => g.items)).some((item) => item.href === barLinks.install.href)).toBe(false);
+  });
+
   it('gives every menu item a one-line note', () => {
     for (const item of menus.flatMap((m) => m.groups.flatMap((g) => g.items))) {
       expect(item.note.length).toBeGreaterThan(10);

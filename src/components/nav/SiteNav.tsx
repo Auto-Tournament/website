@@ -13,13 +13,9 @@ import { CaretDown } from '@phosphor-icons/react/dist/csr/CaretDown';
 import { BookOpen } from '@phosphor-icons/react/dist/csr/BookOpen';
 import { ChatCircle } from '@phosphor-icons/react/dist/csr/ChatCircle';
 import { DiscordLogo } from '@phosphor-icons/react/dist/csr/DiscordLogo';
-import { DownloadSimple } from '@phosphor-icons/react/dist/csr/DownloadSimple';
 import { GameController } from '@phosphor-icons/react/dist/csr/GameController';
 import { GithubLogo } from '@phosphor-icons/react/dist/csr/GithubLogo';
-import { Key } from '@phosphor-icons/react/dist/csr/Key';
 import { List } from '@phosphor-icons/react/dist/csr/List';
-import { Pulse } from '@phosphor-icons/react/dist/csr/Pulse';
-import { Scales } from '@phosphor-icons/react/dist/csr/Scales';
 import { SealCheck } from '@phosphor-icons/react/dist/csr/SealCheck';
 import { Trophy } from '@phosphor-icons/react/dist/csr/Trophy';
 import { UserCircle } from '@phosphor-icons/react/dist/csr/UserCircle';
@@ -49,14 +45,10 @@ const PANEL_GAP = 8;
 const icons: Record<NavIcon, typeof Trophy> = {
   features: Trophy,
   games: GameController,
-  compat: Pulse,
-  install: DownloadSimple,
   docs: BookOpen,
-  licensing: Scales,
   github: GithubLogo,
   discord: DiscordLogo,
   console: UserCircle,
-  key: Key,
   verify: SealCheck,
   contact: ChatCircle,
 };

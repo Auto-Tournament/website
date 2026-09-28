@@ -14,7 +14,7 @@ import { licenseStore, type LicenseStore } from './store';
  *
  * - once (default): only when the license hasn't been emailed yet. The store's
  *   claim makes the webhook, its retries and the thanks page send it once.
- * - again: the "Email it to me again" button on /license (rate-limited there).
+ * - again: a resend from the console (its own admin actions; rate-limited there).
  *
  * `to` must be the address the license was bought with: its hash is checked
  * against the license, so a key never goes anywhere else.

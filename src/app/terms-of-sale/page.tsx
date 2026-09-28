@@ -59,7 +59,8 @@ export default function TermsOfSale() {
       <H2 id="delivery">6. Delivery</H2>
       <p>
         Nothing is shipped: the software is downloaded from its public repositories. For card payments your license key is shown right after checkout, emailed to the
-        address you paid with, and can be retrieved later on the license page; for invoice orders we email it once the invoice is paid. If an order turns out to be wrong (for example the wrong
+        address you paid with, and can be seen again any time by <a href={links.account}>signing in to the console</a> with that email; for invoice orders we email it
+        once the invoice is paid. If an order turns out to be wrong (for example the wrong
         pack), we correct it or refund you in full.
       </p>
 

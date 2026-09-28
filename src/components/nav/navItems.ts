@@ -2,12 +2,15 @@ import { links } from '../links';
 
 /**
  * What the site nav shows. The bar keeps the few things people come for
- * (Pricing, the console, Install); everything else sits in two menus:
- * Product (what it does and how it is licensed) and Resources (setting it up, community).
+ * (Pricing, the console, Install); everything else sits in two menus, Product
+ * and Resources. Every destination appears exactly once across the bar and
+ * the menus: the CS2 status dot in the bar is the only link to
+ * /compatibility, licenses and keys live in the console (the bar's Console
+ * button), and the Install button is the only link to the install guide.
  * Pure data and helpers, no React, so the tests can read them.
  */
 
-export type NavIcon = 'features' | 'games' | 'compat' | 'install' | 'docs' | 'licensing' | 'github' | 'discord' | 'console' | 'key' | 'verify' | 'contact';
+export type NavIcon = 'features' | 'games' | 'docs' | 'github' | 'discord' | 'console' | 'verify' | 'contact';
 
 export type NavLink = {
   label: string;
@@ -40,14 +43,6 @@ export const menus: NavMenu[] = [
         items: [
           { label: 'Features', href: '/#features', note: 'Map veto, server allocation, brackets and stats.', icon: 'features' },
           { label: 'Games', href: '/#games', note: 'CS2 built in. More games as modules.', icon: 'games' },
-          { label: 'CS2 compatibility', href: links.compatibility, note: 'Does Ready Up work on the latest CS2 build?', icon: 'compat', status: true },
-        ],
-      },
-      {
-        heading: 'Licenses',
-        items: [
-          { label: 'Licensing', href: links.licensing, note: 'What is free, and when you need a license.', icon: 'licensing' },
-          { label: 'License keys', href: links.license, note: 'Get your license key again.', icon: 'key' },
           { label: 'Check a license', href: links.verify, note: 'See whether a license id is valid.', icon: 'verify' },
         ],
       },
@@ -59,15 +54,9 @@ export const menus: NavMenu[] = [
     fallbackHref: '#site-links',
     groups: [
       {
-        heading: 'Set it up',
+        heading: 'Resources',
         items: [
           { label: 'Docs', href: links.docs, note: 'Setup, configuration and the API.', icon: 'docs' },
-          { label: 'Install guide', href: links.install, note: 'One Docker Compose file, up in five minutes.', icon: 'install' },
-        ],
-      },
-      {
-        heading: 'Community',
-        items: [
           { label: 'GitHub', href: links.github, note: 'Source code, issues and releases.', icon: 'github' },
           { label: 'Discord', href: links.discord, note: 'Ask the people who build it.', icon: 'discord' },
           { label: 'Contact', href: links.contact, note: 'Quotes, invoices and free LAN confirmations.', icon: 'contact' },

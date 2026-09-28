@@ -41,12 +41,12 @@ export default function Privacy() {
         <strong>Your license key.</strong> When you pay by card, we issue a signed license key that you paste into the software. It contains a license id, your
         Stripe customer id, the business name you gave at checkout, the product, pack and server limit, the period, when it was issued, how long updates run
         and, for one event, the event dates. It doesn&apos;t contain your email, name or address, but anyone you give the key to can read what it contains. We
-        keep the issued keys on our server with a one-way hash of your email (not the email itself), so you can <a href="/license">get your key again</a>. The
-        software checks the key offline and sends nothing to us.
+        keep the issued keys on our server with a one-way hash of your email (not the email itself), so you can <a href={links.account}>sign in to the console</a> and
+        see it again. The software checks the key offline and sends nothing to us.
       </p>
       <p id="license-email">
-        <strong>The license email.</strong> We email your license key to the address you paid with, once, right after payment, and again when you ask for it
-        on the license page. The email contains the key, the license details above, the order reference and the invoice number. We send it through Postmark
+        <strong>The license email.</strong> We email your license key to the address you paid with, once, right after payment. The email contains the key,
+        the license details above, the order reference and the invoice number. We send it through Postmark
         (see section 5). We keep when it was sent and, if sending failed, the error, but not your address.
       </p>
       <div id="console">

@@ -6,6 +6,7 @@
  * Relative imports on purpose: vitest runs this file without the `@/` alias.
  */
 import { seller } from '../../components/seller';
+import { consoleUrl } from '../console/urls';
 import { coverageText, licenseDurationText, packName, productContents, updatesText } from './describe';
 import type { LicensePayload } from './format';
 
@@ -40,7 +41,8 @@ function detailRows(r: LicenseEmailInput): [string, string][] {
 export function licenseEmail(r: LicenseEmailInput, site: string): LicenseEmail {
   const p = r.payload;
   const subject = `Your Auto Tournament license key — ${p.id}`;
-  const licenseUrl = `${site}/license`;
+  const consoleLink = consoleUrl('/');
+  const consoleHost = consoleLink.replace(/^https?:\/\//, '');
   const termsUrl = `${site}/terms`;
   const rows = detailRows(r);
   const coverage = coverageText(p);
@@ -68,7 +70,7 @@ export function licenseEmail(r: LicenseEmailInput, site: string): LicenseEmail {
     rules,
     `Commercial License Terms: ${termsUrl}`,
     '',
-    `Lost this email? Get the key again at ${licenseUrl} with the order reference and this email address.`,
+    `See your licenses any time at ${consoleHost}, signing in with this email address.`,
     '',
     'Questions? Reply to this email.',
     '',
@@ -95,7 +97,7 @@ ${rows.map(([k, v]) => `<tr><td style="padding:4px 16px 4px 0;color:#71717a;vert
 <p style="margin:0 0 8px">${e(coverage)}</p>
 <p style="margin:0 0 8px">${e(rules)}</p>
 <p style="margin:0 0 24px"><a href="${e(termsUrl)}" style="color:#1a1a1a">Commercial License Terms</a></p>
-<p style="margin:0 0 16px">Lost this email? Get the key again on the <a href="${e(licenseUrl)}" style="color:#1a1a1a">license page</a> with the order reference and this email address.</p>
+<p style="margin:0 0 16px">See your licenses any time at <a href="${e(consoleLink)}" style="color:#1a1a1a">${e(consoleHost)}</a>, signing in with this email address.</p>
 <p style="margin:0 0 24px">Questions? Reply to this email.</p>
 <p style="margin:0;padding-top:16px;border-top:1px solid #e4e4e7;color:#71717a;font-size:13px">${footer.map(e).join('<br>')}</p>
 </div>
