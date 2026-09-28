@@ -1,3 +1,9 @@
 {
-  "keys": {}
+  "keys": {
+    "tWl_YS3_AzLgqdkm": {
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "x": "YQMKIdrQtVz-QFV3Tw0AWa7RivnNtjK6PiJzskg8R0g"
+    }
+  }
 }
