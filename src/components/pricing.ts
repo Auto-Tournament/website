@@ -83,15 +83,15 @@ export const productLabels: Record<PackProduct, string> = {
 
 /** The Servers / Platform toggle: a short name and one line on what it covers. */
 export const productIntro: Record<PackProduct, { title: string; line: string }> = {
-  servers: { title: 'Servers', line: 'CS2 Server Manager and/or Ready Up, on game servers you run.' },
+  servers: { title: 'Servers', line: 'Our server tools on game servers you run: today CS2 Server Manager and Ready Up, for CS2.' },
   platform: { title: 'Platform', line: 'The full Auto Tournament platform, with CS2 Server Manager, Ready Up and the game packs included.' },
 };
 
-/** What each size fits, on the pack cards. */
+/** What each size fits, on the pack cards. Said in events, never bracket sizes. */
 export const packGoodFor: Record<PackSize, string> = {
-  S: 'Small LAN: one tournament, plus a spare or practice server',
-  M: 'Mid-size LAN: a few tournaments at once, plus practice and spare servers',
-  L: 'Big LAN: many tournaments at once, plus practice and spare servers',
+  S: 'one tournament, plus a spare or practice server',
+  M: 'a few tournaments at once, plus practice and spare servers',
+  L: 'many tournaments at once, plus practice and spare servers',
 };
 
 export const popularSize: PackSize = 'M';
