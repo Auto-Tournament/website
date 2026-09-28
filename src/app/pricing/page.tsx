@@ -366,7 +366,7 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
               <Box component="strong" sx={{ color: color.ink }}>
                 What counts:
               </Box>{' '}
-              only game servers running our software, today CS2 Server Manager and Ready Up. Other game servers don&apos;t, and test, staging and CI servers are free.
+              every game server running our software, today CS2 Server Manager and Ready Up, including spares, practice and test servers. Game servers without our software don&apos;t count.
             </Box>
             <Box component="li" sx={{ borderLeft: { md: `1px solid ${color.rule}` }, pl: { md: 2 } }}>
               <Box component="strong" sx={{ color: color.ink }}>

@@ -154,7 +154,7 @@ export const operatorRule =
 
 /** Which servers count toward the limit. */
 export const testServersRule =
-  'Only servers used for the paid activity count, spares included. Test, staging and CI servers are free.';
+  'Every game server running our software counts: match servers, spares, practice and test servers.';
 
 /** Price changes never touch what you already bought. */
 export const priceChangeRule =

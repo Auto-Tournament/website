@@ -19,7 +19,6 @@ import {
   formatEuro,
   founderBadge,
   founderLifetime,
-  freeUseHelp,
   maxPackServers,
   packFor,
   periodLabels,
@@ -61,7 +60,6 @@ import {
 } from '@/components/findPack';
 import { links } from '@/components/links';
 import { seller } from '@/components/seller';
-import { FreeLanConfirmation } from '@/components/FreeLanConfirmation';
 import { startCheckout } from '@/lib/startCheckout';
 
 const { color, radius, ease, duration } = tokens;
@@ -443,7 +441,7 @@ function ServersStep({ draft, setDraft, packs }: { draft: Answers; setDraft: (a:
         </Box>
       </Box>
       <Typography id="servers-help" sx={{ color: color.ink2, maxWidth: '60ch' }}>
-        The most CS2 servers set up at the same time. Count spares and practice servers too. Only servers running our software count; test servers are free.
+        The most CS2 servers you have set up at the same time with our software on them. Count every one: match servers, spares, practice and test servers.
       </Typography>
       {Number.isInteger(current) && current > max && (
         <Note>More than {max} is more than our biggest pack. Go on and we&apos;ll price it with you.</Note>
@@ -722,11 +720,11 @@ function Result({ rec, answers, pricesAvailable }: { rec: Recommendation; answer
     return (
       <Box sx={{ display: 'grid', gap: 2 }}>
         <Typography sx={big} data-testid="guide-headline">
-          Free · MatchZy Enhanced
+          MatchZy Enhanced
         </Typography>
         <Typography sx={{ color: color.ink2, maxWidth: '64ch' }}>
-          Our CS2 match plugin runs ready-up, pauses, demos and results on servers you already have. It&apos;s MIT licensed: free for any use, paid work
-          included. No license and no sign-up.
+          Our CS2 match plugin runs ready-up, pauses, demos and results on servers you already have. It&apos;s MIT licensed, so you can use it for
+          anything, paid work included.
         </Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25 }}>
           <Button variant="contained" href={cs2PluginRepo} target="_blank" rel="noopener noreferrer" sx={oneLine}>
@@ -747,19 +745,22 @@ function Result({ rec, answers, pricesAvailable }: { rec: Recommendation; answer
     return (
       <Box sx={{ display: 'grid', gap: 2 }}>
         <Typography sx={big} data-testid="guide-headline">
-          €0 · no license needed
+          No license needed
         </Typography>
         <Typography sx={{ color: color.ink2, maxWidth: '64ch' }}>
-          {freeUseHelp} No license, no payment and no registration. If that changes, for example the event makes a profit or someone gets paid, you&apos;d need a
-          license.
+          All the money your events take in goes back into them, and nobody is paid. Install it and run as many events as you like. If that changes, for
+          example an event makes a profit or you pay someone to run it, you need a license.
         </Typography>
-        <FreeLanConfirmation compact headingLevel="h3" />
+        <Typography sx={{ color: color.ink2, maxWidth: '64ch', fontSize: '0.9375rem' }}>
+          Want it in writing for a sponsor or venue?{' '}
+          <Box component="a" href={`${links.contact}?topic=free-lan`} target="_blank" rel="noopener" sx={underline}>
+            Tell us about your event
+          </Box>{' '}
+          and we&apos;ll confirm it by email.
+        </Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25 }}>
           <Button variant="contained" href={links.install} target="_blank" rel="noopener noreferrer" sx={oneLine}>
             Install it ↗
-          </Button>
-          <Button variant="text" href={links.contact} target="_blank" rel="noopener" sx={{ ...oneLine, color: color.ink }}>
-            Ask us
           </Button>
         </Box>
       </Box>
