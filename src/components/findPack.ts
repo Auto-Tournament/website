@@ -112,7 +112,7 @@ export type StepId = (typeof stepIds)[number];
 
 export const stepTitles: Record<StepId, string> = {
   games: 'Which games will you run?',
-  job: 'What do you want Auto Tournament to do?',
+  job: 'Where will you run the tournament?',
   money: 'Does anyone earn money from your events?',
   servers: 'How many game servers at once?',
   freq: 'How often?',
@@ -122,7 +122,7 @@ export const stepTitles: Record<StepId, string> = {
 /** Short labels for the progress dots and the answer summary. */
 export const stepShort: Record<StepId, string> = {
   games: 'Games',
-  job: 'What it does',
+  job: 'Where you run it',
   money: 'Money',
   servers: 'Servers',
   freq: 'How often',
@@ -203,9 +203,14 @@ export const hasCs2 = (a: Answers) => a.games.includes(cs2.slug);
 /** Games other than CS2, including "another game". */
 export const otherGames = (a: Answers) => a.games.filter((g) => g !== cs2.slug);
 
-/** The choices on "What do you want Auto Tournament to do?". Every game but CS2 runs on the platform only. */
+/**
+ * The choices on "Where will you run the tournament?". With CS2 picked, they
+ * can run it here, or run only the CS2 servers (or just the match plugin) and
+ * keep sign-ups and brackets on another site; other games then aren't ours to
+ * count. Without CS2 there is only the platform.
+ */
 export function jobOptions(a: Answers): Job[] {
-  if (hasCs2(a) && otherGames(a).length === 0) return ['plugin', 'servers', 'platform'];
+  if (hasCs2(a)) return ['platform', 'servers', 'plugin'];
   return ['platform'];
 }
 

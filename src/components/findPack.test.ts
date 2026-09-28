@@ -49,10 +49,10 @@ describe('parseAnswers / toQuery', () => {
 });
 
 describe('steps', () => {
-  it('asks what it should do only when CS2 is the only game', () => {
-    expect(jobOptions(q('g=cs2').answers)).toEqual(['plugin', 'servers', 'platform']);
+  it('asks where they run the tournament whenever CS2 is picked', () => {
+    expect(jobOptions(q('g=cs2').answers)).toEqual(['platform', 'servers', 'plugin']);
     expect(jobOptions(q('g=valorant').answers)).toEqual(['platform']);
-    expect(jobOptions(q('g=cs2,valorant').answers)).toEqual(['platform']);
+    expect(jobOptions(q('g=cs2,valorant').answers)).toEqual(['platform', 'servers', 'plugin']);
     expect(jobOptions(q('g=other').answers)).toEqual(['platform']);
   });
 
@@ -153,9 +153,15 @@ describe('recommend', () => {
   });
 
   it('CS2 with another game: Platform, sized by the CS2 servers', () => {
-    const r = rec('g=cs2,rocket-league&money=yes&servers=12&freq=event');
+    const r = rec('g=cs2,rocket-league&do=platform&money=yes&servers=12&freq=event');
     if (r.kind !== 'pack') throw new Error(r.kind);
     expect(r.pack.id).toBe('platform-m');
+  });
+
+  it('CS2 servers for a tournament on another site: Servers, even with other games', () => {
+    const r = rec('g=cs2,rocket-league&do=servers&money=yes&servers=12&freq=event');
+    if (r.kind !== 'pack') throw new Error(r.kind);
+    expect(r.pack.id).toBe('servers-m');
   });
 
   it('every pack it recommends passes the checkout validation', () => {
