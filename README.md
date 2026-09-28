@@ -43,7 +43,7 @@ Session through `POST /api/checkout`. Set these in a `.env` file next to
 `env_file` with `required: false` needs Docker Compose 2.24 or newer):
 
 - `STRIPE_SECRET_KEY`: a Stripe restricted key with Checkout Sessions write,
-  Prices read and Products read. Unset means card checkout is off: the route
+  Prices read and Products read (and optionally Invoices read, see License keys). Unset means card checkout is off: the route
   answers 503 and the calculator offers the email request instead.
 - `SITE_URL`: base URL for Stripe's return links. Defaults to
   `https://autotournament.gg`.
@@ -57,7 +57,7 @@ URL in Dashboard → Settings → Public details first
 (`https://autotournament.gg/terms`); without it, creating a Checkout Session
 fails and the calculator falls back to the email request.
 
-`yarn test` runs the checkout, Stripe price and CS2 compatibility tests.
+`yarn test` runs the checkout, Stripe price, license key and CS2 compatibility tests.
 
 ## Prices live in Stripe
 
@@ -110,6 +110,126 @@ price: No"). Under the advanced options, set the lookup key (for example
 `servers_l_event`) and transfer it from the old price. Then archive the old
 price. Update the `PACKS` table to the same amount afterwards, or the next
 script run puts the table's amount back.
+
+## License keys
+
+Every paid card checkout gets an Ed25519-signed license key. Ready Up and the
+platform check it offline with an embedded public key. **Nothing ever
+blocks**: a problem is a warning in the product, never a lockout.
+
+### Flow
+
+1. `POST /api/checkout` puts the pack, period and `max_servers` in the
+   session metadata.
+2. Stripe calls `POST /api/stripe/webhook` (`checkout.session.completed`,
+   `checkout.session.async_payment_succeeded`). The route checks the Stripe
+   signature, then issues one key per Checkout Session (`src/lib/license`).
+3. `/pricing/thanks?session_id=cs_…` shows the key. If the webhook hasn't
+   arrived yet, the page asks Stripe whether the session is paid and issues
+   the key itself (same one-per-session store, so never two keys).
+4. `/license` gets a key again with the order reference (`cs_…`, shown on the
+   thanks page) or the invoice number from Stripe's receipt, plus the email
+   paid with. The site sends no email of its own.
+
+Issued keys live in `licenses.json` in `LICENSE_DATA_DIR` (default
+`./data/licenses`, `/app/data/licenses` on the same `compat-data` volume),
+written atomically, mode 600, with a SHA-256 of the buyer's email instead of
+the email.
+
+### Setup (once)
+
+1. On your own machine: `node scripts/license-keygen.mjs`. It prints the
+   private key and the public key; nothing is written to disk.
+2. In `.env` next to `docker-compose.yml` on the server:
+   - `LICENSE_SIGNING_KEY`: the private key it printed (base64 PKCS#8). Also
+     keep it in your password manager. Never commit it.
+   - `STRIPE_WEBHOOK_SECRET`: the endpoint's signing secret (`whsec_…`) from
+     step 4. Unset, the webhook answers 404.
+   - optional `LICENSE_DATA_DIR`.
+3. Add the printed `{"<kid>": {…}}` entry under `keys` in
+   `src/lib/license/public-keys.json` and commit it (public keys are not
+   secret). Give the same `kid` and `x` to Ready Up and the platform.
+4. Stripe Dashboard → Developers → Webhooks → Add endpoint:
+   `https://autotournament.gg/api/stripe/webhook`, events
+   `checkout.session.completed` and `checkout.session.async_payment_succeeded`.
+   Copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
+5. Optional: give the site's restricted Stripe key **Invoices: Read**, so the
+   invoice number can be used on `/license`. Without it, only the order
+   reference works.
+6. `docker compose up -d`.
+
+Without `LICENSE_SIGNING_KEY`, no keys are issued: the webhook answers 503 so
+Stripe retries for up to 3 days, and the thanks page shows the old "we'll
+email your confirmation" text. Look for `[license]` in the container log.
+
+**Rotating:** run the keygen again, add the new public key to
+`public-keys.json` (keep the old one, so old keys still verify), ship the new
+public key in the products, then swap `LICENSE_SIGNING_KEY`.
+
+### Token format (v1)
+
+```
+ATL1.<payload>.<signature>
+```
+
+- `payload`: base64url (no padding) of the UTF-8 JSON below.
+- `signature`: base64url (no padding) of the 64-byte Ed25519 signature over
+  the ASCII bytes of `ATL1.<payload>`.
+- The payload's `kid` picks the public key. `kid` is the first 16 base64url
+  characters of SHA-256 of the raw 32-byte public key.
+
+```json
+{
+  "v": 1,
+  "kid": "LsbOKx91J9fIxM0s",
+  "id": "L-3kq8Zx0bQ1aR",
+  "customer": "cus_…",
+  "licensee": "Example LAN AS",
+  "product": "servers",
+  "pack": "M",
+  "max_servers": 15,
+  "kind": "event",
+  "issued_at": "2026-09-28T10:11:12Z",
+  "updates_until": "2026-10-05",
+  "valid_from": "2026-10-03",
+  "valid_to": "2026-10-05"
+}
+```
+
+- `customer`: Stripe customer id, or the email when Stripe has none.
+  `licensee` (the business name) is optional.
+- `product`: `servers` | `platform`; `pack`: `S` | `M` | `L`; `kind`:
+  `event` | `year` | `founder`.
+- Coverage is by **version line**. Each release carries `line_date`, the
+  release date of its `major.minor.0`. A release is covered when
+  `line_date <= updates_until` (dates are `YYYY-MM-DD`, inclusive), so later
+  patches of a covered line stay covered.
+  - `event`: `valid_from`..`valid_to` is the event window (the dates from the
+    checkout form, at most 5 days; 5 days from the purchase if they can't be
+    read). `updates_until` = `valid_to`.
+  - `year`: `updates_until` = purchase + 12 months. No `valid_*`: commercial
+    use of covered lines goes on after that.
+  - `founder`: `updates_until` = `9999-12-31`.
+- Ignore unknown fields. Treat any other `v` as "needs a newer release".
+
+`GET /api/license/public-keys` returns
+`{ "alg": "Ed25519", "format": "ATL1", "keys": { "<kid>": { "kty": "OKP", "crv": "Ed25519", "x": "<base64url>" } } }`.
+
+### Reference verifier
+
+`scripts/license-verify.mjs` is the logic the products port. Offline; it
+uses `src/lib/license/public-keys.json` unless given `--keys`:
+
+```bash
+node scripts/license-verify.mjs <token> [--line-date YYYY-MM-DD] [--servers N] [--product servers|platform] [--now YYYY-MM-DD] [--keys file.json]
+```
+
+It returns `{ valid, status: "ok" | "warning" | "invalid", warnings: [{ code, message }], license }`
+and never "blocked". Warning codes: `updates_expired` (line date after
+`updates_until`), `too_many_servers`, `period_ended` / `period_not_started`
+(event window), `wrong_product` (a Servers key in the platform). Invalid
+codes: `malformed`, `unknown_kid`, `bad_signature`, `unsupported_version`.
+Tests: `src/lib/license/license.test.ts` (throwaway keys made at runtime).
 
 ## CS2 compatibility
 
