@@ -1,15 +1,10 @@
 import Box from '@mui/material/Box';
 import { tokens } from '@/theme/tokens';
 import { CodeBlock } from './CodeBlock';
+import { licenseDurationText, updatesText } from '@/lib/license/describe';
 import type { LicensePayload } from '@/lib/license/format';
 
 const { color, radius } = tokens;
-
-const kinds: Record<LicensePayload['kind'], string> = {
-  event: 'One event',
-  year: 'Yearly',
-  founder: 'Founding supporter',
-};
 
 /** The license key with a copy button, and what it says. Used by the thanks page and /license. */
 export function LicenseKeyView({
@@ -28,9 +23,8 @@ export function LicenseKeyView({
 }) {
   const rows: [string, string][] = [
     ['License', `${license.product === 'platform' ? 'Platform' : 'Servers'} ${license.pack}, up to ${license.max_servers} servers`],
-    ['Period', kinds[license.kind]],
-    ...(license.valid_from && license.valid_to ? ([['Event window', `${license.valid_from} to ${license.valid_to}`]] as [string, string][]) : []),
-    ['Updates', license.updates_until === '9999-12-31' ? 'For life' : `Release lines up to ${license.updates_until}`],
+    ['License duration', licenseDurationText(license)],
+    ['Updates', updatesText(license)],
     ...(license.licensee ? ([['Licensee', license.licensee]] as [string, string][]) : []),
     ['License id', license.id],
     ...(reference ? ([['Order reference', reference]] as [string, string][]) : []),

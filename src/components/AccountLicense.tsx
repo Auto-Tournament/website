@@ -3,7 +3,7 @@ import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
 import { CodeBlock } from './CodeBlock';
 import { DetailList, PublicCheckLink } from './LicenseKeyView';
-import { kindNames, packName, periodText, productContents, statusText } from '@/lib/license/describe';
+import { kindNames, licenseDurationText, packName, productContents, statusHint, statusText } from '@/lib/license/describe';
 import type { LicensePayload } from '@/lib/license/format';
 import type { Coverage, Version } from '@/lib/account/versions';
 
@@ -39,12 +39,13 @@ export function AccountLicense({
   /** null: GitHub couldn't be read, so the section is hidden. */
   versions: RepoCoverage[] | null;
 }) {
+  const hint = livemode ? statusHint(license, new Date(`${today}T00:00:00Z`)) : '';
   const rows: [string, React.ReactNode][] = [
     ['Licensee', license.licensee ?? 'Not given'],
     ['Pack', `${packName(license)}, up to ${license.max_servers} servers: ${productContents(license.product)}`],
     ['Kind', kindNames[license.kind]],
-    ['Period', periodText(license)],
-    ['Status', livemode ? statusText(license, today) : 'Test license (made in Stripe test mode, not valid for use)'],
+    ['License duration', licenseDurationText(license)],
+    ['Status', livemode ? `${statusText(license, today)}${hint ? ` (${hint})` : ''}` : 'Test license (made in Stripe test mode, not valid for use)'],
     ['License id', license.id],
     ['Order reference', reference],
   ];

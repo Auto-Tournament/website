@@ -5,7 +5,7 @@
  *
  * Relative imports on purpose: vitest runs this file without the `@/` alias.
  */
-import { formatDay, kindNames, licenseStatus, packName, periodText, productContents } from './describe';
+import { formatDay, kindNames, licenseDurationText, licenseStatus, packName, productContents, statusHint } from './describe';
 import { LIFETIME, type LicensePayload } from './format';
 
 /** License ids look like L-3kq8Zx0bQ1aR. */
@@ -43,11 +43,15 @@ export function publicCheck(record: { payload: LicensePayload; livemode: boolean
     status = 'valid';
     statusText = 'Valid';
   }
+  if (record.livemode && p.kind !== 'founder') {
+    const hint = statusHint(p, new Date(`${today}T00:00:00Z`));
+    if (hint) statusText += ` (${hint})`;
+  }
   const rows: [string, string][] = [
     ['Licensee', p.licensee ?? 'Not given'],
     ['License', `${packName(p)}: ${productContents(p.product)}, up to ${p.max_servers} servers`],
     ['Kind', kindNames[p.kind]],
-    ['Period', periodText(p)],
+    ['License duration', licenseDurationText(p)],
     ['Updates until', p.updates_until === LIFETIME ? 'For life' : formatDay(p.updates_until)],
     ['License id', p.id],
   ];
