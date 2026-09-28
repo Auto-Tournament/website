@@ -15,11 +15,14 @@ import { db } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/admin/guard';
 import { adminStatusLabel, licenseDetail } from '@/lib/admin/licenses';
 import { refundable } from '@/lib/license/refund';
+import { pendingRequests, REFUNDS_NEED_EMAIL } from '@/lib/license/refundRequests';
+import { emailConfig } from '@/lib/email/postmark';
+import { moneyText } from '@/lib/console/emails';
 import { kindNames, licenseDurationText, packName, todayUtc } from '@/lib/license/describe';
 import { LICENSE_ID } from '@/lib/license/verify';
 import { consoleHref } from '@/lib/console/urls';
 import { siteUrl } from '@/lib/site';
-import { addLicenseNoteAction, refundAction, reissueAction, resendAction, revokeAction } from '../../actions';
+import { addLicenseNoteAction, cancelRefundRequestAction, reissueAction, requestRefundAction, resendAction, revokeAction } from '../../actions';
 
 const { color } = tokens;
 
@@ -43,6 +46,8 @@ export default async function AdminLicense({ params }: { params: Promise<{ id: s
   if (!detail) notFound();
   const { record: r, status, org } = detail;
   const payment = await refundable(db(), id);
+  const pending = await pendingRequests(db(), id);
+  const canEmail = emailConfig() !== null;
   const p = r.payload;
   const href = (path: string) => consoleHref(path);
   const site = siteUrl() ?? '';
@@ -190,17 +195,40 @@ export default async function AdminLicense({ params }: { params: Promise<{ id: s
         <Panel title="Refund">
           <Box sx={{ mb: 2, fontSize: '0.9375rem', maxWidth: '70ch' }}>
             {payment.via === 'stripe'
-              ? `Refunds the card payment through Stripe${payment.root.payload.id !== p.id ? ` (the checkout of ${payment.root.payload.id}; a difference paid by bank for a reissue isn’t part of it)` : ''}. A full refund marks the license refunded: the public check says revoked, the console stops showing it, and it leaves revenue and the VAT total. A partial refund keeps the license valid and takes the amount off revenue.`
-              : 'This license wasn’t paid through Stripe. Make the refund in the bank first, then record it here: a full refund marks the license refunded, a partial one keeps it valid and takes the amount off revenue.'}
+              ? `Refunds the card payment through Stripe${payment.root.payload.id !== p.id ? ` (the checkout of ${payment.root.payload.id}; a difference paid by bank for a reissue isn’t part of it)` : ''}, once you confirm it through a link emailed to your own address (it works for 15 minutes, only for you). Nothing moves until then. A full refund marks the license refunded: the public check says revoked, the console stops showing it, and it leaves revenue and the VAT total. A partial refund keeps the license valid and takes the amount off revenue.`
+              : 'This license wasn’t paid through Stripe. Make the refund in the bank first, then record it here (confirmed through a link emailed to you): a full refund marks the license refunded, a partial one keeps it valid and takes the amount off revenue.'}
           </Box>
-          <RefundForm
-            action={refundAction}
-            licenseId={p.id}
-            licensee={p.licensee ?? 'no licensee'}
-            currency={payment.root.currency ?? 'eur'}
-            left={payment.left}
-            via={payment.via}
-          />
+          {pending.length > 0 && (
+            <Box sx={{ mb: 3, display: 'grid', gap: 1.5 }} data-testid="pending-refunds">
+              {pending.map((q) => (
+                <Box key={q.id} sx={{ border: `1px solid ${color.rule}`, borderRadius: 1, p: 1.5, display: 'grid', gap: 1 }}>
+                  <Box sx={{ fontSize: '0.9375rem' }}>
+                    <strong>Waiting for email confirmation:</strong> {moneyText(q.amount, q.currency)}, asked by {q.askedBy ?? 'an admin'} at {dayTime(q.createdAt)}; the link
+                    expires {dayTime(q.expiresAt)}.{q.status === 'confirming' ? ' Being confirmed right now.' : ''}
+                  </Box>
+                  {q.status === 'pending' && (
+                    <AdminForm action={cancelRefundRequestAction} submitLabel="Cancel" pendingLabel="Cancelling…" tone="error" testId="cancel-refund-request">
+                      <input type="hidden" name="requestId" value={q.id} />
+                    </AdminForm>
+                  )}
+                </Box>
+              ))}
+            </Box>
+          )}
+          {canEmail ? (
+            <RefundForm
+              action={requestRefundAction}
+              licenseId={p.id}
+              licensee={p.licensee ?? 'no licensee'}
+              currency={payment.root.currency ?? 'eur'}
+              left={payment.left}
+              via={payment.via}
+            />
+          ) : (
+            <Box role="alert" sx={{ color: color.ban, fontSize: '0.9375rem' }}>
+              {REFUNDS_NEED_EMAIL}
+            </Box>
+          )}
         </Panel>
       )}
 

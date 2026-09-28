@@ -21,8 +21,9 @@ function minor(raw: string): number | null {
 const fmt = (amount: number, currency: string) => `${currency.toUpperCase()} ${(amount / 100).toFixed(2)}`;
 
 /**
- * The Refund form on the admin license page. Before it runs, the browser's
- * own dialog shows the amount and the license, so a refund is never one click.
+ * The Refund form on the admin license page. It asks for the refund: the
+ * server emails the admin a link, and nothing moves until they confirm it
+ * there. Before it asks, the browser's own dialog shows the amount and the license.
  */
 export function RefundForm({
   action,
@@ -54,7 +55,8 @@ export function RefundForm({
         const full = amount === null || left === null || amount >= left;
         const what = amount === null ? 'the full amount' : fmt(amount, currency);
         const message = [
-          `${via === 'stripe' ? 'Refund' : 'Record a refund of'} ${what} for license ${licenseId} (${licensee})?`,
+          `Ask to ${via === 'stripe' ? 'refund' : 'record a refund of'} ${what} for license ${licenseId} (${licensee})?`,
+          'We email you a link to confirm it; nothing happens until you do.',
           via === 'stripe' ? 'The money goes back to the buyer’s card through Stripe.' : 'Nothing is sent anywhere: this only records the refund you made.',
           full ? 'The license will be marked refunded (revoked).' : 'Partial refund: the license stays valid.',
           "This can't be undone.",
@@ -97,7 +99,7 @@ export function RefundForm({
       </Box>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5 }}>
         <Button type="submit" variant="outlined" color="error" disabled={pending}>
-          {pending ? 'Refunding…' : via === 'stripe' ? 'Refund' : 'Record refund'}
+          {pending ? 'Sending the confirmation…' : via === 'stripe' ? 'Refund' : 'Record refund'}
         </Button>
         <Status state={state} />
       </Box>

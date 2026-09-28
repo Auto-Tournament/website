@@ -6,7 +6,8 @@
  * and the VAT total).
  *
  * Two ways in:
- * - refundLicense: the admin CRM's Refund button (src/app/console/admin/actions.ts).
+ * - refundLicense: the admin CRM's Refund button, only once the admin has
+ *   confirmed it through the link emailed to them (./refundRequests.ts).
  * - syncChargeRefund / syncRefundFailure: the Stripe webhook (charge.refunded,
  *   refund.updated, refund.failed), so a refund made in the Stripe Dashboard
  *   lands here too, and the admin's own refund is confirmed.

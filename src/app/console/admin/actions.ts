@@ -14,7 +14,7 @@ import { consoleEnabled } from '@/lib/console/auth';
 import { limits } from '@/lib/console/limits';
 import { EMAIL, type ConsoleUser } from '@/lib/console/orgs';
 import { currentUser } from '@/lib/console/session';
-import { consoleHref, consoleOrigin } from '@/lib/console/urls';
+import { consoleHref, consoleOrigin, consoleUrl } from '@/lib/console/urls';
 import { isAdminUser } from '@/lib/admin/access';
 import {
   addNote,
@@ -33,7 +33,20 @@ import {
 } from '@/lib/admin/licenses';
 import { createFreeLan, updateLead } from '@/lib/admin/leads';
 import { emailLicense, emailRefund, type DeliverResult } from '@/lib/license/deliver';
-import { isRefundReason, refundLicense, RefundError, type RefundClient, type RefundOutcome } from '@/lib/license/refund';
+import { isRefundReason, RefundError, type RefundClient } from '@/lib/license/refund';
+import {
+  cancelRefundRequest,
+  confirmRefundRequest,
+  createRefundRequest,
+  REFUND_TOKEN,
+  REFUNDS_NEED_EMAIL,
+  withdrawRefundRequest,
+  type Confirmed,
+  type CreatedRequest,
+} from '@/lib/license/refundRequests';
+import { packName } from '@/lib/license/describe';
+import { emailConfig, sendEmail } from '@/lib/email/postmark';
+import { moneyText, refundConfirmEmail } from '@/lib/console/emails';
 import { CHECKOUT_SESSION_ID } from '@/lib/license/format';
 import { stripeServer } from '@/lib/license/issue';
 import { licenseSigningKey } from '@/lib/license/keys';
@@ -55,7 +68,7 @@ const text = (fd: FormData, key: string, max = 400): string => {
   return typeof v === 'string' ? v.slice(0, max) : '';
 };
 
-type Kind = 'write' | 'sensitive' | 'refund';
+type Kind = 'write' | 'sensitive' | 'refund-request' | 'refund';
 
 /** The signed-in admin for a write, or an error state. */
 async function adminWriter(kind: Kind = 'write'): Promise<{ user: ConsoleUser } | { error: string }> {
@@ -67,6 +80,7 @@ async function adminWriter(kind: Kind = 'write'): Promise<{ user: ConsoleUser } 
   const now = Date.now();
   if (!limits.adminWrite(user.id, now)) return { error: 'Too many changes at once. Wait a minute.' };
   if (kind !== 'write' && !limits.adminSensitive(user.id, now)) return { error: 'Too many of these at once. Wait a few minutes.' };
+  if (kind === 'refund-request' && !limits.adminRefundRequest(user.id, now)) return { error: 'Too many refund requests in the last hour. Wait a while.' };
   if (kind === 'refund' && !limits.adminRefund(user.id, now)) return { error: 'Too many refunds in the last hour. Wait a while.' };
   return { user };
 }
@@ -196,9 +210,6 @@ export async function revokeAction(_prev: ActionState, fd: FormData): Promise<Ac
   return { ok: reason === 'refunded' ? 'Marked refunded.' : 'Revoked.' };
 }
 
-/** Refunds in flight in this process, by license: a second click waits for the first instead of racing it. */
-const refunding = new Set<string>();
-
 const refundSentText: Record<DeliverResult, string> = {
   sent: 'The buyer was emailed.',
   skipped: 'The buyer was not emailed.',
@@ -207,14 +218,19 @@ const refundSentText: Record<DeliverResult, string> = {
 };
 
 /**
- * The Refund button: refunds the license's Stripe payment (full, or the amount
- * given) or, for a bank-transfer license, records a manual refund; then the
- * license is marked refunded when it is all of it. Optionally emails the buyer.
- * The page asks for confirmation with the amount first.
+ * The Refund button. It doesn't refund: it creates a pending request and
+ * emails the signed-in admin's own verified address a link to confirm it
+ * (src/lib/license/refundRequests.ts). Without email set up, refunds are
+ * refused: there is no way around the confirmation.
  */
-export async function refundAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  const w = await adminWriter('refund');
+export async function requestRefundAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const w = await adminWriter('refund-request');
   if ('error' in w) return { error: w.error };
+  const config = emailConfig();
+  if (!config) return { error: REFUNDS_NEED_EMAIL };
+  // isAdminUser checked both: a verified address, in ADMIN_EMAILS.
+  const adminEmail = w.user.email;
+  if (!adminEmail || !w.user.emailVerified) return { error: 'Not found.' };
   const licenseId = text(fd, 'licenseId', 80);
   const reason = text(fd, 'reason', 40);
   if (!isRefundReason(reason)) return { error: 'Choose a reason.' };
@@ -226,11 +242,10 @@ export async function refundAction(_prev: ActionState, fd: FormData): Promise<Ac
   const sendTo = emailFrom(fd, 'sendTo');
   if (sendTo === 'invalid') return { error: 'Enter a valid email address, or leave it empty.' };
   const notify = text(fd, 'notify', 5) === 'yes';
-  if (refunding.has(licenseId)) return { error: 'A refund for this license is already running. Reload the page in a moment.' };
-  refunding.add(licenseId);
-  let outcome: RefundOutcome;
+  const now = new Date();
+  let created: CreatedRequest;
   try {
-    outcome = await refundLicense(
+    created = await createRefundRequest(
       db(),
       w.user,
       licenseId,
@@ -238,25 +253,86 @@ export async function refundAction(_prev: ActionState, fd: FormData): Promise<Ac
         amount,
         reason,
         note: textBlock(text(fd, 'note', 4000)),
-        manual: { refundedOn: refundedOn ? new Date(`${refundedOn}T12:00:00Z`) : null, reference: line(text(fd, 'reference'), 200) },
+        notifyBuyer: notify,
+        sendTo,
+        manual: { refundedOn: refundedOn || null, reference: line(text(fd, 'reference'), 200) },
       },
-      { stripe: stripeServer() as RefundClient | null },
+      now,
     );
   } catch (err) {
     if (err instanceof RefundError) return { error: err.message };
     return failed(err);
-  } finally {
-    refunding.delete(licenseId);
   }
+  const link = `${consoleUrl('/refunds/confirm')}?token=${encodeURIComponent(created.token)}`;
+  const p = created.record.payload;
+  const mail = refundConfirmEmail({
+    confirmLink: link,
+    cancelLink: `${link}&cancel=1`,
+    licenseId: p.id,
+    licensee: p.licensee ?? null,
+    pack: packName(p),
+    amount: created.request.amount,
+    currency: created.request.currency,
+    reason,
+    via: created.via,
+    requestedBy: w.user.name ? `${w.user.name} (${adminEmail})` : adminEmail,
+    requestedAt: now,
+  });
+  const sent = await sendEmail({ to: adminEmail, ...mail, tag: 'admin-refund-confirm' }, config);
+  if (!sent.ok) {
+    await withdrawRefundRequest(db(), created.request.id).catch(() => {});
+    console.error('[admin] refund confirmation email failed', { id: p.id, error: sent.error });
+    refresh();
+    return { error: 'The confirmation email could not be sent, so the refund was not asked for. Nothing was refunded. Try again in a few minutes.' };
+  }
+  console.info('[admin] refund requested', { id: p.id, request: created.request.id });
+  refresh();
+  return { ok: `Check your email to confirm this refund of ${moneyText(created.request.amount, created.request.currency)} (expires in 15 minutes). Nothing is refunded until you do.` };
+}
+
+/** Cancel a pending refund request from the license page (any admin). */
+export async function cancelRefundRequestAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const w = await adminWriter();
+  if ('error' in w) return { error: w.error };
+  const id = text(fd, 'requestId', 64);
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { error: 'No such request.' };
+  try {
+    const result = await cancelRefundRequest(db(), { id, admin: w.user });
+    refresh();
+    return result.cancelled ? { ok: 'Cancelled. Nothing was refunded.' } : { error: 'That request is no longer pending.' };
+  } catch (err) {
+    return failed(err);
+  }
+}
+
+/**
+ * The Confirm button on the page the emailed link opens (a POST: opening the
+ * link does nothing). The signed-in admin must be the one who asked. Makes the
+ * refund with the amount, reason and note from the request, then optionally
+ * emails the buyer.
+ */
+export async function confirmRefundAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const w = await adminWriter('refund');
+  if ('error' in w) return { error: w.error };
+  const token = text(fd, 'token', 64);
+  if (!REFUND_TOKEN.test(token)) return { error: 'This confirmation link isn’t valid. Nothing was refunded.' };
+  let confirmed: Confirmed;
+  try {
+    confirmed = await confirmRefundRequest(db(), w.user, token, { stripe: stripeServer() as RefundClient | null });
+  } catch (err) {
+    if (err instanceof RefundError) return { error: err.message };
+    return failed(err);
+  }
+  const { outcome, request } = confirmed;
   let emailed = '';
-  if (notify) {
-    const to = sendTo ?? outcome.buyerEmail;
+  if (request.notifyBuyer) {
+    const to = request.sendTo ?? outcome.buyerEmail;
     const result = to ? await emailRefund(outcome.record, to, outcome) : 'failed';
     await audit(db(), { actor: w.user.id, action: 'license.refund_email', orgId: outcome.record.org_id ?? null, targetType: 'license', targetId: outcome.licenseId, details: { result } }).catch(() => {});
     emailed = ` ${refundSentText[result]}`;
   }
   refresh();
-  const money = `${outcome.currency.toUpperCase()} ${(outcome.amount / 100).toFixed(2)}`;
+  const money = moneyText(outcome.amount, outcome.currency);
   const what =
     outcome.via === 'stripe'
       ? `Refunded ${money} in Stripe${outcome.status === 'succeeded' ? '' : ` (status: ${outcome.status})`}.`

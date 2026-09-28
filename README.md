@@ -406,7 +406,21 @@ rate-limited (20 per 10 minutes).
     the Checkout Session's PaymentIntent through Stripe (the whole amount
     left, or the amount typed, in the license's currency; reason
     requested_by_customer, duplicate or fraudulent; a note), after the
-    browser's own dialog shows the amount and the license. A bank-transfer
+    browser's own dialog shows the amount and the license. **Every refund is
+    confirmed by email first**: the button only creates a pending request
+    (`refund_requests`) and emails the signed-in admin's own verified address
+    ("Confirm refund of €X for <license id>": licensee, pack, amount, reason,
+    who asked and when, plus a cancel link). The link opens
+    `/refunds/confirm`, which changes nothing by itself (mail scanners open
+    links); its Confirm button (a POST) needs the same admin signed in, and the
+    token valid, unused and under 15 minutes old (single use, stored as a
+    SHA-256 only). Only then does the refund below run. One pending request per
+    license (a new one cancels the old), 5 requests per admin per hour; the
+    license page lists pending ones with a Cancel button. The email's cancel
+    link can also sign that admin out of every session. Without Postmark
+    (`POSTMARK_SERVER_TOKEN`) refunds are refused: there is no path without
+    the confirmation. Expired requests are pruned daily, finished ones after
+    30 days (the activity log keeps what happened). A bank-transfer
     license: nothing is sent anywhere, it records the refund (amount, date,
     bank reference). A full refund marks the license (and its reissue chain)
     refunded, as below; a partial one keeps it valid and records
@@ -414,8 +428,8 @@ rate-limited (20 per 10 minutes).
     emails the buyer a short "your license was refunded" note (Postmark, to the
     address it was bought with only). Never twice: the payment's refunds are
     read from Stripe first, the Stripe call has an idempotency key
-    (`refund:<license id>:<amount>:<refunded before>`), and a double click in the
-    same process is refused. 10 refunds per admin per hour. Needs **Refunds:
+    (`refund:<license id>:<amount>:<refunded before>`), and a request confirms
+    once. 10 confirmed refunds per admin per hour. Needs **Refunds:
     Write** on the site's key (and Checkout Sessions: Read, part of the write
     permission it already has); without it the page says which permission to
     add. The webhook keeps it in step with Stripe: `charge.refunded` (a refund
