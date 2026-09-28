@@ -46,12 +46,12 @@ export const packDefs: readonly Pick<Pack, 'id' | 'product' | 'size' | 'name'>[]
  * the fallback page doesn't mislead. Same order as packDefs.
  */
 export const FALLBACK_PACKS: readonly Pack[] = [
-  { id: 'servers-s', product: 'servers', size: 'S', name: 'Servers S', maxServers: 5, prices: { event: 1900, year: 4900, founder: 7900 } },
-  { id: 'servers-m', product: 'servers', size: 'M', name: 'Servers M', maxServers: 15, prices: { event: 4900, year: 12900, founder: 19900 } },
-  { id: 'servers-l', product: 'servers', size: 'L', name: 'Servers L', maxServers: 40, prices: { event: 9900, year: 27900, founder: 39900 } },
-  { id: 'platform-s', product: 'platform', size: 'S', name: 'Platform S', maxServers: 5, prices: { event: 3900, year: 9900, founder: 14900 } },
-  { id: 'platform-m', product: 'platform', size: 'M', name: 'Platform M', maxServers: 15, prices: { event: 7900, year: 21900, founder: 32900 } },
-  { id: 'platform-l', product: 'platform', size: 'L', name: 'Platform L', maxServers: 40, prices: { event: 14900, year: 42900, founder: 59900 } },
+  { id: 'servers-s', product: 'servers', size: 'S', name: 'Servers S', maxServers: 5, prices: { event: 1900, year: 4900, founder: 14900 } },
+  { id: 'servers-m', product: 'servers', size: 'M', name: 'Servers M', maxServers: 15, prices: { event: 4900, year: 12900, founder: 38900 } },
+  { id: 'servers-l', product: 'servers', size: 'L', name: 'Servers L', maxServers: 40, prices: { event: 9900, year: 27900, founder: 79900 } },
+  { id: 'platform-s', product: 'platform', size: 'S', name: 'Platform S', maxServers: 5, prices: { event: 3900, year: 9900, founder: 29900 } },
+  { id: 'platform-m', product: 'platform', size: 'M', name: 'Platform M', maxServers: 15, prices: { event: 7900, year: 21900, founder: 64900 } },
+  { id: 'platform-l', product: 'platform', size: 'L', name: 'Platform L', maxServers: 40, prices: { event: 14900, year: 42900, founder: 119900 } },
 ];
 
 export const packIds: readonly PackId[] = packDefs.map((p) => p.id);
@@ -99,7 +99,7 @@ export const popularSize: PackSize = 'M';
 export const periodLabels: Record<Period, string> = {
   event: 'One event (up to 5 days in a row)',
   year: 'Yearly (12 months, unlimited events)',
-  founder: 'Founding supporter (one-off)',
+  founder: 'Founding supporter (one-off, lifetime updates)',
 };
 
 /** Short period words for prices: "€99 per event". */
@@ -128,19 +128,47 @@ export function packRules(packs: readonly Pack[]): string[] {
   ];
 }
 
-/** Founding supporter: limited, and checked by hand when an order comes in. */
+/**
+ * Founding supporter: pay once, lifetime updates. Limited, and checked by hand
+ * when an order comes in. The same words are on the pricing page and in /terms.
+ */
 export const founderLimit = 25;
 export const founderDeadline = '31 March 2027';
 export const founderBadge = `Limited: first ${founderLimit} or until ${founderDeadline}`;
-export const founderUpdateWarning = 'CS2 updates can break older versions; renew updates to stay current';
+
+/** What "lifetime" means. Used on the pricing page, the calculator and /terms. */
+export const founderLifetime = 'for as long as we sell the software your pack covers';
+
+/** The one-line pitch: founder strip and calculator. */
+export const founderPitch = `Pay once and get lifetime updates: every new version, ${founderLifetime}. No yearly fee.`;
+
+export const founderUpdateWarning = 'CS2 updates can break older versions; install our updates to stay current';
+
+/** The shutdown promise, for every founding supporter (lifetime) license. */
+export const founderShutdownPromise =
+  'If we ever stop selling it, you keep every version you have, nothing can lock you out, and we release a final build without the license check.';
+
+/**
+ * How licenses are enforced: on trust. Nothing ever blocks. Keep this true
+ * before changing the words: no license check may stop the software.
+ */
+export const neverLockOut =
+  'We never lock you out. A license check never stops the software; at most it shows a warning when a version is newer than the updates your license covers.';
+
+/** Moving a founder pack to a bigger size: the founder price difference, e.g. Servers M → L. */
+export function founderUpgradeExample(packs: readonly Pack[], product: PackProduct = 'servers'): string {
+  const m = packIn(packs, `${product}-m`);
+  const l = packIn(packs, `${product}-l`);
+  return `${m.name} to ${l.name} costs ${formatEuro(l.prices.founder - m.prices.founder)}`;
+}
 
 export function founderTerms(packs: readonly Pack[]): string[] {
   return [
     `Only for the first ${founderLimit} buyers, or until ${founderDeadline}, whichever comes first.`,
-    'Perpetual commercial use of every version released within 12 months of purchase, including 1 year of updates.',
-    `After that, renewing updates is optional, at the yearly price of the same pack (for example Servers L at ${formatEuro(packIn(packs, 'servers-l').prices.year)} a year), and renewing restores updates.`,
-    'Without renewal you keep using the versions from your first 12 months.',
-    'The server limit stays the pack\'s limit. To move to a bigger founder pack, pay the difference while founder packs are still available.',
+    `Pay once. Commercial use of every version we release, ${founderLifetime}: lifetime updates, no yearly fee.`,
+    'Updates means every new version of the software in your pack: fixes, CS2 compatibility updates and new features.',
+    `The pack size is fixed. To move to a bigger size, pay the difference between the founder prices (${founderUpgradeExample(packs)}).`,
+    founderShutdownPromise,
   ];
 }
 

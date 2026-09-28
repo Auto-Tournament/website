@@ -12,11 +12,14 @@ import {
   earnMoneyRule,
   formatEuro,
   founderBadge,
+  founderLifetime,
+  founderShutdownPromise,
   founderTerms,
   founderUpdateWarning,
   freeOrganizations,
   freeUseHelp,
   maxPackServers,
+  neverLockOut,
   packIn,
   packRules,
   pricingVersion,
@@ -102,7 +105,7 @@ function examplesFor(packs: readonly Pack[]): { scenario: string; verdict: strin
     {
       scenario: 'A freelancer runs 34 servers (32 + 2 spares) with CS2 Server Manager for a paying client.',
       verdict: `Servers L, ${price('servers-l', 'event')}`,
-      why: `34 servers fit the L pack (up to ${upTo('servers-l')}): ${price('servers-l', 'event')} for one event. As a founding supporter it is ${price('servers-l', 'founder')} once, for every version released in the next 12 months.`,
+      why: `34 servers fit the L pack (up to ${upTo('servers-l')}): ${price('servers-l', 'event')} for one event. As a founding supporter it is ${price('servers-l', 'founder')} once, with lifetime updates.`,
     },
     {
       scenario: 'An esports org runs events all year on 10 servers with the platform.',
@@ -177,8 +180,16 @@ function faqFor(packs: readonly Pack[]): { q: string; a: React.ReactNode }[] {
       a: `Email us before you set them up. You upgrade to the next size and pay the difference, and we send an updated license confirmation. Above ${max} servers, we work out a custom quote with you.`,
     },
     {
-      q: 'What happens after the first 12 months of a founding supporter pack?',
-      a: `You keep commercial use of every version released in those 12 months, for good. Renewing updates is optional, at the yearly price of the same pack, and brings you back to the latest version. ${founderUpdateWarning}.`,
+      q: 'What does “lifetime updates” mean for a founding supporter pack?',
+      a: `You pay once and get every new version, ${founderLifetime}: fixes, CS2 compatibility updates and new features, with no yearly fee. The pack size is fixed; moving to a bigger size costs the difference between the founder prices. ${founderUpdateWarning}.`,
+    },
+    {
+      q: 'What if Auto Tournament stops being sold?',
+      a: `Founding supporters are covered. ${founderShutdownPromise}`,
+    },
+    {
+      q: 'Can a license lock me out?',
+      a: `No. ${neverLockOut}`,
     },
     {
       q: 'Do game packs need their own license?',
@@ -296,7 +307,7 @@ export default async function Pricing() {
               <Chip size="small" variant="outlined" label={founderBadge} />
             </Box>
             <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2 }}>
-              {[...founderTerms(packs), `${founderUpdateWarning}.`].map((item) => (
+              {[...founderTerms(packs), `${founderUpdateWarning}.`, neverLockOut].map((item) => (
                 <Box key={item} component="li" sx={bullet}>
                   {item}
                 </Box>

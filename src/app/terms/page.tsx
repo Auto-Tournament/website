@@ -2,11 +2,22 @@ import type { Metadata } from 'next';
 import { H2, LegalPage } from '@/components/legal';
 import { links } from '@/components/links';
 import { seller } from '@/components/seller';
-import { formatEuro, founderDeadline, founderLimit, founderUpdateWarning, maxPackServers, packIn } from '@/components/pricing';
+import {
+  formatEuro,
+  founderDeadline,
+  founderLifetime,
+  founderLimit,
+  founderShutdownPromise,
+  founderUpdateWarning,
+  founderUpgradeExample,
+  maxPackServers,
+  neverLockOut,
+  packIn,
+} from '@/components/pricing';
 import { getPacks } from '@/lib/stripePrices';
 
 const title = 'Commercial License Terms';
-const description = 'The terms for a paid commercial license to Auto Tournament, CS2 Server Manager and Ready Up: packs and their server limits, the period, founding supporter packs, who may use it, refunds and liability.';
+const description = 'The terms for a paid commercial license to Auto Tournament, CS2 Server Manager and Ready Up: packs and their server limits, the period, founding supporter packs with lifetime updates, who may use it, refunds and liability.';
 
 export const metadata: Metadata = {
   title,
@@ -16,7 +27,7 @@ export const metadata: Metadata = {
   twitter: { title, description },
 };
 
-// Section 18 lists the current prices, read from Stripe at request time (cached).
+// Section 19 lists the current prices, read from Stripe at request time (cached).
 export const dynamic = 'force-dynamic';
 
 export default async function Terms() {
@@ -94,17 +105,18 @@ export default async function Terms() {
       </p>
       <ul>
         <li>
-          You get perpetual commercial use, for the licensee&apos;s own events, of every version released within 12 months of the purchase date, including 1 year
-          of updates.
+          <strong>Lifetime updates:</strong> you pay once and get commercial use, for the licensee&apos;s own events, of every version we release, {founderLifetime}.
+          There is no yearly fee, and the versions you have stay yours to use for good.
         </li>
         <li>
-          After that, renewing updates is optional, at the yearly price of the same pack. A renewal restores updates for 12 months.
+          <strong>Updates</strong> means every new version of the software in your pack (section 3): fixes, CS2 compatibility updates and new features. It
+          doesn&apos;t include other products or services we sell separately.
         </li>
-        <li>Without renewal, you keep using the versions released within the first 12 months.</li>
         <li>
-          The pack&apos;s server limit stays the same; a founding supporter pack doesn&apos;t grow. To move to a bigger founding supporter pack, you pay the
-          difference, while founding supporter packs are still for sale.
+          <strong>Pack size:</strong> the pack&apos;s server limit is fixed; a founding supporter pack doesn&apos;t grow. To move to a bigger size, you pay the
+          difference between the founding supporter prices ({founderUpgradeExample(packs)}).
         </li>
+        <li>{founderShutdownPromise}</li>
         <li>{founderUpdateWarning}. We don&apos;t promise that an older version keeps working after a CS2 update.</li>
       </ul>
 
@@ -124,7 +136,7 @@ export default async function Terms() {
       <H2 id="upgrades">9. Upgrades</H2>
       <p>
         Need more servers during the period? Email us before you set them up. You upgrade to the next pack size and pay the price difference, and we send an
-        updated license confirmation.
+        updated license confirmation. Founding supporter packs follow section 6.
       </p>
 
       <H2 id="start">10. When the license starts</H2>
@@ -187,7 +199,14 @@ export default async function Terms() {
       </p>
       <p>Licenses bought under Pricing v1 (per seat, 25 September 2026) keep their terms.</p>
 
-      <H2 id="prices">18. Prices and contact</H2>
+      <H2 id="license-checks">18. License checks</H2>
+      <p>{neverLockOut}</p>
+      <p>
+        We may later add a daily check-in that sends only the license key id, the software version and the number of servers. It will be optional, described
+        here before it starts, and off for non-commercial use.
+      </p>
+
+      <H2 id="prices">19. Prices and contact</H2>
       <p>
         Current prices (Pricing v2, valid from 25 September 2026), per event, yearly and founding supporter:{' '}
         {packs.map((p) => `${p.name} (up to ${p.maxServers} servers) ${formatEuro(p.prices.event)}, ${formatEuro(p.prices.year)}, ${formatEuro(p.prices.founder)}`).join('; ')}.

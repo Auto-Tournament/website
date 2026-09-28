@@ -15,6 +15,8 @@ import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
 import {
   founderBadge,
+  founderPitch,
+  founderShutdownPromise,
   founderUpdateWarning,
   formatEuro,
   freeUseHelp,
@@ -385,8 +387,7 @@ export function PriceCalculator({ packs, pricesAvailable = true }: { packs: read
               <Box sx={{ mt: 1, display: 'grid', gap: 0.75, justifyItems: 'start' }}>
                 <Chip size="small" color="primary" label={founderBadge} />
                 <Typography sx={{ color: color.ink2, fontSize: '0.875rem' }}>
-                  Pay once. Every version released in the 12 months after you buy is yours to use commercially, for good. Renewing updates after
-                  that is optional, at {formatEuro(quote.pack.prices.year)} a year.
+                  {founderPitch} The pack size is fixed; a bigger size costs the difference. {founderShutdownPromise}
                 </Typography>
                 <Typography sx={{ color: color.ink, fontSize: '0.875rem', fontWeight: 600 }}>{founderUpdateWarning}.</Typography>
               </Box>

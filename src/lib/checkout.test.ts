@@ -163,12 +163,12 @@ describe('validateCheckoutRequest', () => {
 
 describe('fallback packs', () => {
   const expected: [string, number, number, number, number][] = [
-    ['servers-s', 5, 1900, 4900, 7900],
-    ['servers-m', 15, 4900, 12900, 19900],
-    ['servers-l', 40, 9900, 27900, 39900],
-    ['platform-s', 5, 3900, 9900, 14900],
-    ['platform-m', 15, 7900, 21900, 32900],
-    ['platform-l', 40, 14900, 42900, 59900],
+    ['servers-s', 5, 1900, 4900, 14900],
+    ['servers-m', 15, 4900, 12900, 38900],
+    ['servers-l', 40, 9900, 27900, 79900],
+    ['platform-s', 5, 3900, 9900, 29900],
+    ['platform-m', 15, 7900, 21900, 64900],
+    ['platform-l', 40, 14900, 42900, 119900],
   ];
   it('match the Pricing v2 table (and the seed script)', () => {
     expect(FALLBACK_PACKS.map((p) => [p.id, p.maxServers, p.prices.event, p.prices.year, p.prices.founder])).toEqual(expected);

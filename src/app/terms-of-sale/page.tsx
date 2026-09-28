@@ -40,7 +40,7 @@ export default function TermsOfSale() {
 
       <H2 id="order">3. What you buy</H2>
       <p>
-        A commercial license pack (Servers or Platform, size S, M or L) for the period you choose (one event, yearly, or founding supporter), on the{' '}
+        A commercial license pack (Servers or Platform, size S, M or L) for the period you choose (one event, yearly, or founding supporter: pay once, lifetime updates), on the{' '}
         <a href={links.terms}>Commercial License Terms</a>. By paying you accept the Commercial License Terms and these Terms of Sale.
       </p>
 

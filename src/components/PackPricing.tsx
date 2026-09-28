@@ -12,7 +12,10 @@ import { fontDisplay } from '@/theme/theme';
 import {
   formatEuro,
   founderBadge,
+  founderPitch,
+  founderShutdownPromise,
   founderUpdateWarning,
+  founderUpgradeExample,
   maxPackServers,
   packGoodFor,
   popularSize,
@@ -292,8 +295,7 @@ export function PackPricing({ packs: allPacks, pricesAvailable = true }: { packs
           <Chip size="small" variant="outlined" label={founderBadge} data-testid="founder-badge" />
         </Box>
         <Typography sx={{ color: color.ink2, maxWidth: '62ch' }}>
-          Pay once. Every version released in the 12 months after you buy is yours to use commercially, for good. Those 12 months are your included
-          year of updates.
+          {founderPitch}
         </Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0,1fr))' }, gap: 1, maxWidth: 560 }}>
           {packs.map((pack) => {
@@ -336,8 +338,7 @@ export function PackPricing({ packs: allPacks, pricesAvailable = true }: { packs
           })}
         </Box>
         <Typography sx={{ color: color.ink2, fontSize: '0.9375rem', maxWidth: '62ch' }}>
-          After that, renewing updates is optional, at the pack&apos;s yearly price (for example {formatEuro(packs[2].prices.year)} a year for{' '}
-          {packs[2].name}). If you don&apos;t renew, you keep the versions from your first 12 months.
+          The pack size is fixed; a bigger size costs the difference ({founderUpgradeExample(allPacks, product)}). {founderShutdownPromise}
         </Typography>
         <Typography sx={{ color: color.ink, fontSize: '0.9375rem', fontWeight: 600 }}>{founderUpdateWarning}.</Typography>
         <Typography sx={{ color: color.muted, fontSize: '0.875rem' }}>
