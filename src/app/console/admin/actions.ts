@@ -32,7 +32,8 @@ import {
   type LicenseTerms,
 } from '@/lib/admin/licenses';
 import { createFreeLan, updateLead } from '@/lib/admin/leads';
-import { emailLicense, type DeliverResult } from '@/lib/license/deliver';
+import { emailLicense, emailRefund, type DeliverResult } from '@/lib/license/deliver';
+import { isRefundReason, refundLicense, RefundError, type RefundClient, type RefundOutcome } from '@/lib/license/refund';
 import { CHECKOUT_SESSION_ID } from '@/lib/license/format';
 import { stripeServer } from '@/lib/license/issue';
 import { licenseSigningKey } from '@/lib/license/keys';
@@ -54,7 +55,7 @@ const text = (fd: FormData, key: string, max = 400): string => {
   return typeof v === 'string' ? v.slice(0, max) : '';
 };
 
-type Kind = 'write' | 'sensitive';
+type Kind = 'write' | 'sensitive' | 'refund';
 
 /** The signed-in admin for a write, or an error state. */
 async function adminWriter(kind: Kind = 'write'): Promise<{ user: ConsoleUser } | { error: string }> {
@@ -65,7 +66,8 @@ async function adminWriter(kind: Kind = 'write'): Promise<{ user: ConsoleUser } 
   if (!user || !isAdminUser(user)) return { error: 'Not found.' };
   const now = Date.now();
   if (!limits.adminWrite(user.id, now)) return { error: 'Too many changes at once. Wait a minute.' };
-  if (kind === 'sensitive' && !limits.adminSensitive(user.id, now)) return { error: 'Too many of these at once. Wait a few minutes.' };
+  if (kind !== 'write' && !limits.adminSensitive(user.id, now)) return { error: 'Too many of these at once. Wait a few minutes.' };
+  if (kind === 'refund' && !limits.adminRefund(user.id, now)) return { error: 'Too many refunds in the last hour. Wait a while.' };
   return { user };
 }
 
@@ -192,6 +194,74 @@ export async function revokeAction(_prev: ActionState, fd: FormData): Promise<Ac
   }
   refresh();
   return { ok: reason === 'refunded' ? 'Marked refunded.' : 'Revoked.' };
+}
+
+/** Refunds in flight in this process, by license: a second click waits for the first instead of racing it. */
+const refunding = new Set<string>();
+
+const refundSentText: Record<DeliverResult, string> = {
+  sent: 'The buyer was emailed.',
+  skipped: 'The buyer was not emailed.',
+  failed: 'The buyer was not emailed: no address from Stripe, it doesn’t match the one the license was bought with, or the send failed.',
+  disabled: 'Email is off here (no POSTMARK_SERVER_TOKEN), so the buyer was not emailed.',
+};
+
+/**
+ * The Refund button: refunds the license's Stripe payment (full, or the amount
+ * given) or, for a bank-transfer license, records a manual refund; then the
+ * license is marked refunded when it is all of it. Optionally emails the buyer.
+ * The page asks for confirmation with the amount first.
+ */
+export async function refundAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const w = await adminWriter('refund');
+  if ('error' in w) return { error: w.error };
+  const licenseId = text(fd, 'licenseId', 80);
+  const reason = text(fd, 'reason', 40);
+  if (!isRefundReason(reason)) return { error: 'Choose a reason.' };
+  const amountRaw = text(fd, 'amount', 20).trim();
+  const amount = amountRaw ? parseAmount(amountRaw) : null;
+  if (amountRaw && (amount === null || amount <= 0)) return { error: 'The amount must be a number above 0, like 20 or 20.50. Leave it empty for a full refund.' };
+  const refundedOn = text(fd, 'refundedOn', 20).trim();
+  if (refundedOn && !isDay(refundedOn)) return { error: 'The refund date must be a date (YYYY-MM-DD).' };
+  const sendTo = emailFrom(fd, 'sendTo');
+  if (sendTo === 'invalid') return { error: 'Enter a valid email address, or leave it empty.' };
+  const notify = text(fd, 'notify', 5) === 'yes';
+  if (refunding.has(licenseId)) return { error: 'A refund for this license is already running. Reload the page in a moment.' };
+  refunding.add(licenseId);
+  let outcome: RefundOutcome;
+  try {
+    outcome = await refundLicense(
+      db(),
+      w.user,
+      licenseId,
+      {
+        amount,
+        reason,
+        note: textBlock(text(fd, 'note', 4000)),
+        manual: { refundedOn: refundedOn ? new Date(`${refundedOn}T12:00:00Z`) : null, reference: line(text(fd, 'reference'), 200) },
+      },
+      { stripe: stripeServer() as RefundClient | null },
+    );
+  } catch (err) {
+    if (err instanceof RefundError) return { error: err.message };
+    return failed(err);
+  } finally {
+    refunding.delete(licenseId);
+  }
+  let emailed = '';
+  if (notify) {
+    const to = sendTo ?? outcome.buyerEmail;
+    const result = to ? await emailRefund(outcome.record, to, outcome) : 'failed';
+    await audit(db(), { actor: w.user.id, action: 'license.refund_email', orgId: outcome.record.org_id ?? null, targetType: 'license', targetId: outcome.licenseId, details: { result } }).catch(() => {});
+    emailed = ` ${refundSentText[result]}`;
+  }
+  refresh();
+  const money = `${outcome.currency.toUpperCase()} ${(outcome.amount / 100).toFixed(2)}`;
+  const what =
+    outcome.via === 'stripe'
+      ? `Refunded ${money} in Stripe${outcome.status === 'succeeded' ? '' : ` (status: ${outcome.status})`}.`
+      : `Recorded a refund of ${money}.`;
+  return { ok: `${what} ${outcome.full ? 'The license is marked refunded.' : 'Partial refund: the license stays valid.'}${emailed}` };
 }
 
 /** The address a Stripe license was paid with, from its Checkout Session (read-only; needs the site's Stripe key). */

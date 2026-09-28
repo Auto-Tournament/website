@@ -209,7 +209,15 @@ export async function notesFor(db: Db, targetType: 'license' | 'organization', t
 export async function historyFor(db: Db, targetType: string, targetIds: string[]): Promise<HistoryEntry[]> {
   if (targetIds.length === 0) return [];
   return db
-    .select({ id: auditLog.id, at: auditLog.at, action: auditLog.action, actor: users.email, targetId: auditLog.targetId, details: auditLog.details })
+    .select({
+      id: auditLog.id,
+      at: auditLog.at,
+      action: auditLog.action,
+      // The refund webhook writes as "stripe" (not a user).
+      actor: sql<string | null>`coalesce(${users.email}, case when ${auditLog.actorUserId} = 'stripe' then 'stripe' end)`,
+      targetId: auditLog.targetId,
+      details: auditLog.details,
+    })
     .from(auditLog)
     .leftJoin(users, eq(users.id, auditLog.actorUserId))
     .where(and(eq(auditLog.targetType, targetType), inArray(auditLog.targetId, targetIds)))

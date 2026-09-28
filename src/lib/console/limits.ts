@@ -17,6 +17,8 @@ export const limits = {
   adminWrite: createRateLimiter({ limit: 60, windowMs: 60_000 }),
   /** Admin actions that sign keys or send email (reissue, manual license, mark paid, resend, refund/revoke), per admin. */
   adminSensitive: createRateLimiter({ limit: 20, windowMs: 10 * 60_000 }),
+  /** Refunds (money leaves), per admin, on top of adminSensitive. */
+  adminRefund: createRateLimiter({ limit: 10, windowMs: 60 * 60_000 }),
   /** The bookkeeping CSV export, per admin. */
   adminExport: createRateLimiter({ limit: 10, windowMs: 10 * 60_000 }),
 };

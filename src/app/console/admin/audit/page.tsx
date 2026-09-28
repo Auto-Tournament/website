@@ -34,7 +34,7 @@ export default async function AdminAudit({ searchParams }: { searchParams: Promi
     <>
       <PageTitle sub="Every console write and sign-in, newest first. Kept 2 years.">Audit log</PageTitle>
       <FilterBar>
-        <input type="text" name="actor" defaultValue={actor} placeholder="Actor email, user id, or “system”" aria-label="Actor" />
+        <input type="text" name="actor" defaultValue={actor} placeholder="Actor email, user id, “system” or “stripe”" aria-label="Actor" />
         <input type="text" name="action" defaultValue={action} placeholder="Action, e.g. license. or auth.signin" aria-label="Action" list="audit-actions" />
         <datalist id="audit-actions">
           {actions.map((a) => (
@@ -59,7 +59,7 @@ export default async function AdminAudit({ searchParams }: { searchParams: Promi
           key: String(r.id),
           cells: {
             at: dayTime(r.at),
-            actor: r.actorEmail ?? (r.actorUserId ? <Muted>deleted user</Muted> : <Muted>system</Muted>),
+            actor: r.actorEmail ?? (r.actorUserId === 'stripe' ? 'stripe' : r.actorUserId ? <Muted>deleted user</Muted> : <Muted>system</Muted>),
             action: <code>{r.action}</code>,
             target: targetLink(r.targetType, r.targetId),
             org: r.orgId ? <a href={consoleHref(`/admin/orgs/${r.orgId}`)}>{r.orgName ?? 'deleted'}</a> : null,

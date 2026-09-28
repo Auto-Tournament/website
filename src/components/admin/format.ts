@@ -28,11 +28,12 @@ export const leadTone: Record<LeadStatus, Tone> = { new: 'warn', replied: 'info'
 export const leadLabel: Record<LeadStatus, string> = { new: 'New', replied: 'Replied', won: 'Won', lost: 'Lost' };
 
 /** Stripe Dashboard links, built from ids (test-mode ids open the test dashboard). */
-export function stripeLinks(input: { sessionId: string; customer: string | null; livemode: boolean }): { label: string; href: string }[] {
+export function stripeLinks(input: { sessionId: string; customer: string | null; livemode: boolean; paymentIntent?: string | null }): { label: string; href: string }[] {
   const test = !input.livemode || input.sessionId.startsWith('cs_test_');
   const base = test ? 'https://dashboard.stripe.com/test' : 'https://dashboard.stripe.com';
   const out: { label: string; href: string }[] = [];
   if (/^cs_(live|test)_[A-Za-z0-9]+$/.test(input.sessionId)) out.push({ label: 'Checkout session', href: `${base}/checkout/sessions/${input.sessionId}` });
+  if (input.paymentIntent && /^pi_[A-Za-z0-9]+$/.test(input.paymentIntent)) out.push({ label: 'Payment', href: `${base}/payments/${input.paymentIntent}` });
   if (input.customer && /^cus_[A-Za-z0-9]+$/.test(input.customer)) out.push({ label: 'Customer', href: `${base}/customers/${input.customer}` });
   return out;
 }

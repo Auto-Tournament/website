@@ -9,15 +9,17 @@ import { DetailList, PublicCheckLink } from '@/components/LicenseKeyView';
 import { AdminForm } from '@/components/admin/AdminClient';
 import { Badge, DataTable, Muted } from '@/components/admin/AdminUi';
 import { TermsFields } from '@/components/admin/TermsFields';
+import { RefundForm } from '@/components/admin/RefundForm';
 import { day, dayTime, money, statusTone, stripeInvoiceSearch, stripeLinks } from '@/components/admin/format';
 import { db } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/admin/guard';
 import { adminStatusLabel, licenseDetail } from '@/lib/admin/licenses';
+import { refundable } from '@/lib/license/refund';
 import { kindNames, licenseDurationText, packName, todayUtc } from '@/lib/license/describe';
 import { LICENSE_ID } from '@/lib/license/verify';
 import { consoleHref } from '@/lib/console/urls';
 import { siteUrl } from '@/lib/site';
-import { addLicenseNoteAction, reissueAction, resendAction, revokeAction } from '../../actions';
+import { addLicenseNoteAction, refundAction, reissueAction, resendAction, revokeAction } from '../../actions';
 
 const { color } = tokens;
 
@@ -40,11 +42,13 @@ export default async function AdminLicense({ params }: { params: Promise<{ id: s
   const detail = await licenseDetail(db(), id, today);
   if (!detail) notFound();
   const { record: r, status, org } = detail;
+  const payment = await refundable(db(), id);
   const p = r.payload;
   const href = (path: string) => consoleHref(path);
   const site = siteUrl() ?? '';
   const customer = /^cus_/.test(p.customer) ? p.customer : (org?.stripeCustomerId ?? null);
-  const stripe = r.source === 'manual' ? [] : stripeLinks({ sessionId: r.session_id, customer, livemode: r.livemode });
+  const stripe = r.source === 'manual' ? [] : stripeLinks({ sessionId: r.session_id, customer, livemode: r.livemode, paymentIntent: payment?.root.payment_intent ?? null });
+  const refunded = payment && payment.refunded > 0 ? payment : null;
   const current = !r.superseded_by && !r.revoked_at;
 
   const emailStatus = !r.email_sha256
@@ -67,6 +71,14 @@ export default async function AdminLicense({ params }: { params: Promise<{ id: s
     ['Source', r.source === 'manual' ? 'Manual (bank transfer / invoice)' : 'Card checkout (Stripe)'],
     ['Amount', r.amount_total !== null && r.amount_total !== undefined ? money(r.amount_total, r.currency) : 'Unknown'],
     ['Paid', r.paid_at ? dayTime(new Date(r.paid_at)) : r.source === 'stripe' && !r.supersedes ? `${dayTime(new Date(p.issued_at))} (issued)` : '—'],
+    ...(refunded
+      ? ([
+          [
+            'Refunded',
+            `${money(refunded.refunded, refunded.root.currency)}${refunded.charged ? ` of ${money(refunded.charged, refunded.root.currency)}` : ''}${refunded.left ? ' (partial)' : ''}${refunded.root.refunded_at ? `, last ${day(refunded.root.refunded_at)}` : ''}${refunded.root.payload.id !== p.id ? ` (payment of ${refunded.root.payload.id})` : ''}`,
+          ],
+        ] as [string, string][])
+      : []),
     ...(r.payment_ref ? ([['Payment reference', r.payment_ref]] as [string, string][]) : []),
     ['Order reference', r.session_id],
     ...(r.invoice_number ? ([['Invoice', r.invoice_number]] as [string, string][]) : []),
@@ -174,11 +186,29 @@ export default async function AdminLicense({ params }: { params: Promise<{ id: s
         </Panel>
       )}
 
-      {!r.revoked_at && (
-        <Panel title="Refund or revoke">
+      {current && payment && (payment.left === null || payment.left > 0 || payment.via === 'stripe') && (
+        <Panel title="Refund">
           <Box sx={{ mb: 2, fontSize: '0.9375rem', maxWidth: '70ch' }}>
-            Marks the license refunded or revoked; nothing is deleted. The public check then says revoked, and the console and /license stop showing the key. A
-            refunded license no longer counts as revenue. Refund the payment itself in Stripe or the bank.
+            {payment.via === 'stripe'
+              ? `Refunds the card payment through Stripe${payment.root.payload.id !== p.id ? ` (the checkout of ${payment.root.payload.id}; a difference paid by bank for a reissue isn’t part of it)` : ''}. A full refund marks the license refunded: the public check says revoked, the console stops showing it, and it leaves revenue and the VAT total. A partial refund keeps the license valid and takes the amount off revenue.`
+              : 'This license wasn’t paid through Stripe. Make the refund in the bank first, then record it here: a full refund marks the license refunded, a partial one keeps it valid and takes the amount off revenue.'}
+          </Box>
+          <RefundForm
+            action={refundAction}
+            licenseId={p.id}
+            licensee={p.licensee ?? 'no licensee'}
+            currency={payment.root.currency ?? 'eur'}
+            left={payment.left}
+            via={payment.via}
+          />
+        </Panel>
+      )}
+
+      {!r.revoked_at && (
+        <Panel title="Mark refunded or revoked">
+          <Box sx={{ mb: 2, fontSize: '0.9375rem', maxWidth: '70ch' }}>
+            Marks the license refunded or revoked without moving any money; nothing is deleted. The public check then says revoked, and the console and
+            /license stop showing the key. A refunded license no longer counts as revenue. To give the money back, use Refund above.
           </Box>
           <AdminForm action={revokeAction} submitLabel="Mark it" tone="error" confirm="Mark this license refunded or revoked? This can't be undone here." testId="revoke-form">
             <input type="hidden" name="licenseId" value={p.id} />

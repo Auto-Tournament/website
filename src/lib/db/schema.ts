@@ -182,9 +182,25 @@ export const licenses = pgTable(
     supersedes: text('supersedes'),
     /** The license id that replaced this one. The old key keeps working offline; /verify says "replaced by". */
     supersededBy: text('superseded_by'),
-    /** Marked refunded or revoked by hand in the admin CRM. Never deleted: /verify shows "revoked". */
+    /** Marked refunded or revoked (admin CRM, or a full Stripe refund). Never deleted: /verify shows "revoked". */
     revokedAt: at('revoked_at'),
     revokeReason: text('revoke_reason').$type<RevokeReason>(),
+    /**
+     * The Stripe PaymentIntent that paid the Checkout Session (card licenses
+     * issued since refunds were added; learned on the first refund for older
+     * ones). The refund webhook (charge.refunded) finds the license by it.
+     */
+    paymentIntent: text('payment_intent'),
+    /**
+     * How much of this row's payment was given back, in minor units of
+     * `currency` (Stripe refunds, or a manual refund recorded in the admin
+     * CRM). Null: none. Kept on the row that holds the payment (the first of a
+     * reissue chain). Revenue and the VAT total count amount_total minus this;
+     * a full refund also marks the license refunded.
+     */
+    refundedAmount: integer('refunded_amount'),
+    /** The last refund. */
+    refundedAt: at('refunded_at'),
     createdAt: at('created_at').notNull().defaultNow(),
   },
   (t) => [
@@ -192,6 +208,7 @@ export const licenses = pgTable(
     index('licenses_org_idx').on(t.orgId),
     index('licenses_invoice_number_idx').on(sql`upper(${t.invoiceNumber})`),
     index('licenses_paid_at_idx').on(t.paidAt),
+    index('licenses_payment_intent_idx').on(t.paymentIntent),
   ],
 );
 

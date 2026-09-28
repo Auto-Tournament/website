@@ -1,18 +1,52 @@
 import Stripe from 'stripe';
 import { readCapped } from '@/lib/readCapped';
-import { issueForSession } from '@/lib/license/issue';
+import { issueForSession, stripeServer } from '@/lib/license/issue';
+import { syncChargeRefund, syncRefundFailure, type SyncResult } from '@/lib/license/refund';
+import { db } from '@/lib/db/client';
 import { dbError } from '@/lib/db/errors';
 
-// Stripe webhook: issues the license key when a checkout is paid. Register
-// https://autotournament.gg/api/stripe/webhook in Stripe (Developers →
-// Webhooks) for checkout.session.completed and
-// checkout.session.async_payment_succeeded, and put its signing secret in
-// STRIPE_WEBHOOK_SECRET. Unset, this route answers 404.
+// Stripe webhook. Register https://autotournament.gg/api/stripe/webhook in
+// Stripe (Developers → Webhooks) and put its signing secret in
+// STRIPE_WEBHOOK_SECRET. Unset, this route answers 404. Events:
+// - checkout.session.completed, checkout.session.async_payment_succeeded:
+//   issue the license key.
+// - charge.refunded: a refund (from the admin CRM or the Stripe Dashboard);
+//   full marks the license refunded, partial records the amount.
+// - refund.updated, refund.failed: a refund that failed or was canceled.
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const maxBodyBytes = 512 * 1024;
-const handled = new Set(['checkout.session.completed', 'checkout.session.async_payment_succeeded']);
+const issuing = new Set(['checkout.session.completed', 'checkout.session.async_payment_succeeded']);
+
+/**
+ * The Checkout Session a PaymentIntent paid, for licenses issued before the
+ * PaymentIntent was stored (needs Checkout Sessions: Read on the key). Throws
+ * when Stripe can't be asked, so the webhook answers 500 and Stripe retries.
+ */
+async function sessionForPaymentIntent(paymentIntent: string): Promise<string | null> {
+  const stripe = stripeServer();
+  if (!stripe) return null;
+  const { data } = await stripe.checkout.sessions.list({ payment_intent: paymentIntent, limit: 1 });
+  return data[0]?.id ?? null;
+}
+
+async function refundEvent(event: Stripe.Event): Promise<Response> {
+  let result: SyncResult;
+  try {
+    if (event.type === 'charge.refunded') {
+      result = await syncChargeRefund(db(), event.data.object as Stripe.Charge, sessionForPaymentIntent);
+    } else {
+      result = await syncRefundFailure(db(), event.data.object as Stripe.Refund, sessionForPaymentIntent);
+    }
+  } catch (err) {
+    const info = err instanceof Stripe.errors.StripeError ? { type: err.type, code: err.code, requestId: err.requestId } : dbError(err);
+    console.error('[refund] webhook sync failed; Stripe will retry', { event: event.id, type: event.type }, info);
+    return reply(500, { error: 'Could not record the refund' });
+  }
+  if (result.status !== 'unknown') console.info('[refund] webhook', { event: event.id, type: event.type, id: result.licenseId, status: result.status });
+  return reply(200, { received: true, refund: result.status });
+}
 
 function reply(status: number, body: Record<string, unknown>) {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
@@ -41,7 +75,8 @@ export async function POST(request: Request) {
     return reply(400, { error: 'Bad signature' });
   }
 
-  if (!handled.has(event.type)) return reply(200, { received: true });
+  if (event.type === 'charge.refunded' || event.type === 'refund.updated' || event.type === 'refund.failed') return refundEvent(event);
+  if (!issuing.has(event.type)) return reply(200, { received: true });
 
   const session = event.data.object as Stripe.Checkout.Session;
   try {

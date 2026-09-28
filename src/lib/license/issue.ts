@@ -82,6 +82,8 @@ export async function issueForSession(session: Stripe.Checkout.Session, now: Dat
       amount_total: session.amount_total ?? 0,
       currency: session.currency ?? null,
       paid_at: now.toISOString(),
+      // For the refund webhook (charge.refunded carries the PaymentIntent, not the session).
+      payment_intent: typeof session.payment_intent === 'string' ? session.payment_intent : (session.payment_intent?.id ?? null),
     };
   });
   if (created) {

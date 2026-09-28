@@ -5,7 +5,8 @@
  *
  * A sale is a live-mode license row with its amount (Stripe checkout, a paid
  * manual license, or the difference paid for a reissue), dated by paid_at
- * (issued_at before that column existed). Refunded licenses don't count; a
+ * (issued_at before that column existed), net of partial refunds
+ * (refunded_amount). Refunded licenses don't count; a
  * revoked one (not refunded) still does, the money was kept. A superseded
  * license still counts: its replacement carries only a difference, never the
  * amount again.
@@ -26,7 +27,7 @@ export type Sale = {
   sessionId: string;
   payload: LicensePayload;
   source: LicenseSource;
-  /** Minor units of `currency`; 0 when unknown (rows from before amounts were kept). */
+  /** Minor units of `currency`, net of partial refunds; 0 when unknown (rows from before amounts were kept). */
   amountTotal: number;
   currency: Currency;
   paidAt: Date;
@@ -49,6 +50,7 @@ export async function salesBetween(db: Db, from: Date, to: Date, options: { newe
       payload: licenses.payload,
       source: licenses.source,
       amountTotal: licenses.amountTotal,
+      refundedAmount: licenses.refundedAmount,
       currency: licenses.currency,
       paidAt: licenses.paidAt,
       issuedAt: licenses.issuedAt,
@@ -73,7 +75,8 @@ export async function salesBetween(db: Db, from: Date, to: Date, options: { newe
       sessionId: r.sessionId,
       payload: r.payload,
       source: r.source,
-      amountTotal: r.amountTotal ?? 0,
+      // Net of partial refunds (a full refund leaves the sales altogether).
+      amountTotal: Math.max(0, (r.amountTotal ?? 0) - (r.refundedAmount ?? 0)),
       currency: isCurrency(r.currency) ? r.currency : 'eur',
       paidAt: r.paidAt ?? r.issuedAt,
       paymentRef: r.paymentRef,

@@ -44,7 +44,7 @@ Session through `POST /api/checkout`. Set these in a `.env` file next to
 
 - `STRIPE_SECRET_KEY`: a Stripe restricted key with Checkout Sessions write,
   Prices read and Products read (optionally Invoices read, see License keys,
-  and Customer portal write, see Console). Unset means card checkout is off: the route
+  Customer portal write, see Console, and Refunds write, see Refunds). Unset means card checkout is off: the route
   answers 503 and the calculator offers the email request instead.
 - `SITE_URL`: base URL for Stripe's return links. Defaults to
   `https://autotournament.gg`.
@@ -158,7 +158,9 @@ file, so it stays as a backup of the keys issued before the move.
    secret). Give the same `kid` and `x` to Ready Up and the platform.
 4. Stripe Dashboard → Developers → Webhooks → Add endpoint:
    `https://autotournament.gg/api/stripe/webhook`, events
-   `checkout.session.completed` and `checkout.session.async_payment_succeeded`.
+   `checkout.session.completed` and `checkout.session.async_payment_succeeded`
+   (issuing), plus `charge.refunded`, `refund.updated` and `refund.failed`
+   (refunds, see the admin CRM's Refund below).
    Copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
 5. Optional: give the site's restricted Stripe key **Invoices: Read**, so the
    invoice number is available too. Without it, only the order reference
@@ -400,7 +402,33 @@ rate-limited (20 per 10 minutes).
     "Replaced by <new id>", and the console shows the newest key for that
     organization. An amount entered is the difference paid (it counts
     as a sale), never the original again.
-  - *Refund / revoke*: sets `revoked_at` and the reason; never deletes.
+  - *Refund*: gives the money back and records it. A card license: refunds
+    the Checkout Session's PaymentIntent through Stripe (the whole amount
+    left, or the amount typed, in the license's currency; reason
+    requested_by_customer, duplicate or fraudulent; a note), after the
+    browser's own dialog shows the amount and the license. A bank-transfer
+    license: nothing is sent anywhere, it records the refund (amount, date,
+    bank reference). A full refund marks the license (and its reissue chain)
+    refunded, as below; a partial one keeps it valid and records
+    `refunded_amount`, which revenue and the VAT total take off. Optionally
+    emails the buyer a short "your license was refunded" note (Postmark, to the
+    address it was bought with only). Never twice: the payment's refunds are
+    read from Stripe first, the Stripe call has an idempotency key
+    (`refund:<license id>:<amount>:<refunded before>`), and a double click in the
+    same process is refused. 10 refunds per admin per hour. Needs **Refunds:
+    Write** on the site's key (and Checkout Sessions: Read, part of the write
+    permission it already has); without it the page says which permission to
+    add. The webhook keeps it in step with Stripe: `charge.refunded` (a refund
+    from here or from the Stripe Dashboard) records the charge's refunded
+    total and, when it is all of it, marks the license refunded; a redelivered
+    or late event changes nothing. `refund.updated`/`refund.failed` for a
+    failed or canceled refund puts the amount back into revenue once and turns
+    a "refunded" license into "revoked" (the key stays off; reissue it if the
+    buyer keeps it). The license is found by the PaymentIntent stored at
+    issuing, or for older licenses through Stripe's Checkout Session list.
+    These audit entries have the actor `stripe`.
+  - *Mark refunded or revoke*: sets `revoked_at` and the reason without moving
+    money; never deletes.
     `/verify` says "Revoked", the console stops showing the key,
     and a refunded license leaves revenue, the VAT total and the founder count.
   - *Resend license email*: to the address it was bought with only (checked

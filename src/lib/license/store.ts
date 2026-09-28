@@ -51,6 +51,11 @@ export type LicenseRecord = {
   /** Marked refunded or revoked in the admin CRM (ISO 8601), and which. */
   revoked_at?: string | null;
   revoke_reason?: RevokeReason | null;
+  /** The Stripe PaymentIntent that paid the session, when known. */
+  payment_intent?: string | null;
+  /** Given back so far, minor units of `currency` (null: nothing), and when last. */
+  refunded_amount?: number | null;
+  refunded_at?: string | null;
 };
 
 export interface LicenseStore {
@@ -119,6 +124,9 @@ export function fromRow(row: Row): LicenseRecord {
     superseded_by: row.supersededBy,
     revoked_at: iso(row.revokedAt),
     revoke_reason: row.revokeReason,
+    payment_intent: row.paymentIntent,
+    refunded_amount: row.refundedAmount,
+    refunded_at: iso(row.refundedAt),
   };
 }
 
@@ -146,6 +154,9 @@ export function toRow(r: LicenseRecord): typeof licenses.$inferInsert {
     supersededBy: r.superseded_by ?? null,
     revokedAt: r.revoked_at ? new Date(r.revoked_at) : null,
     revokeReason: r.revoke_reason ?? null,
+    paymentIntent: r.payment_intent ?? null,
+    refundedAmount: r.refunded_amount ?? null,
+    refundedAt: r.refunded_at ? new Date(r.refunded_at) : null,
   };
 }
 

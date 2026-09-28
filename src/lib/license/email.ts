@@ -106,3 +106,39 @@ ${rows.map(([k, v]) => `<tr><td style="padding:4px 16px 4px 0;color:#71717a;vert
 `;
   return { subject, text, html };
 }
+
+/** The short "your license was refunded" note (the admin's Refund button, when asked to email the buyer). */
+export function refundEmail(
+  r: { payload: LicensePayload; session_id: string },
+  refund: { amount: number; currency: string; full: boolean },
+  site: string,
+): LicenseEmail {
+  const p = r.payload;
+  const amount = `${refund.currency.toUpperCase()} ${(refund.amount / 100).toFixed(2)}`;
+  const subject = refund.full ? `Your Auto Tournament license was refunded — ${p.id}` : `Partial refund for your Auto Tournament license — ${p.id}`;
+  const lines = [
+    `We have refunded ${amount} for your Auto Tournament license ${p.id} (${packName(p)}${p.licensee ? `, ${p.licensee}` : ''}).`,
+    refund.full
+      ? 'The license is no longer valid: its public check says revoked, and it no longer shows in the console.'
+      : 'This was a partial refund. The license stays valid.',
+    'Refunds to a card usually show up within 5 to 10 business days.',
+    `Order reference: ${r.session_id}`,
+    'Questions? Reply to this email.',
+  ];
+  const footer = [`${seller.name} (${seller.form}), org. nr. ${seller.orgNumber}`, seller.address, `${seller.email} · ${site.replace(/^https?:\/\//, '')}`];
+  const text = [...lines.flatMap((l) => [l, '']), '-- ', ...footer, ''].join('\n');
+  const e = escapeHtml;
+  const font = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+  const html = `<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(subject)}</title></head>
+<body style="margin:0;padding:0;background:#ffffff;color:#1a1a1a;${font};font-size:15px;line-height:1.55">
+<div style="max-width:600px;margin:0 auto;padding:24px 16px">
+${lines.map((l) => `<p style="margin:0 0 16px">${e(l)}</p>`).join('\n')}
+<p style="margin:0;padding-top:16px;border-top:1px solid #e4e4e7;color:#71717a;font-size:13px">${footer.map(e).join('<br>')}</p>
+</div>
+</body>
+</html>
+`;
+  return { subject, text, html };
+}
