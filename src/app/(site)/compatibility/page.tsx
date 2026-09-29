@@ -3,7 +3,6 @@ import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
-import { Footer, Nav } from '@/components/sections';
 import { links } from '@/components/links';
 import { CompatibilityLive } from '@/components/compat/CompatibilityLive';
 import { CompatDot, type CompatTone } from '@/components/compat/CompatDot';
@@ -74,7 +73,6 @@ export default async function Compatibility() {
   const serverNow = Date.now();
   return (
     <>
-      <Nav />
       <main>
         <Container maxWidth="lg" component="section" sx={{ pt: { xs: 8, md: 14 }, pb: { xs: 4, md: 6 } }}>
           <Typography variant="h1" sx={{ fontSize: 'clamp(2.25rem, 3vw + 1rem, 4rem)', maxWidth: '20ch' }}>
@@ -166,7 +164,6 @@ export default async function Compatibility() {
           </Typography>
         </Container>
       </main>
-      <Footer />
     </>
   );
 }

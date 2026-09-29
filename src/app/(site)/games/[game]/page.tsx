@@ -8,7 +8,6 @@ import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
-import { Footer, Nav } from '@/components/sections';
 import { BadgeChip, CommercialUse, Crumbs, LinkButton, ProductIcon, TextLink, ToolCard } from '@/components/product/ProductParts';
 import { findGame, gamePath, gamesWithPages, platform } from '@/content/catalog';
 import { links } from '@/components/links';
@@ -45,7 +44,6 @@ export default async function GamePage({ params }: { params: Promise<Params> }) 
   const cs2 = game.slug === 'cs2';
   return (
     <>
-      <Nav />
       <main>
         <Container maxWidth="lg" component="section" sx={{ pt: { xs: 8, md: 13 }, pb: { xs: 5, md: 8 } }}>
           <Crumbs
@@ -145,7 +143,6 @@ export default async function GamePage({ params }: { params: Promise<Params> }) 
           mit={cs2 ? 'The Auto Tournament CS2 plugin is MIT licensed and never needs a license on its own.' : undefined}
         />
       </main>
-      <Footer />
     </>
   );
 }

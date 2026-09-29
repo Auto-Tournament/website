@@ -1,16 +1,14 @@
-import { Features, Footer, Games, Hero, Install, Nav } from '@/components/sections';
+import { Features, Games, Hero, Install } from '@/components/sections';
 
 export default function Home() {
   return (
     <>
-      <Nav />
       <main>
         <Hero />
         <Features />
         <Games />
         <Install />
       </main>
-      <Footer />
     </>
   );
 }

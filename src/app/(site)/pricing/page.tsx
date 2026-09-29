@@ -11,7 +11,6 @@ import Container from '@mui/material/Container';
 import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
-import { Footer, Nav } from '@/components/sections';
 import { links } from '@/components/links';
 import {
   earnMoneyRule,
@@ -497,7 +496,6 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
       <Suspense fallback={null}>
         <PricingJsonLd />
       </Suspense>
-      <Nav />
       <main>
         {/* 1 · The rule, then the guide: a few questions, one answer. The h1 renders immediately; only the guide waits on packs/founder data. */}
         <Box component="section" id="guide" aria-labelledby="pricing-title" sx={{ scrollMarginTop: 80 }}>
@@ -746,7 +744,6 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
           </div>
         </Section>
       </main>
-      <Footer />
     </>
   );
 }

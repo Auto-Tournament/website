@@ -5,7 +5,6 @@ import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
-import { Footer, Nav } from '@/components/sections';
 import { links } from '@/components/links';
 import { LicenseKeyView } from '@/components/LicenseKeyView';
 import { clientIp, createRateLimiter } from '@/lib/checkout';
@@ -69,7 +68,6 @@ export default async function Thanks({ searchParams }: { searchParams: Promise<R
 
   return (
     <>
-      <Nav />
       <main>
         <Container maxWidth="md" component="section" sx={{ pt: { xs: 8, md: 14 }, pb: { xs: 8, md: 12 } }}>
           <Typography variant="h1" sx={{ fontSize: 'clamp(2.25rem, 3vw + 1rem, 3.5rem)' }}>
@@ -140,7 +138,6 @@ export default async function Thanks({ searchParams }: { searchParams: Promise<R
           </Button>
         </Container>
       </main>
-      <Footer />
     </>
   );
 }

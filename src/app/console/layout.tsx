@@ -4,6 +4,7 @@ import { tokens } from '@/theme/tokens';
 import type { NavAccount } from '@/components/nav/AccountMenu';
 import { ConsoleNavBar, type ConsoleOrgSwitch } from '@/components/console/ConsoleNavBar';
 import { ConsoleFooter } from '@/components/console/ConsoleFooter';
+import { PageTransition } from '@/components/PageTransition';
 import { accountLinks } from '@/components/console/consoleNav';
 import { isAdminUser } from '@/lib/admin/access';
 import { currentOrg, currentUser } from '@/lib/console/session';
@@ -60,7 +61,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         // The admin pages (data-admin-wide) get room for their tables on a laptop.
         sx={{ pt: { xs: 4, md: 6 }, pb: { xs: 6, md: 8 }, color: color.ink2, '& a': { color: 'inherit' }, '&:has([data-admin-wide])': { maxWidth: 1280 } }}
       >
-        {children}
+        <PageTransition>{children}</PageTransition>
       </Container>
       <ConsoleFooter site={site} />
     </>

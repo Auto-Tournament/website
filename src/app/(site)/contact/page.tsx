@@ -4,7 +4,6 @@ import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
-import { Footer, Nav } from '@/components/sections';
 import { SellerDetails } from '@/components/legal';
 import { ContactForm } from '@/components/ContactForm';
 import { seller } from '@/components/seller';
@@ -31,7 +30,6 @@ export default function Contact() {
   const emailAvailable = !!emailConfig();
   return (
     <>
-      <Nav />
       <main>
         <Container maxWidth="md" component="section" sx={{ pt: { xs: 8, md: 14 }, pb: { xs: 8, md: 12 } }}>
           <Typography variant="h1" sx={{ fontSize: 'clamp(2.25rem, 3vw + 1rem, 3.5rem)' }}>
@@ -60,7 +58,6 @@ export default function Contact() {
           </Box>
         </Container>
       </main>
-      <Footer />
     </>
   );
 }
