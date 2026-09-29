@@ -2,7 +2,6 @@
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
@@ -16,6 +15,8 @@ import { AtIcon } from './AtIcon';
 import { CodeBlock } from './CodeBlock';
 import { links } from './links';
 import { installCommands } from '@/content/install';
+import { games as catalogGames, gamePath } from '@/content/catalog';
+import { BadgeChip } from './product/ProductParts';
 
 const { color, radius } = tokens;
 
@@ -159,16 +160,8 @@ export function Features() {
   );
 }
 
-const games = [
-  { name: 'Counter-Strike 2', note: 'Your own servers with the Auto Tournament CS2 plugin. Veto, live scores, demos and stats.', built: true },
-  { name: 'Team Fortress 2', note: 'Self-hosted servers, same model as CS2.' },
-  { name: 'Dota 2', note: 'Lobbies created by a bot, results from the Steam Web API.' },
-  { name: 'League of Legends', note: "Tournament codes and results through Riot's Tournament API." },
-  { name: 'Trackmania', note: 'Dedicated servers you host, plus the Nadeo API.' },
-  { name: 'osu!', note: 'Multiplayer lobbies run by a bot, results from the osu! API.' },
-  { name: 'Chess', note: 'Games and results through the open Lichess API.' },
-  { name: 'Any other game', note: 'Manual result reporting for games without an API.' },
-];
+/** The homepage's short game grid: CS2 plus a handful of the manual-reporting games. Full list on /games. */
+const homeGames = catalogGames.slice(0, 8);
 
 export function Games() {
   return (
@@ -176,7 +169,8 @@ export function Games() {
       <Box sx={{ maxWidth: '40rem', display: 'grid', gap: 2 }}>
         <Typography variant="h2">CS2 today. More games as modules.</Typography>
         <Typography sx={{ color: color.ink2 }}>
-          Games plug in as modules. The CS2 module ships with the platform. The rest are planned, starting with games that let you host servers or run lobbies through an API.
+          Games plug in as modules. The CS2 module ships with the platform: the match plugin on your servers reports every round back. Every other game runs on
+          manual reporting: a captain reports the score, the other captain agrees.
         </Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 1 }}>
           <Button variant="outlined" href="/games">
@@ -188,29 +182,34 @@ export function Games() {
         </Box>
       </Box>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 14rem), 1fr))', gap: 2, mt: 6 }}>
-        {games.map((g) => (
-          <Box
-            component={g.built ? 'a' : 'article'}
-            href={g.built ? '/games/cs2' : undefined}
-            key={g.name}
-            sx={{
-              bgcolor: color.paper2,
-              border: `1px solid ${g.built ? color.accent : color.rule}`,
-              borderRadius: `${radius.lg}px`,
-              p: 3,
-              display: 'grid',
-              gap: 1,
-              alignContent: 'start',
-              color: 'inherit',
-              textDecoration: 'none',
-              ...(g.built && { '&:hover': { bgcolor: color.paper3 } }),
-            }}
-          >
-            <Chip size="small" color={g.built ? 'primary' : 'default'} label={g.built ? 'Included' : 'Planned'} sx={{ justifySelf: 'start' }} />
-            <Typography variant="h3">{g.name}</Typography>
-            <Typography sx={{ color: color.muted, fontSize: '0.875rem' }}>{g.note}</Typography>
-          </Box>
-        ))}
+        {homeGames.map((g) => {
+          const linked = Boolean(g.tools?.length);
+          return (
+            <Box
+              component={linked ? 'a' : 'article'}
+              href={linked ? gamePath(g) : undefined}
+              key={g.slug}
+              sx={{
+                bgcolor: color.paper2,
+                border: `1px solid ${linked ? color.accent : color.rule}`,
+                borderRadius: `${radius.lg}px`,
+                p: 3,
+                display: 'grid',
+                gap: 1,
+                alignContent: 'start',
+                color: 'inherit',
+                textDecoration: 'none',
+                ...(linked && { '&:hover': { bgcolor: color.paper3 } }),
+              }}
+            >
+              <Box sx={{ justifySelf: 'start' }}>
+                <BadgeChip badge={g.badge} />
+              </Box>
+              <Typography variant="h3">{g.name}</Typography>
+              <Typography sx={{ color: color.muted, fontSize: '0.875rem' }}>{g.line}</Typography>
+            </Box>
+          );
+        })}
       </Box>
     </Container>
   );

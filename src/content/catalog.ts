@@ -404,8 +404,7 @@ const csm: Product = {
       title: 'Instance mode: one CS2 install, many servers',
       badge: csmNext,
       body: [
-        'Normally every server is a full copy of CS2. In instance mode, every server runs the one install read-only and only stores the files it writes itself: logs, demos, backups and its own settings. An extra server takes about 10 MB of disk and starts in about 5 seconds.',
-        'Memory is the same as before: each running server still needs about 1 to 2 GB of RAM.',
+        'Normally every server is a full copy of CS2. In instance mode, every server runs the one install read-only and only stores the files it writes itself: logs, demos, backups and its own settings. Ten servers cost about as much disk as one.',
       ],
       points: ['No root and no sudo (Linux 5.11 or newer)', 'A server that crashes is started again after 10 seconds', 'Ready Up is installed once, into a layer every server shares'],
     },
