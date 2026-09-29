@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { isScrolledPastBackground, shouldDrawFrame, wantsStaticFrame } from './background';
 import { FRAGMENT_SHADER, REDUCED_MOTION_TIME, VERTEX_SHADER } from './shader';
 
 /**
@@ -95,6 +96,13 @@ export function ShaderBackground() {
       setColors();
 
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const nav = navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } };
+      const staticFrame = wantsStaticFrame({
+        coarsePointer: window.matchMedia('(pointer: coarse)').matches,
+        hardwareConcurrency: nav.hardwareConcurrency,
+        deviceMemory: nav.deviceMemory,
+        saveData: nav.connection?.saveData,
+      });
 
       const resize = () => {
         // Half resolution: it's a soft blur, and this keeps phones cool.
@@ -110,8 +118,10 @@ export function ShaderBackground() {
       let frame = 0;
       let start = 0;
       let lastTime = REDUCED_MOTION_TIME;
+      let lastDrawTime = -Infinity;
       const draw = (seconds: number) => {
         lastTime = seconds;
+        lastDrawTime = seconds;
         resize();
         gl.viewport(0, 0, canvas.width, canvas.height);
         gl.uniform2f(uResolution, canvas.width, canvas.height);
@@ -121,22 +131,45 @@ export function ShaderBackground() {
       const loop = (timestamp: number) => {
         frame = requestAnimationFrame(loop);
         if (start === 0) start = timestamp - lastTime * 1000;
-        draw((timestamp - start) / 1000);
+        const seconds = (timestamp - start) / 1000;
+        if (shouldDrawFrame(seconds, lastDrawTime)) draw(seconds);
+        else lastTime = seconds;
       };
       const stop = () => {
         if (frame) cancelAnimationFrame(frame);
         frame = 0;
       };
+      let scrolledPast = false;
       const run = () => {
         stop();
-        if (reducedMotion.matches) {
+        if (reducedMotion.matches || staticFrame) {
           draw(REDUCED_MOTION_TIME);
           return;
         }
+        if (scrolledPast) {
+          draw(lastTime);
+          return;
+        }
         start = 0;
+        lastDrawTime = -Infinity;
         frame = requestAnimationFrame(loop);
       };
       const onVisibility = () => (document.hidden ? stop() : run());
+
+      let scrollTicking = false;
+      const onScroll = () => {
+        if (scrollTicking) return;
+        scrollTicking = true;
+        requestAnimationFrame(() => {
+          scrollTicking = false;
+          const past = isScrolledPastBackground(window.scrollY, window.innerHeight);
+          if (past === scrolledPast) return;
+          scrolledPast = past;
+          if (document.hidden || staticFrame || reducedMotion.matches) return;
+          if (past) stop();
+          else run();
+        });
+      };
 
       // The theme picker writes the colour variables onto <html>.
       const themeObserver = new MutationObserver(() => {
@@ -149,13 +182,16 @@ export function ShaderBackground() {
       });
       sizeObserver.observe(canvas);
 
+      scrolledPast = isScrolledPastBackground(window.scrollY, window.innerHeight);
       run();
       canvas.style.opacity = '1';
       reducedMotion.addEventListener('change', run);
       document.addEventListener('visibilitychange', onVisibility);
+      window.addEventListener('scroll', onScroll, { passive: true });
 
       cleanup = () => {
         stop();
+        window.removeEventListener('scroll', onScroll);
         themeObserver.disconnect();
         sizeObserver.disconnect();
         reducedMotion.removeEventListener('change', run);
