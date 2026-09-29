@@ -17,12 +17,13 @@ const unknown: CompatStatus = { overall: null, cs2: null, checked_at: null };
  * `GET /api/compat/status` answers (the page never waits on it), and unknown
  * for good when that read fails.
  */
-export function useCompatStatus(): CompatStatus {
+export function useCompatStatus(site = ''): CompatStatus {
   const [status, setStatus] = useState<CompatStatus>(unknown);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/api/compat/status', { signal: controller.signal })
+    // On the console's own host the API lives on the main site (it answers any origin).
+    fetch(`${site}/api/compat/status`, { signal: controller.signal })
       .then((res) => (res.ok ? (res.json() as Promise<{ status?: CompatStatus }>) : null))
       .then((body) => {
         if (body?.status) setStatus(body.status);
@@ -31,7 +32,7 @@ export function useCompatStatus(): CompatStatus {
         // Offline, rate limited or aborted: stay grey (unknown).
       });
     return () => controller.abort();
-  }, []);
+  }, [site]);
   return status;
 }
 
@@ -40,13 +41,13 @@ export function useCompatStatus(): CompatStatus {
  * shows from the sm breakpoint up; on phones the dot stands alone, named by
  * its aria-label.
  */
-export function CompatNavStatus({ status }: { status: CompatStatus }) {
+export function CompatNavStatus({ status, href = links.compatibility }: { status: CompatStatus; href?: string }) {
   const tone = compatSummaryTone(status.overall);
   const { label, title } = compatSummaryText(status);
   return (
     <Box
       component="a"
-      href={links.compatibility}
+      href={href}
       aria-label={label}
       title={title}
       data-testid="nav-compat"

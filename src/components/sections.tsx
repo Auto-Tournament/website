@@ -14,15 +14,14 @@ import { ServersCard } from './cards/ServersCard';
 import { ProfileCard } from './cards/ProfileCard';
 import { AtIcon } from './AtIcon';
 import { CodeBlock } from './CodeBlock';
-import { ThemePicker } from './ThemePicker';
 import { links } from './links';
-import { seller } from './seller';
 
 const { color, radius } = tokens;
 
 export { links } from './links';
 
 export { SiteNav as Nav } from './nav/SiteNav';
+export { Footer } from './Footer';
 
 export function Hero() {
   return (
@@ -237,50 +236,6 @@ export function Install() {
           </Box>
         </div>
         <CodeBlock comment="# no clone needed: download the compose file and start" code={installCommands} />
-      </Box>
-    </Container>
-  );
-}
-
-/* Ft5 statement */
-export function Footer() {
-  return (
-    <Container maxWidth="lg" component="footer" sx={{ pt: { xs: 10, md: 16 }, pb: 6, mt: 6, borderTop: `1px solid ${color.rule}` }}>
-      <Typography sx={{ fontFamily: fontDisplay, fontWeight: 700, fontSize: 'clamp(1.9rem, 2.2vw + 1rem, 2.75rem)', letterSpacing: '-0.03em', lineHeight: 1.1, maxWidth: '20ch' }}>
-        Made by people who run LANs, for people who run LANs.
-      </Typography>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 2, mt: 6, color: color.muted, fontSize: '0.875rem' }}>
-        <Box component="nav" id="site-links" aria-label="Footer" sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-          {[
-            ['Pricing', links.pricing],
-            ['CS2 compatibility', links.compatibility],
-            ['Check a license', links.verify],
-            ['Console', links.account],
-            ['Contact', links.contact],
-            ['Docs', links.docs],
-            ['GitHub', links.github],
-            ['Discord', links.discord],
-          ].map(([label, href]) => (
-            <Box key={label} component="a" href={href} sx={{ color: 'inherit', textDecoration: 'none', whiteSpace: 'nowrap', '&:hover': { color: color.ink } }}>
-              {label}
-            </Box>
-          ))}
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <ThemePicker />
-          <Box component="a" href={links.licensing} sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { color: color.ink } }}>
-            Free for non-commercial use · Licensing
-          </Box>
-        </Box>
-      </Box>
-      <Box
-        component="p"
-        data-testid="seller"
-        sx={{ m: 0, mt: 3, color: color.muted, fontSize: '0.8125rem', lineHeight: 1.6, '& a': { color: 'inherit', '&:hover': { color: color.ink } } }}
-      >
-        Sold by {seller.name} ({seller.form}), org. nr. {seller.orgNumber}, {seller.address} ·{' '}
-        <a href={`mailto:${seller.email}`}>{seller.email}</a> · {seller.vatNote} · <a href={links.terms}>Terms</a> ·{' '}
-        <a href={links.termsOfSale}>Terms of sale</a> · <a href={links.privacy}>Privacy</a>
       </Box>
     </Container>
   );

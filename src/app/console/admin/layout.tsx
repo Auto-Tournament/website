@@ -1,15 +1,12 @@
 import type { Metadata } from 'next';
 import Box from '@mui/material/Box';
-import { tokens } from '@/theme/tokens';
-import { AdminNav } from '@/components/admin/AdminClient';
+import { ConsoleSubNav } from '@/components/console/ConsoleSubNav';
 import { requireAdmin } from '@/lib/admin/guard';
 import { gateFor } from '@/lib/admin/approval';
 import { passkeysOf } from '@/lib/admin/passkeys';
 import { PasskeyCheck, PasskeySetup } from '@/components/admin/Passkeys';
 import { db } from '@/lib/db/client';
 import { consoleBase } from '@/lib/console/urls';
-
-const { color } = tokens;
 
 export const metadata: Metadata = { title: { default: 'Admin', template: '%s · Admin · Auto Tournament console' } };
 export const dynamic = 'force-dynamic';
@@ -32,11 +29,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
   return (
     <Box data-admin-wide sx={{ minWidth: 0 }}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 1.5, mb: 2 }}>
-        <Box sx={{ color: color.accent, fontWeight: 600, fontSize: '0.8125rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Admin</Box>
-      </Box>
-      <AdminNav base={consoleBase()} />
-      <Box sx={{ mt: 4, minWidth: 0 }}>{children}</Box>
+      <ConsoleSubNav area="admin" base={consoleBase()} title="Admin" />
+      <Box sx={{ minWidth: 0 }}>{children}</Box>
     </Box>
   );
 }
