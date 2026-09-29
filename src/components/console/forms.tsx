@@ -6,7 +6,9 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { CaretDown } from '@phosphor-icons/react/dist/csr/CaretDown';
 import { tokens } from '@/theme/tokens';
+import { NavMenu } from '@/components/nav/NavMenu';
 import type { ActionState } from '@/app/console/actions';
 
 const { color } = tokens;
@@ -248,37 +250,74 @@ export function RoleForm({ action, orgId, userId, role, allowOwner }: { action: 
   );
 }
 
-/** The organization switcher: submits on change. */
-export function OrgSwitcher({ action, orgs, current }: { action: Action; orgs: { id: string; name: string }[]; current: string }) {
-  const [state, run, pending] = useActionState(action, null);
+/**
+ * The organization switcher, as a menu: "<Org name> ▾" with the other
+ * organizations underneath. Each one is its own one-click form, like the
+ * account menu's sign-out button; picking one switches and the server
+ * redirects back to the same console section.
+ */
+export function OrgSwitcherMenu({ action, orgs, current, hydrated }: { action: Action; orgs: { id: string; name: string }[]; current: string; hydrated: boolean }) {
+  const { color, radius } = tokens;
   // Stay on the same section after switching.
   const next = `/${(usePathname() ?? '').split('/').filter(Boolean).at(-1) ?? 'licenses'}`;
+  const currentOrg = orgs.find((o) => o.id === current) ?? orgs[0];
   return (
-    <Box component="form" action={run} sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, maxWidth: '100%' }}>
-      <input type="hidden" name="next" value={next} />
-      <TextField
-        select
-        name="orgId"
-        size="small"
-        label="Organization"
-        defaultValue={current}
-        disabled={pending}
-        slotProps={{ select: { native: true } }}
-        onChange={(e) => (e.target as HTMLElement).closest('form')?.requestSubmit()}
-        sx={{ minWidth: 0, maxWidth: '100%', '& select': { textOverflow: 'ellipsis' } }}
-      >
-        {orgs.map((o) => (
-          <option key={o.id} value={o.id}>
+    <NavMenu
+      id="org-switcher"
+      hydrated={hydrated}
+      fallbackHref="/licenses"
+      ariaLabel="Organization"
+      panelLabel="Organizations"
+      align="right"
+      width="14rem"
+      trigger={
+        <>
+          <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: { xs: '6rem', sm: '10rem' } }}>
+            {currentOrg?.name ?? 'Organization'}
+          </Box>
+          <CaretDown className="nav-menu-caret" size={12} weight="bold" aria-hidden style={{ flex: 'none' }} />
+        </>
+      }
+    >
+      {orgs.map((o) => (
+        <Box
+          key={o.id}
+          component="form"
+          action={async (fd: FormData) => {
+            await action(null, fd);
+          }}
+          sx={{ m: 0 }}
+        >
+          <input type="hidden" name="orgId" value={o.id} />
+          <input type="hidden" name="next" value={next} />
+          <Box
+            component="button"
+            type="submit"
+            aria-current={o.id === current ? 'true' : undefined}
+            sx={{
+              display: 'block',
+              width: '100%',
+              px: 1.25,
+              py: 1,
+              border: 0,
+              borderRadius: `${radius.md}px`,
+              bgcolor: o.id === current ? color.paper3 : 'transparent',
+              color: color.ink,
+              font: 'inherit',
+              fontWeight: o.id === current ? 600 : 400,
+              fontSize: '0.9375rem',
+              textAlign: 'left',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              cursor: 'pointer',
+              '&:hover, &:focus-visible': { bgcolor: color.paper3 },
+            }}
+          >
             {o.name}
-          </option>
-        ))}
-      </TextField>
-      <noscript>
-        <Button type="submit" size="small">
-          Switch
-        </Button>
-      </noscript>
-      <Status state={state} />
-    </Box>
+          </Box>
+        </Box>
+      ))}
+    </NavMenu>
   );
 }
