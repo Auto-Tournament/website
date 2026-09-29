@@ -15,8 +15,11 @@
  *
  * On Pay: VAT ID → checkout.updateTaxIdInfo (with the company as the business
  * name); our other fields → /api/checkout/details through
- * checkout.runServerUpdate (session metadata); then checkout.confirm with the
- * email and the billing address (the company as its name). Stripe.js then
+ * checkout.runServerUpdate (session metadata); the billing address (the
+ * company as its name) → checkout.updateBillingAddress; then checkout.confirm
+ * with the email. confirm() must not get the billing address: with automatic
+ * tax Stripe.js throws an IntegrationError ("You cannot provide
+ * `billingAddress` in confirm() when using automatic tax"). Stripe.js then
  * leaves for the session's return_url, the thanks page.
  */
 import { useEffect, useMemo, useRef } from 'react';
@@ -121,7 +124,7 @@ function logStep(step: string, err: unknown) {
   });
 }
 
-type PayCheckout = Pick<Checkout, 'updateTaxIdInfo' | 'runServerUpdate' | 'confirm' | 'id' | 'email'>;
+type PayCheckout = Pick<Checkout, 'updateTaxIdInfo' | 'runServerUpdate' | 'updateBillingAddress' | 'confirm' | 'id' | 'email'>;
 
 /**
  * Runs the pay steps against the session's actions. Exported for tests.
@@ -169,16 +172,21 @@ export async function payWith(
     if (!saved.ok) return { ok: false, error: saved.error, ...(saved.field && saved.field !== 'sessionId' ? { field: saved.field } : {}) };
     if (update.type === 'error') return { ok: false, error: update.error.message || "Couldn't save your details. Try again." };
 
-    step = 'confirm';
+    // Automatic tax reads the address from the session, so it goes there first, never into confirm().
+    step = 'updateBillingAddress';
     const { line1, line2, postal_code, city, country } = input.address;
-    const result = await withTimeout(
+    const billing = await withTimeout(
       step,
-      checkout.confirm({
-        ...(checkout.email ? {} : { email: input.email }),
-        billingAddress: { name: input.company.trim(), address: { country, line1, line2: line2 || null, postal_code: postal_code || null, city } },
-      }),
-      free ? timeoutMs : null,
+      checkout.updateBillingAddress({ name: input.company.trim(), address: { country, line1, line2: line2 || null, postal_code: postal_code || null, city } }),
+      timeoutMs,
     );
+    if (billing.type === 'error') {
+      logStep(step, billing.error);
+      return { ok: false, error: billing.error.message || "Stripe couldn't use this billing address. Check it and try again." };
+    }
+
+    step = 'confirm';
+    const result = await withTimeout(step, checkout.confirm(checkout.email ? {} : { email: input.email }), free ? timeoutMs : null);
     if (result.type === 'error') {
       logStep(step, result.error);
       return { ok: false, error: result.error.message || genericPayError };
@@ -190,7 +198,7 @@ export async function payWith(
   }
 }
 
-function Form({ order, onPaying, onInitFailed }: { order: CheckoutFormOrder; onPaying: (p: boolean) => void; onInitFailed: () => void }) {
+function Form({ order, country, onPaying, onInitFailed }: { order: CheckoutFormOrder; country: string | null; onPaying: (p: boolean) => void; onInitFailed: () => void }) {
   const state = useCheckoutElements();
   const failed = useRef(false);
   useEffect(() => {
@@ -226,26 +234,29 @@ function Form({ order, onPaying, onInitFailed }: { order: CheckoutFormOrder; onP
       </Box>
     );
   }
-  return <CheckoutForm order={order} adapter={adapter} onPaying={onPaying} />;
+  return <CheckoutForm order={order} adapter={adapter} onPaying={onPaying} country={country} />;
 }
 
 export function StripeCheckoutForm({
   stripe,
   clientSecret,
   order,
+  country = null,
   onPaying,
   onInitFailed,
 }: {
   stripe: Stripe;
   clientSecret: string;
   order: CheckoutFormOrder;
+  /** The buyer's country from CF-IPCountry (server-side), or null. */
+  country?: string | null;
   onPaying: (p: boolean) => void;
   onInitFailed: () => void;
 }) {
   const options = useMemo(() => ({ clientSecret, elementsOptions: { appearance: stripeAppearance, fonts: stripeFonts } }), [clientSecret]);
   return (
     <CheckoutElementsProvider stripe={stripe} options={options}>
-      <Form order={order} onPaying={onPaying} onInitFailed={onInitFailed} />
+      <Form order={order} country={country} onPaying={onPaying} onInitFailed={onInitFailed} />
     </CheckoutElementsProvider>
   );
 }

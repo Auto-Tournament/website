@@ -10,12 +10,11 @@
  */
 import { createHash, createPrivateKey, createPublicKey, sign, type KeyObject } from 'node:crypto';
 import type { PackId, PackProduct, PackSize, Period } from '../../components/pricing';
+import { addDays, addMonths, EVENT_MAX_DAYS, isIsoDay, isoDay, LIFETIME } from './dates';
+
+export { addDays, addMonths, EVENT_MAX_DAYS, LIFETIME };
 
 export const TOKEN_PREFIX = 'ATL1';
-/** updates_until for founder packs: updates for as long as the product is sold. */
-export const LIFETIME = '9999-12-31';
-/** An event license covers up to 5 days in a row (Commercial License Terms, section 5). */
-export const EVENT_MAX_DAYS = 5;
 
 export type LicensePayload = {
   v: 1;
@@ -72,26 +71,9 @@ export function signLicense(payload: LicensePayload, key: SigningKey): string {
 // ---------------------------------------------------------------------------
 // Dates
 
-const isoDay = (d: Date) => d.toISOString().slice(0, 10);
-
 function utcDay(y: number, m: number, d: number): Date | null {
   const date = new Date(Date.UTC(y, m - 1, d));
   return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d ? date : null;
-}
-
-export function addDays(day: string, days: number): string {
-  const d = new Date(`${day}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return isoDay(d);
-}
-
-/** Same day `months` later; the 31st becomes the last day of a shorter month. */
-export function addMonths(day: string, months: number): string {
-  const [y, m, d] = day.split('-').map(Number);
-  const target = new Date(Date.UTC(y, m - 1 + months, 1));
-  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
-  target.setUTCDate(Math.min(d, last));
-  return isoDay(target);
 }
 
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
@@ -112,6 +94,9 @@ function monthNumber(word: string): number | null {
  * "October 3, 2026" and "October 3–5, 2026".
  */
 export function parseEventDates(text: string): { start: string; end: string } | null {
+  // The date picker's value: "2026-10-03" or "2026-10-03/2026-10-07".
+  const iso = /^\s*(\d{4}-\d{2}-\d{2})(?:\/(\d{4}-\d{2}-\d{2}))?\s*$/.exec(text);
+  if (iso && isIsoDay(iso[1]) && (!iso[2] || (isIsoDay(iso[2]) && iso[2] >= iso[1]))) return { start: iso[1], end: iso[2] ?? iso[1] };
   const found: Date[] = [];
   const add = (y: number, m: number, d: number) => {
     const date = utcDay(y, m, d);
@@ -153,8 +138,9 @@ function plausibleStart(start: string | undefined, purchaseDay: string): boolean
  * - event: rights for the event window only, valid_from..valid_to: the dates
  *   from the form (at most 5 days from the first), or 5 days from the purchase
  *   when they can't be read. Updates until the last day.
- * - year: updates until 12 months after the purchase. No end to the rights:
- *   commercial use of covered lines continues after that.
+ * - year: updates until 12 months after the start day from the form (the
+ *   purchase day when there is none). No end to the rights: commercial use
+ *   of covered lines continues after that, so no valid_from/valid_to.
  * - founder: updates for life (9999-12-31).
  */
 export function licenseDates(
@@ -163,9 +149,9 @@ export function licenseDates(
   eventDates: string | undefined,
 ): { updates_until: string; valid_from?: string; valid_to?: string; fromForm: boolean } {
   if (kind === 'founder') return { updates_until: LIFETIME, fromForm: false };
-  if (kind === 'year') return { updates_until: addMonths(purchaseDay, 12), fromForm: false };
   const parsed = eventDates ? parseEventDates(eventDates) : null;
   const fromForm = plausibleStart(parsed?.start, purchaseDay);
+  if (kind === 'year') return { updates_until: addMonths(fromForm && parsed ? parsed.start : purchaseDay, 12), fromForm };
   const start = fromForm && parsed ? parsed.start : purchaseDay;
   const cap = addDays(start, EVENT_MAX_DAYS - 1);
   const end = fromForm && parsed && parsed.end < cap ? parsed.end : cap;

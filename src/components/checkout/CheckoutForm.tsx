@@ -14,6 +14,11 @@
  * real thing, a mock in the /dev/checkout preview).
  */
 import { useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import dayjs, { type Dayjs } from 'dayjs';
+import 'dayjs/locale/en-gb';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -27,6 +32,9 @@ import { tokens } from '@/theme/tokens';
 import { fontDisplay } from '@/theme/theme';
 import { formatEuro, periodLabels, vatShort, type Period } from '@/components/pricing';
 import { detailLimits, validateCheckoutDetails, type CheckoutDetails } from '@/lib/checkout';
+import { countryCodes, initialCountry } from '@/lib/country';
+import { eventDatesValue, isIsoDay } from '@/lib/license/dates';
+import { checkoutValidityText } from '@/lib/license/describe';
 
 const { color, radius } = tokens;
 
@@ -75,12 +83,6 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 /** Countries without postal codes where the field is left optional. */
 const noPostalCode = new Set(['AE', 'AG', 'AO', 'BF', 'BJ', 'BS', 'BW', 'BZ', 'CM', 'FJ', 'GH', 'HK', 'IE', 'JM', 'KE', 'MO', 'QA', 'RW', 'TZ', 'UG', 'ZW']);
 
-// ISO 3166-1 alpha-2; names come from Intl.DisplayNames in the buyer's language setting (English here).
-const countryCodes =
-  'AD AE AF AG AI AL AM AO AR AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BM BN BO BR BS BT BW BY BZ CA CD CF CG CH CI CL CM CN CO CR CV CY CZ DE DJ DK DM DO DZ EC EE EG ES ET FI FJ FO FR GA GB GD GE GG GH GI GL GM GN GR GT GY HK HN HR HT HU ID IE IL IM IN IQ IS IT JE JM JO JP KE KG KH KN KR KW KY KZ LA LB LC LI LK LR LS LT LU LV MA MC MD ME MG MK ML MN MO MR MT MU MV MW MX MY MZ NA NE NG NI NL NO NP NZ OM PA PE PG PH PK PL PR PT PY QA RE RO RS RW SA SC SE SG SI SK SL SM SN SR SV TD TG TH TJ TN TR TT TW TZ UA UG US UY UZ VA VC VE VG VN XK ZA ZM ZW'.split(
-    ' ',
-  );
-
 function countryOptions(): { code: string; name: string }[] {
   let names: Intl.DisplayNames | null = null;
   try {
@@ -102,6 +104,7 @@ type Values = {
   email: string;
   company: string;
   eventName: string;
+  /** The license start day from the date picker: YYYY-MM-DD, '' when empty, 'invalid' for a typed non-date. */
   eventDates: string;
   vatId: string;
   business: boolean;
@@ -122,7 +125,7 @@ const empty: Values = {
   vatId: '',
   business: false,
   terms: false,
-  country: 'NO',
+  country: '',
   line1: '',
   line2: '',
   postal_code: '',
@@ -131,8 +134,11 @@ const empty: Values = {
 
 type Errors = Partial<Record<FieldKey, string>>;
 
+/** Today in the buyer's time zone, YYYY-MM-DD: the earliest start day. */
+const localToday = () => dayjs().format('YYYY-MM-DD');
+
 /** Our checks before anything goes to Stripe; the server checks the same details again. */
-export function validateForm(values: Values, sessionId: string, emailFixed: boolean): Errors {
+export function validateForm(values: Values, sessionId: string, emailFixed: boolean, today: string = localToday()): Errors {
   const errors: Errors = {};
   if (!emailFixed && !emailPattern.test(values.email.trim())) errors.email = 'Enter the email address the license and invoice go to.';
   // Report every field at once, not only the first.
@@ -141,12 +147,12 @@ export function validateForm(values: Values, sessionId: string, emailFixed: bool
     buyerName: values.buyerName,
     company: values.company,
     eventName: values.eventName,
-    eventDates: values.eventDates,
+    eventDates: validSample.eventDates,
     vatId: values.vatId,
     business: values.business,
     terms: values.terms,
   };
-  const fields = ['buyerName', 'company', 'eventName', 'eventDates', 'vatId', 'business', 'terms'] as const;
+  const fields = ['buyerName', 'company', 'eventName', 'vatId', 'business', 'terms'] as const;
   for (const field of fields) {
     const probe: Record<string, unknown> = { ...base };
     // Replace every other field with a valid value, so each error is this field's own.
@@ -154,14 +160,17 @@ export function validateForm(values: Values, sessionId: string, emailFixed: bool
     const r = validateCheckoutDetails(probe);
     if (!r.ok && r.field === field) errors[field] = r.error;
   }
-  if (!values.country) errors.country = 'Choose the country.';
+  if (!values.eventDates) errors.eventDates = 'Choose the date the license starts.';
+  else if (!isIsoDay(values.eventDates)) errors.eventDates = 'Enter a date like 03/10/2026, or pick one from the calendar.';
+  else if (values.eventDates < today) errors.eventDates = 'Choose today or a later date.';
+  if (!values.country) errors.country = 'Choose your country.';
   if (!values.line1.trim()) errors.line1 = 'Enter the street address.';
   if (!values.city.trim()) errors.city = 'Enter the city.';
   if (!values.postal_code.trim() && !noPostalCode.has(values.country)) errors.postal_code = 'Enter the postal code.';
   return errors;
 }
 
-const validSample = { buyerName: 'Kari Nordmann', company: 'Valid AS', eventName: 'Valid event', eventDates: '1 January 2027', vatId: '', business: true, terms: true } as const;
+const validSample = { buyerName: 'Kari Nordmann', company: 'Valid AS', eventName: 'Valid event', eventDates: '2027-01-01', vatId: '', business: true, terms: true } as const;
 
 /* ------------------------------------------------------------------ fields */
 
@@ -193,6 +202,66 @@ const inputSx = {
   ...noMotion,
 } as const;
 
+/**
+ * The license start day: MUI's DatePicker. Day, month and year are
+ * spinbuttons (type digits, or arrow keys to step), labelled by the Field's
+ * label; the calendar button opens a keyboard-navigable grid. Past days are
+ * off. `id` lands on the picker's hidden input, so the label and the error
+ * summary find it (focusField moves on to the first spinbutton).
+ * Styled like inputSx; the calendar popover uses the dark theme's paper.
+ */
+function StartDatePicker({ id, value, disabled, onChange, onBlur, 'aria-invalid': invalid, 'aria-describedby': describedBy }: ControlProps & { value: string; disabled: boolean; onChange: (v: string) => void; onBlur: () => void }) {
+  const parsed = isIsoDay(value) ? dayjs(value) : null;
+  return (
+    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="en-gb">
+      <DatePicker
+        value={parsed}
+        disablePast
+        disabled={disabled}
+        format="DD/MM/YYYY"
+        onChange={(d: Dayjs | null) => onChange(!d ? '' : d.isValid() ? d.format('YYYY-MM-DD') : 'invalid')}
+        slotProps={{
+          textField: {
+            id,
+            fullWidth: true,
+            required: true,
+            error: invalid,
+            onBlur,
+            slotProps: { input: { 'aria-labelledby': `${id}-label`, 'aria-describedby': describedBy, 'aria-required': true } as never },
+            sx: {
+              '& .MuiPickersInputBase-root': { minHeight: 44, bgcolor: color.paper, borderRadius: `${radius.sm}px`, font: 'inherit', fontSize: '0.9375rem', lineHeight: 1.4, color: color.ink, pl: 1.5, pr: 0.5 },
+              '& .MuiPickersSectionList-root': { py: 1.25 },
+              '& fieldset': { borderColor: color.fieldRule, borderRadius: `${radius.sm}px`, transition: 'border-color 150ms, box-shadow 150ms', ...noMotion },
+              '@media (hover: hover)': { '& .MuiPickersInputBase-root:hover:not(.Mui-disabled):not(.Mui-focused) fieldset': { borderColor: color.muted } },
+              '& .MuiPickersInputBase-root.Mui-focused fieldset': { borderColor: color.accent, borderWidth: '1px', boxShadow: `0 0 0 1px ${color.accent}` },
+              '& .MuiPickersInputBase-root.Mui-error fieldset': { borderColor: color.ban },
+              '& .MuiPickersInputBase-root.Mui-error.Mui-focused fieldset': { boxShadow: `0 0 0 1px ${color.ban}` },
+              '& .Mui-disabled': { opacity: 0.6 },
+              '& .MuiIconButton-root': { color: color.ink2, '&:focus-visible': { outline: `2px solid ${color.focus}`, outlineOffset: 1 } },
+            },
+          },
+          openPickerButton: { 'aria-label': 'Choose the start date from a calendar' },
+          desktopPaper: { sx: { bgcolor: color.paper2, backgroundImage: 'none', border: `1px solid ${color.rule}`, borderRadius: `${radius.md}px` } },
+          mobilePaper: { sx: { bgcolor: color.paper2, backgroundImage: 'none', borderRadius: `${radius.md}px` } },
+          layout: {
+            sx: {
+              color: color.ink,
+              '& .MuiPickerDay-root': { color: color.ink, fontSize: '0.875rem' },
+              '& .MuiPickerDay-root.Mui-disabled:not(.Mui-selected)': { color: color.muted },
+              '& .MuiPickerDay-root.Mui-selected': { bgcolor: color.accent, color: color.accentInk, fontWeight: 600 },
+              '& .MuiPickerDay-today:not(.Mui-selected)': { borderColor: color.ink2 },
+              '& .MuiDayCalendar-weekDayLabel': { color: color.ink2 },
+              '& .MuiPickersCalendarHeader-label': { fontWeight: 600 },
+              '& .MuiYearCalendar-button.Mui-selected, & .MuiYearCalendar-selected, & .MuiMonthCalendar-button.Mui-selected, & .MuiMonthCalendar-selected': { bgcolor: color.accent, color: color.accentInk },
+              '& .Mui-focusVisible, & :focus-visible': { outline: `2px solid ${color.focus}`, outlineOffset: 1 },
+            },
+          },
+        }}
+      />
+    </LocalizationProvider>
+  );
+}
+
 const srOnly = { position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' } as const;
 
 function FieldError({ id, children }: { id: string; children?: string }) {
@@ -211,7 +280,7 @@ function Field({ id, label, hint, error, children }: { id: string; label: string
   const describedBy = [error ? `${id}-error` : '', hint ? `${id}-hint` : ''].filter(Boolean).join(' ') || undefined;
   return (
     <Box sx={{ minWidth: 0 }}>
-      <Box component="label" htmlFor={id} sx={labelSx}>
+      <Box component="label" id={`${id}-label`} htmlFor={id} sx={labelSx}>
         {label}
       </Box>
       {children({ id, 'aria-invalid': Boolean(error), 'aria-describedby': describedBy })}
@@ -384,7 +453,7 @@ function PromoCode({ adapter, disabled, id }: { adapter: CheckoutAdapter; disabl
   };
   return (
     <Box>
-      <Box component="label" htmlFor={id} sx={labelSx}>
+      <Box component="label" id={`${id}-label`} htmlFor={id} sx={labelSx}>
         Promo code
       </Box>
       <Box sx={{ display: 'flex', gap: 1 }}>
@@ -514,7 +583,7 @@ const fieldNames: Record<FieldKey, string> = {
   vatId: 'VAT ID',
   business: 'Business purchase',
   eventName: 'Event or client',
-  eventDates: 'Event date(s)',
+  eventDates: 'License start date',
   country: 'Country',
   line1: 'Street address',
   postal_code: 'Postal code',
@@ -527,13 +596,16 @@ export function CheckoutForm({
   order,
   adapter,
   onPaying,
+  country = null,
 }: {
   order: CheckoutFormOrder;
   adapter: CheckoutAdapter;
   onPaying?: (paying: boolean) => void;
+  /** The buyer's country from CF-IPCountry, or null: then the browser's language region, else none. */
+  country?: string | null;
 }) {
   const { summary } = adapter;
-  const [values, setValues] = useState<Values>(empty);
+  const [values, setValues] = useState<Values>(() => ({ ...empty, country: initialCountry(country, typeof navigator === 'undefined' ? [] : navigator.languages?.length ? navigator.languages : [navigator.language]) }));
   const [errors, setErrors] = useState<Errors>({});
   const [showSummary, setShowSummary] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -565,7 +637,9 @@ export function CheckoutForm({
   });
 
   const focusField = (key: FieldKey) => {
-    const el = document.getElementById(fid(key));
+    let el = document.getElementById(fid(key));
+    // The date picker's id is on a hidden input; focus its first spinbutton.
+    if (el?.getAttribute('aria-hidden') === 'true') el = el.parentElement?.querySelector<HTMLElement>('[role="spinbutton"]') ?? el;
     el?.focus();
     el?.scrollIntoView?.({ block: 'center' });
   };
@@ -591,7 +665,7 @@ export function CheckoutForm({
       email: emailFixed ? (summary.email as string) : values.email.trim(),
       company: values.company,
       eventName: values.eventName,
-      eventDates: values.eventDates,
+      eventDates: eventDatesValue(order.period, values.eventDates),
       vatId: values.vatId,
       business: true,
       terms: true,
@@ -707,9 +781,22 @@ export function CheckoutForm({
           >
             {(p) => <Box component="input" autoComplete="off" maxLength={detailLimits.eventName.max} placeholder="Northside LAN 2026, northsidelan.no" {...p} {...text('eventName')} sx={inputSx} />}
           </Field>
-          <Field id={fid('eventDates')} label="Event date(s)" hint="Yearly or founding supporter: the start date." error={errors.eventDates}>
-            {(p) => <Box component="input" autoComplete="off" maxLength={detailLimits.eventDates.max} placeholder="3–5 Oct 2026" {...p} {...text('eventDates')} sx={inputSx} />}
+          <Field id={fid('eventDates')} label="From when should the license be valid?" error={errors.eventDates}>
+            {(p) => (
+              <StartDatePicker
+                {...p}
+                value={values.eventDates}
+                disabled={processing}
+                onChange={set('eventDates')}
+                onBlur={blur('eventDates')}
+              />
+            )}
           </Field>
+          {isIsoDay(values.eventDates) && (
+            <Box data-testid="checkout-validity" aria-live="polite" sx={{ color: color.ink2, fontSize: '0.9375rem', mt: -1 }}>
+              {checkoutValidityText(order.period, values.eventDates)}
+            </Box>
+          )}
         </Section>
 
         <Section title="Billing address">
@@ -722,6 +809,9 @@ export function CheckoutForm({
                 {...text('country')}
                 sx={{ ...inputSx, appearance: 'none', cursor: 'pointer', backgroundImage: 'linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%)', backgroundPosition: 'calc(100% - 18px) 50%, calc(100% - 13px) 50%', backgroundSize: '5px 5px', backgroundRepeat: 'no-repeat', pr: 5 }}
               >
+                <option value="" disabled>
+                  Choose your country
+                </option>
                 {countries.map((c) => (
                   <option key={c.code} value={c.code}>
                     {c.name}
