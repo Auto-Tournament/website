@@ -277,7 +277,12 @@ export function CheckoutDialog({
           sx: {
             width: phone ? '100%' : 'min(100% - 48px, 1000px)',
             maxWidth: 'none',
+            // Explicit flex column and a max height that matches the height:
+            // MUI's own calc(100% - 64px) cap otherwise wins over ours.
+            display: 'flex',
+            flexDirection: 'column',
             height: phone ? '100%' : 'min(100% - 48px, 860px)',
+            maxHeight: phone ? '100%' : 'calc(100% - 48px)',
             m: phone ? 0 : 3,
             bgcolor: color.paper2,
             color: color.ink,
@@ -349,7 +354,7 @@ export function CheckoutDialog({
         </IconButton>
       </Box>
 
-      <Box sx={{ flex: '1 1 auto', overflowY: 'auto', overscrollBehavior: 'contain', display: 'flex', flexDirection: 'column' }}>
+      <Box data-testid="checkout-body" sx={{ flex: '1 1 0%', minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', display: 'flex', flexDirection: 'column' }}>
         {view.phase === 'loading' && (
           <Box sx={{ display: 'grid', gap: 3, alignContent: 'start', px: { xs: 2, sm: 3 }, py: { xs: 4, sm: 6 } }}>
             <Status spinner>Opening secure checkout…</Status>

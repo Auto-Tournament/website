@@ -46,6 +46,11 @@ export type CheckoutSummary = {
   subtotal: number;
   discount: number;
   total: number;
+  /** Stripe's formatted total ("€0.00"); shown so confirm() accepts the page. Empty in old mocks. */
+  totalAmount: string;
+  /** Stripe's formatted price and discount, shown next to the total so all three read alike. */
+  subtotalAmount: string;
+  discountAmount: string;
   /** Nothing to pay after discounts: no Payment Element, confirm without a payment method. */
   free: boolean;
   /** The promotion code applied, if any. */
@@ -454,7 +459,7 @@ function OrderSummary({ order, summary }: { order: CheckoutFormOrder; summary: C
           {open ? 'Hide order summary' : 'Show order summary'}
         </Box>
         <Box component="span" sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-          {money(summary.total)}
+          {summary.totalAmount || money(summary.total)}
         </Box>
         <CaretDown size={16} aria-hidden style={{ transform: open ? 'rotate(180deg)' : 'none' }} />
       </Box>
@@ -475,10 +480,10 @@ function OrderSummary({ order, summary }: { order: CheckoutFormOrder; summary: C
           </Box>
         </Box>
         <Box sx={{ height: '1px', bgcolor: color.rule }} />
-        <Row label="Price" value={money(summary.subtotal)} testId="checkout-subtotal" />
-        {summary.discount > 0 && <Row label={summary.promotionCode ? `Promo ${summary.promotionCode}` : 'Discount'} value={`−${money(summary.discount)}`} testId="checkout-discount" />}
+        <Row label="Price" value={summary.subtotalAmount || money(summary.subtotal)} testId="checkout-subtotal" />
+        {summary.discount > 0 && <Row label={summary.promotionCode ? `Promo ${summary.promotionCode}` : 'Discount'} value={`−${summary.discountAmount || money(summary.discount)}`} testId="checkout-discount" />}
         <Box sx={{ height: '1px', bgcolor: color.rule }} />
-        <Row strong label={total} value={money(summary.total)} testId="checkout-total" />
+        <Row strong label={total} value={summary.totalAmount || money(summary.total)} testId="checkout-total" />
         <Box sx={{ color: color.muted, fontSize: '0.8125rem', lineHeight: 1.45 }}>No VAT is added: the seller is not VAT-registered. The invoice comes by email.</Box>
       </Box>
     </Box>
@@ -568,7 +573,8 @@ export function CheckoutForm({
     setShowSummary(false);
     setProcessing(true);
     onPaying?.(true);
-    const r = await adapter.pay({
+    const r = await adapter
+      .pay({
       email: emailFixed ? (summary.email as string) : values.email.trim(),
       company: values.company,
       eventName: values.eventName,
@@ -577,7 +583,11 @@ export function CheckoutForm({
       business: true,
       terms: true,
       address: { country: values.country, line1: values.line1.trim(), line2: values.line2.trim(), postal_code: values.postal_code.trim(), city: values.city.trim() },
-    });
+      })
+      .catch((err: unknown): PayResult => {
+        console.error('[checkout] pay failed', err instanceof Error ? err.name : 'unknown error');
+        return { ok: false, error: 'Something went wrong. Nothing was charged. Try again or contact us.' };
+      });
     if (r.ok) return; // Stripe.js is on its way to the thanks page; keep the button busy.
     setProcessing(false);
     onPaying?.(false);
@@ -592,7 +602,7 @@ export function CheckoutForm({
   // (the session completes with payment_status no_payment_required), so no
   // Payment Element and no "Pay €0". Confirm runs the same steps without one.
   const { free } = summary;
-  const payLabel = free ? 'Get my license' : `Pay ${formatMoney(summary.total, summary.currency)}`;
+  const payLabel = free ? 'Get my license' : `Pay ${summary.totalAmount || formatMoney(summary.total, summary.currency)}`;
 
   return (
     <Box

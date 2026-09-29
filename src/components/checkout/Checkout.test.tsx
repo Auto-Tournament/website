@@ -125,8 +125,8 @@ describe('CheckoutProvider with a publishable key (Embedded Checkout)', () => {
     expect(providerOptions).toHaveBeenCalledWith(expect.objectContaining({ clientSecret: 'cs_test_1_secret_x', elementsOptions: expect.objectContaining({ appearance: expect.objectContaining({ theme: 'night' }) }) }));
     expect(screen.getByTestId('payment-element')).toBeTruthy();
     expect(screen.getByTestId('checkout-order').textContent).toContain('Up to 20 servers');
-    expect(screen.getByTestId('checkout-total').textContent).toBe('€499');
-    expect(screen.getByTestId('checkout-pay').textContent).toBe('Pay €499');
+    expect(screen.getByTestId('checkout-total').textContent).toBe('€499.00');
+    expect(screen.getByTestId('checkout-pay').textContent).toBe('Pay €499.00');
     expect(fetchMock).toHaveBeenCalledWith('/api/checkout', expect.objectContaining({ method: 'POST', body: JSON.stringify(order.payload) }));
     expect(outcome).toEqual({ kind: 'opened' });
 
@@ -281,7 +281,7 @@ describe('custom checkout form', () => {
     fireEvent.click(screen.getByTestId('checkout-pay'));
     expect((await screen.findByTestId('checkout-form-error')).textContent).toContain('Your card was declined.');
     expect(actions.updateTaxIdInfo).not.toHaveBeenCalled();
-    expect(screen.getByTestId('checkout-pay').textContent).toBe('Pay €499');
+    expect(screen.getByTestId('checkout-pay').textContent).toBe('Pay €499.00');
   });
 
   it('puts a rejected VAT ID under the VAT field and does not confirm', async () => {
@@ -328,6 +328,74 @@ describe('custom checkout form', () => {
     expect(actions.confirm.mock.calls[0][0]).not.toHaveProperty('paymentMethod');
   });
 
+  // A free session the way Stripe.js behaves: confirm() throws unless the page
+  // read total.total.amount, and on success it leaves for the session's return_url.
+  function freeSession(confirm: (args: unknown) => Promise<Result>) {
+    const discounted: SummarySession = {
+      ...session,
+      total: totals(49900, 49900),
+      discountAmounts: [{ ...amt(49900), displayName: '100% off', promotionCode: 'FREE100', recurring: null, percentOff: 100 }],
+    };
+    let amountRead = false;
+    const total = { ...discounted.total.total };
+    Object.defineProperty(total, 'amount', { enumerable: true, get: () => ((amountRead = true), '€0.00') });
+    const withGetter = { ...discounted, total: { ...discounted.total, total } };
+    actions.confirm.mockImplementationOnce(async (args: unknown) => {
+      if (!amountRead) throw new Error('IntegrationError: total.total.amount was not displayed');
+      return confirm(args);
+    });
+    checkoutState = { type: 'success', checkout: { ...withGetter, ...actions } };
+  }
+
+  it('at 0: confirm resolves and Stripe.js leaves for the return_url; the button stays busy', async () => {
+    freeSession(async () => {
+      window.location.assign('/thanks?session_id=cs_test_1abcdefghijk');
+      return ok;
+    });
+    await openForm();
+    expect(screen.getByTestId('checkout-total').textContent).toContain('€0.00');
+    fillValid();
+    fireEvent.click(screen.getByTestId('checkout-pay'));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('/thanks?session_id=cs_test_1abcdefghijk'));
+    expect(screen.queryByTestId('checkout-form-error')).toBeNull();
+    expect(screen.getByTestId('checkout-pay').textContent).toContain('Processing');
+  });
+
+  it('at 0: a confirm that never settles shows an error after 20 s, never an endless spinner', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    freeSession(() => new Promise<Result>(() => {}));
+    await openForm();
+    fillValid();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      fireEvent.click(screen.getByTestId('checkout-pay'));
+      await waitFor(() => expect(actions.confirm).toHaveBeenCalled());
+      expect(screen.getByTestId('checkout-pay').textContent).toContain('Processing');
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(20_000);
+      });
+      expect((await screen.findByTestId('checkout-form-error')).textContent).toContain('Something went wrong. Nothing was charged. Try again or contact us.');
+      expect(screen.getByTestId('checkout-pay').textContent).toBe('Get my license');
+      expect(log).toHaveBeenCalledWith('[checkout] pay step failed', { step: 'confirm', error: 'StepTimeout' });
+    } finally {
+      vi.useRealTimers();
+      log.mockRestore();
+    }
+  });
+
+  it('a step that throws shows an error instead of spinning', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    actions.runServerUpdate.mockImplementationOnce(async () => {
+      throw new Error('boom');
+    });
+    await openForm();
+    fillValid();
+    fireEvent.click(screen.getByTestId('checkout-pay'));
+    expect((await screen.findByTestId('checkout-form-error')).textContent).toContain('Nothing was charged');
+    expect(actions.confirm).not.toHaveBeenCalled();
+    log.mockRestore();
+  });
+
   it('checks a field when the buyer leaves it, not before', async () => {
     await openForm();
     const email = screen.getByLabelText('Email');
@@ -343,7 +411,7 @@ describe('custom checkout form', () => {
     await openForm();
     expect(screen.getByTestId('payment-element')).toBeTruthy();
     expect(screen.queryByTestId('checkout-free')).toBeNull();
-    expect(screen.getByTestId('checkout-pay').textContent).toBe('Pay €499');
+    expect(screen.getByTestId('checkout-pay').textContent).toBe('Pay €499.00');
   });
 
   it('applies a promo code through Stripe and shows an error when it is refused', async () => {

@@ -63,6 +63,12 @@ export function summaryOf(session: SummarySession): CheckoutSummary {
     subtotal: minor(session.total.subtotal),
     discount: minor(session.total.discount),
     total: free ? 0 : minor(session.total.total),
+    // Stripe's own formatted total. confirm() throws unless the page reads and
+    // shows total.total.amount (or minorUnitsAmount + currency + divisor), so
+    // the Total row and the Pay button show this string.
+    totalAmount: String(session.total.total.amount ?? ''),
+    subtotalAmount: String(session.total.subtotal.amount ?? ''),
+    discountAmount: String(session.total.discount.amount ?? ''),
     free,
     promotionCode: discount?.promotionCode ?? null,
     email: session.email,
@@ -71,40 +77,104 @@ export function summaryOf(session: SummarySession): CheckoutSummary {
 
 const genericPayError = "The payment didn't go through. Check the details and try again, or use another card.";
 
-/** Runs the pay steps against the session's actions. Exported for tests. */
-export async function payWith(checkout: Pick<Checkout, 'updateTaxIdInfo' | 'runServerUpdate' | 'confirm' | 'id' | 'email'>, input: PayInput, fetcher: typeof fetch = fetch): Promise<PayResult> {
-  const taxId = stripeTaxId(input.address.country, input.vatId);
-  if (taxId) {
-    const r = await checkout.updateTaxIdInfo({ businessName: input.company, taxId });
-    if (r.type === 'error') return { ok: false, field: 'vatId', error: r.error.code === 'invalidTaxId' ? 'Stripe says this VAT ID is not valid for the chosen country.' : r.error.message };
+/** Shown when a step throws or hangs: never an endless spinner. */
+export const stuckPayError = 'Something went wrong. Nothing was charged. Try again or contact us.';
+
+/** How long one pay step may take before the form gives up and says so. */
+export const payStepTimeoutMs = 20_000;
+
+class StepTimeout extends Error {
+  constructor(step: string) {
+    super(`${step} timed out`);
+    this.name = 'StepTimeout';
   }
+}
 
-  let saved: Awaited<ReturnType<typeof saveCheckoutDetails>> = { ok: false, error: "Couldn't save your details. Try again." };
-  const update = await checkout.runServerUpdate(async () => {
-    saved = await saveCheckoutDetails(
-      {
-        sessionId: checkout.id,
-        company: input.company,
-        eventName: input.eventName,
-        eventDates: input.eventDates,
-        vatId: input.vatId,
-        business: input.business,
-        terms: input.terms,
-      },
-      fetcher,
+function withTimeout<T>(step: string, p: Promise<T>, ms: number | null): Promise<T> {
+  if (ms === null) return p;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const t = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new StepTimeout(step)), ms);
+  });
+  return Promise.race([p, t]).finally(() => clearTimeout(timer));
+}
+
+/** Logs a failed step without personal data: the step, the error's name and Stripe's code. */
+function logStep(step: string, err: unknown) {
+  const e = err as { name?: unknown; code?: unknown } | null;
+  console.error('[checkout] pay step failed', {
+    step,
+    error: typeof e?.name === 'string' ? e.name : 'unknown',
+    ...(typeof e?.code === 'string' ? { code: e.code } : {}),
+  });
+}
+
+type PayCheckout = Pick<Checkout, 'updateTaxIdInfo' | 'runServerUpdate' | 'confirm' | 'id' | 'email'>;
+
+/**
+ * Runs the pay steps against the session's actions. Exported for tests.
+ *
+ * Every step is bounded by `timeoutMs` and any throw becomes a visible error.
+ * A paid confirm is not bounded: 3-D Secure can keep the buyer in Stripe's
+ * challenge longer than that; a free confirm has nothing for the buyer to do.
+ */
+export async function payWith(
+  checkout: PayCheckout,
+  input: PayInput,
+  fetcher: typeof fetch = fetch,
+  { free = false, timeoutMs = payStepTimeoutMs }: { free?: boolean; timeoutMs?: number } = {},
+): Promise<PayResult> {
+  let step = 'updateTaxIdInfo';
+  try {
+    const taxId = stripeTaxId(input.address.country, input.vatId);
+    if (taxId) {
+      const r = await withTimeout(step, checkout.updateTaxIdInfo({ businessName: input.company, taxId }), timeoutMs);
+      if (r.type === 'error') return { ok: false, field: 'vatId', error: r.error.code === 'invalidTaxId' ? 'Stripe says this VAT ID is not valid for the chosen country.' : r.error.message };
+    }
+
+    step = 'runServerUpdate';
+    let saved: Awaited<ReturnType<typeof saveCheckoutDetails>> = { ok: false, error: "Couldn't save your details. Try again." };
+    const update = await withTimeout(
+      step,
+      checkout.runServerUpdate(async () => {
+        saved = await saveCheckoutDetails(
+          {
+            sessionId: checkout.id,
+            company: input.company,
+            eventName: input.eventName,
+            eventDates: input.eventDates,
+            vatId: input.vatId,
+            business: input.business,
+            terms: input.terms,
+          },
+          fetcher,
+        );
+        if (!saved.ok) throw new Error('details not saved');
+      }),
+      timeoutMs,
     );
-    if (!saved.ok) throw new Error('details not saved');
-  });
-  if (!saved.ok) return { ok: false, error: saved.error, ...(saved.field && saved.field !== 'sessionId' ? { field: saved.field } : {}) };
-  if (update.type === 'error') return { ok: false, error: update.error.message || "Couldn't save your details. Try again." };
+    if (!saved.ok) return { ok: false, error: saved.error, ...(saved.field && saved.field !== 'sessionId' ? { field: saved.field } : {}) };
+    if (update.type === 'error') return { ok: false, error: update.error.message || "Couldn't save your details. Try again." };
 
-  const { line1, line2, postal_code, city, country } = input.address;
-  const result = await checkout.confirm({
-    ...(checkout.email ? {} : { email: input.email }),
-    billingAddress: { name: input.company.trim(), address: { country, line1, line2: line2 || null, postal_code: postal_code || null, city } },
-  });
-  if (result.type === 'error') return { ok: false, error: result.error.message || genericPayError };
-  return { ok: true };
+    step = 'confirm';
+    const { line1, line2, postal_code, city, country } = input.address;
+    const result = await withTimeout(
+      step,
+      checkout.confirm({
+        ...(checkout.email ? {} : { email: input.email }),
+        billingAddress: { name: input.company.trim(), address: { country, line1, line2: line2 || null, postal_code: postal_code || null, city } },
+      }),
+      free ? timeoutMs : null,
+    );
+    if (result.type === 'error') {
+      logStep(step, result.error);
+      return { ok: false, error: result.error.message || genericPayError };
+    }
+    return { ok: true };
+  } catch (err) {
+    logStep(step, err);
+    return { ok: false, error: stuckPayError };
+  }
 }
 
 function Form({ order, onPaying, onInitFailed }: { order: CheckoutFormOrder; onPaying: (p: boolean) => void; onInitFailed: () => void }) {
@@ -130,7 +200,7 @@ function Form({ order, onPaying, onInitFailed }: { order: CheckoutFormOrder; onP
       removePromotionCode: async () => {
         await checkout.removePromotionCode();
       },
-      pay: (input) => payWith(checkout, input),
+      pay: (input) => payWith(checkout, input, fetch, { free: isFreeOrder(checkout) }),
       payment: <PaymentElement options={{ layout: { type: 'tabs' }, fields: { billingDetails: { address: 'never', email: 'never', name: 'auto' } } }} />,
     };
   }, [checkout]);
