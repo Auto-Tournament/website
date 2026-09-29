@@ -249,10 +249,10 @@ describe('checkoutFormParams', () => {
     ]);
   });
 
-  it('requires the event dates and the event or client name', () => {
+  it('requires the event dates; the event or client name is optional', () => {
     const byKey = Object.fromEntries(params.custom_fields.map((f) => [f.key, f]));
     expect(byKey.eventdates?.optional).toBe(false);
-    expect(byKey.eventname?.optional).toBe(false);
+    expect(byKey.eventname?.optional).toBe(true);
     expect(byKey.eventname?.label.custom).toMatch(/client/);
   });
 
@@ -338,6 +338,10 @@ describe('validateCheckoutDetails (our custom form)', () => {
     expect(validateCheckoutDetails({ ...good, vatId: '' })).toMatchObject({ ok: true, value: { vatId: '' } });
   });
 
+  it('accepts an empty event/client name: it is optional, named only on request', () => {
+    expect(validateCheckoutDetails({ ...good, eventName: '' })).toMatchObject({ ok: true, value: { eventName: '' } });
+  });
+
   it('names the field that is wrong', () => {
     const field = (over: Record<string, unknown>) => {
       const r = validateCheckoutDetails({ ...good, ...over });
@@ -347,7 +351,7 @@ describe('validateCheckoutDetails (our custom form)', () => {
     expect(field({ buyerName: 'x'.repeat(101) })).toBe('buyerName');
     expect(field({ company: ' ' })).toBe('company');
     expect(field({ company: 'x'.repeat(121) })).toBe('company');
-    expect(field({ eventName: '' })).toBe('eventName');
+    expect(field({ eventName: 'x'.repeat(201) })).toBe('eventName');
     expect(field({ eventDates: 'no' })).toBe('eventDates');
     expect(field({ vatId: 'NO<script>' })).toBe('vatId');
     expect(field({ business: false })).toBe('business');
@@ -389,6 +393,10 @@ describe('checkoutDetailsMetadata', () => {
       terms_accepted_at: '2026-09-29T12:00:00.000Z',
     });
     expect(checkoutDetailsMetadata({ ...details, vatId: '' }, at)).not.toHaveProperty('vat_id');
+  });
+
+  it('omits eventname when the event/client name is empty: it is optional, named only on request', () => {
+    expect(checkoutDetailsMetadata({ ...details, eventName: '' }, at)).not.toHaveProperty('eventname');
   });
 
   it('never writes the keys set at session creation (pack, period, max_servers, founder…)', () => {

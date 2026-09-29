@@ -582,7 +582,7 @@ const fieldNames: Record<FieldKey, string> = {
   company: 'Company or organization',
   vatId: 'VAT ID',
   business: 'Business purchase',
-  eventName: 'Event or client',
+  eventName: 'What will you use it for?',
   eventDates: 'License start date',
   country: 'Country',
   line1: 'Street address',
@@ -775,11 +775,11 @@ export function CheckoutForm({
         <Section title="Event">
           <Field
             id={fid('eventName')}
-            label="Event, or the client you run it for"
-            hint="Private: only we see this. It's not on the license key, the invoice or the public license check."
+            label="What will you use it for? (optional)"
+            hint="Private: only we see it. You never have to name your customers."
             error={errors.eventName}
           >
-            {(p) => <Box component="input" autoComplete="off" maxLength={detailLimits.eventName.max} placeholder="Northside LAN 2026, northsidelan.no" {...p} {...text('eventName')} sx={inputSx} />}
+            {(p) => <Box component="input" autoComplete="off" maxLength={detailLimits.eventName.max} placeholder="Northside LAN 2026" {...p} {...text('eventName')} sx={inputSx} />}
           </Field>
           <Field id={fid('eventDates')} label="From when should the license be valid?" error={errors.eventDates}>
             {(p) => (

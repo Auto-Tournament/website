@@ -245,7 +245,7 @@ function fillValid({ vat = '' }: { vat?: string } = {}) {
   type('Email', 'buyer@example.com');
   type('Company or organization', 'Example LAN AS');
   type('VAT ID (optional)', vat);
-  type('Event, or the client you run it for', 'Example LAN, examplelan.no');
+  type('What will you use it for? (optional)', 'Example LAN, examplelan.no');
   setStart('03/10/2030');
   fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'NO' } });
   type('Street address', 'Storgata 1');
@@ -260,7 +260,7 @@ describe('custom checkout form', () => {
     await openForm();
     fireEvent.click(screen.getByTestId('checkout-pay'));
     const errorSummary = await screen.findByTestId('checkout-error-summary');
-    expect(errorSummary.textContent).toContain('10 fields need attention');
+    expect(errorSummary.textContent).toContain('9 fields need attention');
     await waitFor(() => expect(document.activeElement).toBe(errorSummary));
     // Each entry links to its field and moves focus there.
     const link = screen.getByRole('link', { name: /^Company or organization:/ });
@@ -268,7 +268,7 @@ describe('custom checkout form', () => {
     expect(document.activeElement).toBe(screen.getByLabelText('Company or organization'));
     expect(screen.getByTestId('checkout-pay').hasAttribute('disabled')).toBe(false);
     const form = screen.getByTestId('checkout-form').textContent ?? '';
-    for (const msg of ['Enter your name', 'Enter the email address', 'Enter the company', 'Enter the event or client name', 'Choose the date the license starts', 'Enter the street address', 'Enter the postal code', 'Enter the city', 'Confirm that you are buying for a business', 'Accept the terms']) {
+    for (const msg of ['Enter your name', 'Enter the email address', 'Enter the company', 'Choose the date the license starts', 'Enter the street address', 'Enter the postal code', 'Enter the city', 'Confirm that you are buying for a business', 'Accept the terms']) {
       expect(form).toContain(msg);
     }
     expect(screen.getByLabelText('Company or organization').getAttribute('aria-invalid')).toBe('true');

@@ -95,7 +95,7 @@ export default async function Terms() {
       <H2 id="period">5. Period</H2>
       <ul>
         <li>
-          <strong>One event:</strong> the event named in your order, on the dates given there, up to 5 days in a row.
+          <strong>One event:</strong> one event of up to 5 days in a row, starting on the date given in your order.
         </li>
         <li>
           <strong>Yearly:</strong> 12 months from the start date in the license key, for any number of events (section 7), with all updates
@@ -131,10 +131,10 @@ export default async function Terms() {
 
       <H2 id="who">7. Who may use the license</H2>
       <p>
-        The license covers the named licensee and its contractors, for the named event. Yearly and founding supporter packs cover the licensee&apos;s own events
+        The license covers the named licensee and its contractors, for one event. Yearly and founding supporter packs cover the licensee&apos;s own events
         and events the licensee operates for clients (for example a LAN that hires you to run its servers). The server limit applies at any one time, and we
-        may ask which events you ran. With an event pack, a contractor who uses the software for someone else&apos;s event needs its own license, or the
-        organizer needs one that names that event.
+        may ask which events you ran if we have a reason to check. With an event pack, a contractor who uses the software for someone else&apos;s event needs
+        its own license, or the organizer needs a license that covers it.
       </p>
       <p>You can&apos;t transfer, resell or sublicense the license.</p>
 
@@ -177,8 +177,9 @@ export default async function Terms() {
         confirmation; it is optional.
       </p>
       <p>
-        Paid operators must name the event or client they work for when buying. We may contact organizers of larger events (for example 20+ servers, ticket
-        sales or sponsors) to ask whether the use is commercial.
+        A commercial license is for the buyer&apos;s own business; a paid operator may use it for events they run for clients, without having to name them at
+        checkout. We may ask which events it was used for if we have a reason to check &mdash; for example more servers than the pack allows, or hosting for
+        many clients at once, which needs a quote (section 4).
       </p>
       <p>
         Charities, schools and universities, public research, public safety or health and environmental protection organizations, and government bodies need no

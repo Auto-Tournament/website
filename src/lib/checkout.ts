@@ -213,11 +213,12 @@ export function checkoutFormParams(base: string) {
         optional: false,
       },
       {
-        // Paid operators must name the event or client they work for.
+        // Optional: the license is for the buyer's own business. We may ask
+        // which events it was used for if we have a reason to check.
         key: 'eventname',
-        label: { type: 'custom' as const, custom: 'Event or client name, and website' },
+        label: { type: 'custom' as const, custom: 'Event or client name, and website (optional)' },
         type: 'text' as const,
-        optional: false,
+        optional: true,
       },
     ],
   };
@@ -364,8 +365,10 @@ export function validateCheckoutDetails(body: unknown): DetailsValidation {
   if (typeof buyerName !== 'string') return buyerName;
   const company = text('company', 'the company or organization name');
   if (typeof company !== 'string') return company;
-  const eventName = text('eventName', 'the event or client name');
-  if (typeof eventName !== 'string') return eventName;
+  // Optional: private, and only asked for on request, so empty is fine.
+  if (typeof obj.eventName !== 'string' || controlChars.test(obj.eventName)) return fail('Enter the event or client name.', 'eventName');
+  const eventName = obj.eventName.trim().replace(/\s+/g, ' ');
+  if (eventName.length > detailLimits.eventName.max) return fail(`Keep the event or client name under ${detailLimits.eventName.max} characters.`, 'eventName');
   const eventDates = text('eventDates', 'the event date(s), or the start date');
   if (typeof eventDates !== 'string') return eventDates;
 
@@ -394,7 +397,7 @@ export function checkoutDetailsMetadata(details: CheckoutDetails, accepted: Date
   return {
     buyer_name: details.buyerName,
     company: details.company,
-    eventname: details.eventName,
+    ...(details.eventName ? { eventname: details.eventName } : {}),
     eventdates: details.eventDates,
     buyertype: businessBuyerField.optionValue,
     ...(details.vatId ? { vat_id: details.vatId } : {}),
