@@ -51,7 +51,7 @@ export type CheckoutSummary = {
   /** Stripe's formatted price and discount, shown next to the total so all three read alike. */
   subtotalAmount: string;
   discountAmount: string;
-  /** Nothing to pay after discounts: no Payment Element, confirm without a payment method. */
+  /** Nothing to pay after discounts: the button and a note say so; the Payment Element stays mounted. */
   free: boolean;
   /** The promotion code applied, if any. */
   promotionCode: string | null;
@@ -598,9 +598,9 @@ export function CheckoutForm({
     }
   };
 
-  // A promo code that covers the whole price: Stripe needs no payment method
-  // (the session completes with payment_status no_payment_required), so no
-  // Payment Element and no "Pay €0". Confirm runs the same steps without one.
+  // A promo code that covers the whole price: no "Pay €0" and a note that
+  // nothing is charged. The Payment Element stays: Stripe.js confirms a
+  // payment-mode session through it even at €0 (StripeCheckoutForm.tsx).
   const { free } = summary;
   const payLabel = free ? 'Get my license' : `Pay ${summary.totalAmount || formatMoney(summary.total, summary.currency)}`;
 
@@ -728,15 +728,15 @@ export function CheckoutForm({
         <PromoCode adapter={adapter} disabled={processing} id={fid('promo')} />
 
         <Section title="Payment">
-          {free ? (
-            <Box data-testid="checkout-free" role="status" sx={{ color: color.ink2, fontSize: '0.9375rem', p: 2, border: `1px solid ${color.rule}`, borderRadius: `${radius.sm}px`, bgcolor: color.paper }}>
-              Nothing to pay: your promo code covers the full price.
-            </Box>
-          ) : (
-            <Box data-testid="checkout-payment" sx={{ minHeight: 120 }}>
-              {adapter.payment}
+          {free && (
+            <Box data-testid="checkout-free" role="status" sx={{ color: color.ink2, fontSize: '0.9375rem', p: 2, mb: 2, border: `1px solid ${color.rule}`, borderRadius: `${radius.sm}px`, bgcolor: color.paper }}>
+              Nothing to pay: your promo code covers the full price. Stripe still needs a payment method to complete the order; nothing is charged.
             </Box>
           )}
+          {/* Mounted at €0 too: Stripe.js confirms a payment-mode session through the Payment Element. */}
+          <Box data-testid="checkout-payment" sx={{ minHeight: 120 }}>
+            {adapter.payment}
+          </Box>
         </Section>
 
         <Box sx={{ display: 'grid', gap: 2 }}>

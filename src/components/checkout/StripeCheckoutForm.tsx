@@ -6,6 +6,13 @@
  * session, the Payment Element takes the card (and wallets, and 3-D Secure),
  * and this file turns the session's actions into a CheckoutAdapter.
  *
+ * The Payment Element is mounted at every total, €0 included: a payment-mode
+ * session has payment_method_collection `always` (only subscription mode can
+ * set `if_required`), so Stripe.js confirms it through the Payment Element and
+ * throws an IntegrationError ("Please ensure that the Payment Element is
+ * mounted and the ready event has been emitted before calling confirm()")
+ * when none is mounted.
+ *
  * On Pay: VAT ID → checkout.updateTaxIdInfo (with the company as the business
  * name); our other fields → /api/checkout/details through
  * checkout.runServerUpdate (session metadata); then checkout.confirm with the
@@ -99,13 +106,18 @@ function withTimeout<T>(step: string, p: Promise<T>, ms: number | null): Promise
   return Promise.race([p, t]).finally(() => clearTimeout(timer));
 }
 
-/** Logs a failed step without personal data: the step, the error's name and Stripe's code. */
+/**
+ * Logs a failed step: the step, the error's name, Stripe's code and message.
+ * Stripe's messages (IntegrationError and confirm errors) name the misuse or
+ * the decline, never the buyer's details; ours are fixed strings.
+ */
 function logStep(step: string, err: unknown) {
-  const e = err as { name?: unknown; code?: unknown } | null;
+  const e = err as { name?: unknown; code?: unknown; message?: unknown } | null;
   console.error('[checkout] pay step failed', {
     step,
     error: typeof e?.name === 'string' ? e.name : 'unknown',
     ...(typeof e?.code === 'string' ? { code: e.code } : {}),
+    ...(typeof e?.message === 'string' && e.message ? { message: e.message.slice(0, 300) } : {}),
   });
 }
 
