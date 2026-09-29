@@ -42,9 +42,13 @@ export function Reveal({ delay = 0, sx, ...props }: BoxProps & { delay?: number 
 }
 
 /** Product card surface used for every in-page UI preview. */
-export function ProductCard({ sx, ...props }: BoxProps) {
+export function ProductCard({ sx, role, ...props }: BoxProps) {
   return (
     <Box
+      // A div with aria-label needs an explicit role to be exposed correctly
+      // (WCAG 4.1.2 / axe aria-prohibited-attr); these cards are decorative
+      // illustrations labelled for screen readers, so "img" fits.
+      role={role ?? ('aria-label' in props ? 'img' : undefined)}
       sx={{
         bgcolor: color.paper2,
         border: `1px solid ${color.rule}`,

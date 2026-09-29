@@ -68,11 +68,20 @@ export const theme = createTheme({
         },
         contained: {
           '&:hover': { backgroundColor: color.accent2 },
+          '&.Mui-disabled': { backgroundColor: color.paper3, color: color.muted },
         },
         outlined: {
-          borderColor: color.rule,
+          // color.rule is a hairline divider (~1.3:1 on the page background)
+          // and isn't visible enough as an interactive boundary; fieldRule
+          // stays ≥3:1 on paper/paper2/paper3 (WCAG 1.4.11) so the button
+          // reads as clickable everywhere it's used.
+          borderColor: color.fieldRule,
           color: color.ink,
-          '&:hover': { borderColor: color.rule, backgroundColor: color.paper3 },
+          '&:hover': { borderColor: color.fieldRule, backgroundColor: color.paper3 },
+          '&.Mui-disabled': { borderColor: color.fieldRule, color: color.muted },
+        },
+        text: {
+          '&.Mui-disabled': { color: color.muted },
         },
         sizeSmall: { padding: '0.55rem 0.95rem', minHeight: 36 },
       },
