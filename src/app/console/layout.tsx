@@ -42,7 +42,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const site = siteForConsole();
   const base = consoleBase();
   const account: NavAccount | undefined = user
-    ? { signedIn: true, email: user.email, links: accountLinks({ base, isAdmin: isAdminUser(user) }), signOut: signOutAction }
+    ? { signedIn: true, email: user.email, links: accountLinks({ base, isAdmin: isAdminUser(user) }), signOut: signOutAction, home: base || '/' }
     : { signedIn: false, signIn: consoleHref('/signin') };
 
   // The organization switcher's data: only signed-in users with an organization have one.
@@ -53,7 +53,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
 
   return (
     <>
-      <ConsoleNavBar base={base} account={account} org={orgSwitch} />
+      <ConsoleNavBar base={base} account={account} org={orgSwitch} role={user ? (org?.org.role ?? null) : undefined} />
       <Container
         component="main"
         maxWidth="md"

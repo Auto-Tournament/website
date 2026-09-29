@@ -848,13 +848,16 @@ export function PackFinder({
   pricesAvailable,
   founderOpen,
   initial,
+  context = 'site',
 }: {
   packs: readonly Pack[];
   pricesAvailable: boolean;
   founderOpen: boolean;
   initial: { answers: Answers; at?: StepId };
+  /** 'console': the console's Buy page, where a signed-in organization buys, so the money question is skipped. */
+  context?: 'site' | 'console';
 }) {
-  const ctx: Context = { packs, founderOpen };
+  const ctx: Context = { packs, founderOpen, skipMoney: context === 'console' };
   const [state, setState] = useState(initial);
   const [moved, setMoved] = useState(0);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -957,7 +960,7 @@ export function PackFinder({
     <Box
       component="form"
       method="get"
-      action="/pricing#guide"
+      action={context === 'console' ? '#guide' : '/pricing#guide'}
       onSubmit={onSubmit}
       noValidate
       aria-labelledby="guide-step-title"

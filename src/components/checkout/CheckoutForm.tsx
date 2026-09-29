@@ -13,7 +13,7 @@
  * to Stripe itself: a `CheckoutAdapter` does (StripeCheckoutForm.tsx for the
  * real thing, a mock in the /dev/checkout preview).
  */
-import { useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { createContext, useContext, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import dayjs, { type Dayjs } from 'dayjs';
 import 'dayjs/locale/en-gb';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -131,6 +131,16 @@ const empty: Values = {
   postal_code: '',
   city: '',
 };
+
+/**
+ * What the form starts with when the buyer is known: the console's Buy page
+ * fills in the organization's name, VAT ID and address. Empty values are
+ * ignored; the buyer can change everything.
+ */
+export type CheckoutDefaults = Partial<Pick<Values, 'company' | 'vatId' | 'country' | 'line1' | 'line2' | 'postal_code' | 'city'>>;
+export const CheckoutDefaultsContext = createContext<CheckoutDefaults | null>(null);
+
+const filled = (d: CheckoutDefaults | null): CheckoutDefaults => Object.fromEntries(Object.entries(d ?? {}).filter(([, v]) => typeof v === 'string' && v.trim() !== ''));
 
 type Errors = Partial<Record<FieldKey, string>>;
 
@@ -605,7 +615,12 @@ export function CheckoutForm({
   country?: string | null;
 }) {
   const { summary } = adapter;
-  const [values, setValues] = useState<Values>(() => ({ ...empty, country: initialCountry(country, typeof navigator === 'undefined' ? [] : navigator.languages?.length ? navigator.languages : [navigator.language]) }));
+  const defaults = useContext(CheckoutDefaultsContext);
+  const [values, setValues] = useState<Values>(() => ({
+    ...empty,
+    country: initialCountry(country, typeof navigator === 'undefined' ? [] : navigator.languages?.length ? navigator.languages : [navigator.language]),
+    ...filled(defaults),
+  }));
   const [errors, setErrors] = useState<Errors>({});
   const [showSummary, setShowSummary] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);

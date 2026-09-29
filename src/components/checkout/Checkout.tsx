@@ -24,6 +24,7 @@
  * Stripe.js is only loaded when someone clicks Buy (the `pure` entry point
  * doesn't load it on import).
  */
+import { CheckoutDefaultsContext, type CheckoutDefaults } from './CheckoutForm';
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import Box from '@mui/material/Box';
@@ -120,7 +121,19 @@ function stripeFor(key: string): Promise<Stripe | null> {
   });
 }
 
-export function CheckoutProvider({ publishableKey, country = null, children }: { publishableKey: string | null; /** From CF-IPCountry, read by the page. */ country?: string | null; children: ReactNode }) {
+export function CheckoutProvider({
+  publishableKey,
+  country = null,
+  defaults = null,
+  children,
+}: {
+  publishableKey: string | null;
+  /** From CF-IPCountry, read by the page. */
+  country?: string | null;
+  /** The console's Buy page: the organization's details to start the form with. */
+  defaults?: CheckoutDefaults | null;
+  children: ReactNode;
+}) {
   const [view, setView] = useState<CheckoutView>({ phase: 'closed' });
   // Set when Stripe says the buyer pressed Pay, cleared when that failed: closing then asks first.
   const [paying, setPaying] = useState(false);
@@ -181,8 +194,10 @@ export function CheckoutProvider({ publishableKey, country = null, children }: {
 
   return (
     <CheckoutContext.Provider value={api}>
-      {children}
-      {publishableKey && <CheckoutDialog view={view} country={country} onClose={close} onRetry={buyEmbedded} onPaying={setPaying} onInitFailed={fallBackToHosted} />}
+      <CheckoutDefaultsContext.Provider value={defaults}>
+        {children}
+        {publishableKey && <CheckoutDialog view={view} country={country} onClose={close} onRetry={buyEmbedded} onPaying={setPaying} onInitFailed={fallBackToHosted} />}
+      </CheckoutDefaultsContext.Provider>
     </CheckoutContext.Provider>
   );
 }

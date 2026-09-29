@@ -21,7 +21,7 @@ import {
   claimLicense,
   ConsoleError,
   createInvite,
-  createOrg,
+  canManage,
   EMAIL,
   getOrg,
   isRole,
@@ -126,22 +126,6 @@ function orgFields(fd: FormData): Record<string, string> {
   return Object.fromEntries(keys.map((k) => [k, text(fd, k)]));
 }
 
-export async function createOrgAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  const w = await writer();
-  if ('error' in w) return { error: w.error };
-  const checked = validateOrgInput(orgFields(fd));
-  if (!checked.ok) return { error: 'Check the fields marked below.', fieldErrors: checked.errors };
-  let orgId: string;
-  try {
-    orgId = await createOrg(db(), w.user, checked.value);
-  } catch (err) {
-    return failed(err);
-  }
-  await setCurrentOrg(orgId);
-  refresh();
-  redirect(consoleHref('/licenses'));
-}
-
 export async function updateOrgAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const w = await writer();
   if ('error' in w) return { error: w.error };
@@ -179,11 +163,15 @@ export async function inviteAction(_prev: ActionState, fd: FormData): Promise<Ac
   const email = text(fd, 'email', 300);
   const role = text(fd, 'role', 20);
   if (!isRole(role)) return { error: 'Choose a role.' };
+  // A server provider's optional last day (YYYY-MM-DD): access ends at the end of that day, UTC.
+  const until = role === 'provider' ? text(fd, 'accessUntil', 10) : '';
+  if (until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) return { error: 'Enter the access end date as a date.' };
+  const accessUntil = until ? new Date(`${until}T23:59:59.999Z`) : null;
   const now = Date.now();
   if (!limits.inviteUser(w.user.id, now) || !limits.inviteOrg(orgId, now)) return { error: 'Too many invites. Try again later.' };
   let invite: Awaited<ReturnType<typeof createInvite>>;
   try {
-    invite = await createInvite(db(), w.user, orgId, email, role as Role);
+    invite = await createInvite(db(), w.user, orgId, email, role as Role, new Date(now), accessUntil);
   } catch (err) {
     return failed(err);
   }
@@ -284,7 +272,7 @@ export async function billingPortalAction(_prev: ActionState, fd: FormData): Pro
   const orgId = text(fd, 'orgId', 64);
   const org = await getOrg(db(), w.user.id, orgId);
   if (!org) return { error: 'No such organization.' };
-  if (org.role === 'member') return { error: 'Only owners and admins can see invoices and payment details.' };
+  if (!canManage(org.role)) return { error: 'Only owners and admins can see invoices and payment details.' };
   const result = await billingPortal(org.stripeCustomerId, consoleUrl('/billing'));
   if (!result.ok) {
     if (result.reason === 'no-customer') return { error: 'No invoices yet: this organization has no purchases with a Stripe customer.' };

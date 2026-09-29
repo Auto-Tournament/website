@@ -1,10 +1,11 @@
 'use client';
 
-/* The console's account menu on the right of the site nav: who is signed in,
- * then Console home, Admin (admins), Add an organization and Sign out.
+/* The console's account menu on the right of the console nav: who is signed
+ * in, then Admin (admins) and Sign out; the logo is the way home. The panel
+ * hangs under its own button, right edges lined up, like NavMenu's panels.
  * Signed out it is a plain "Sign in" link. Only rendered on the console. */
 
-import { useEffect, useLayoutEffect, useRef, type KeyboardEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import Box from '@mui/material/Box';
 import { CaretDown } from '@phosphor-icons/react/dist/csr/CaretDown';
 import { SignOut } from '@phosphor-icons/react/dist/csr/SignOut';
@@ -15,7 +16,7 @@ import type { ConsoleLink } from '../console/consoleNav';
 const { color, radius, ease, duration } = tokens;
 
 export type NavAccount =
-  | { signedIn: true; email: string | null; links: ConsoleLink[]; signOut: () => Promise<void> }
+  | { signedIn: true; email: string | null; links: ConsoleLink[]; signOut: () => Promise<void>; /** The console's home, for the button before the script runs. */ home: string }
   | { signedIn: false; signIn: string };
 
 const noMotion = { '@media (prefers-reduced-motion: reduce)': { transition: 'none' } } as const;
@@ -84,6 +85,24 @@ export function AccountMenu({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const focusFirst = useRef(false);
+  // How far the panel moves right (px) so it stays 16px inside the screen when the button sits far from the right edge.
+  const [nudge, setNudge] = useState(0);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const wrap = wrapRef.current;
+      const panel = panelRef.current;
+      if (!wrap || !panel) return;
+      const vw = document.documentElement.clientWidth;
+      const right = wrap.getBoundingClientRect().right;
+      const left = right - panel.offsetWidth;
+      setNudge(left < 16 ? Math.min(16 - left, Math.max(0, vw - 16 - right)) : right > vw - 16 ? vw - 16 - right : 0);
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [open]);
 
   useLayoutEffect(() => {
     if (open && focusFirst.current) {
@@ -133,7 +152,7 @@ export function AccountMenu({
   // Before the script runs the menu can't open: the button is a link to the console's home.
   if (!hydrated) {
     return (
-      <Box component="a" href={account.links[0]?.href ?? '/'} aria-label={`Account (${email})`} sx={triggerSx}>
+      <Box component="a" href={account.home} aria-label={`Account (${email})`} sx={triggerSx}>
         {label}
       </Box>
     );
@@ -177,6 +196,9 @@ export function AccountMenu({
   return (
     <Box
       ref={wrapRef}
+      data-testid="account-wrap"
+      // The panel's positioning box: it opens under this button, not at the pill's (or the screen's) edge.
+      sx={{ position: 'relative' }}
       onBlur={(e: React.FocusEvent<HTMLElement>) => {
         const to = e.relatedTarget as Node | null;
         if (open && to && !e.currentTarget.contains(to)) onOpenChange(false);
@@ -205,10 +227,11 @@ export function AccountMenu({
         inert={!open}
         onKeyDown={onPanelKeyDown}
         sx={{
-          // Under the pill's right end (the pill is the positioned box), never wider than the screen.
+          // Under the button, right edges lined up (as NavMenu's align="right"), never wider than the screen.
           position: 'absolute',
           top: 'calc(100% + 8px)',
-          right: 0,
+          right: -nudge,
+          zIndex: 5,
           boxSizing: 'border-box',
           width: 'min(18rem, calc(100vw - 32px))',
           p: 1,

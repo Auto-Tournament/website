@@ -93,7 +93,8 @@ export const organizations = pgTable('organizations', {
   createdAt: at('created_at').notNull().defaultNow(),
 });
 
-export const ROLES = ['owner', 'admin', 'member'] as const;
+/** provider: a server provider, who sees the organization's licenses and keys and nothing else. */
+export const ROLES = ['owner', 'admin', 'member', 'provider'] as const;
 export type Role = (typeof ROLES)[number];
 
 export const memberships = pgTable(
@@ -106,6 +107,8 @@ export const memberships = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     role: text('role').$type<Role>().notNull(),
+    /** When access ends (server providers invited for a while); null for no end. Checked on every read, pruned daily. */
+    expiresAt: at('expires_at'),
     createdAt: at('created_at').notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.orgId, t.userId] }), index('memberships_user_idx').on(t.userId)],
@@ -145,6 +148,8 @@ export const invites = pgTable(
     email: text('email').notNull(),
     role: text('role').$type<Role>().notNull(),
     tokenHash: text('token_hash').notNull().unique(),
+    /** For a server provider invite: when their access ends once accepted (memberships.expires_at). */
+    accessUntil: at('access_until'),
     invitedBy: text('invited_by').references(() => users.id, { onDelete: 'set null' }),
     expiresAt: at('expires_at').notNull(),
     acceptedAt: at('accepted_at'),

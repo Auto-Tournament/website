@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { roleName } from '@/lib/console/roles';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
@@ -21,7 +22,6 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
-const roleName = { owner: 'an owner', admin: 'an admin', member: 'a member' } as const;
 
 export default async function Invite({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const raw = (await searchParams).token;
@@ -63,7 +63,7 @@ export default async function Invite({ searchParams }: { searchParams: Promise<R
       {invite.status === 'pending' && user && verifiedEmail(user) === invite.email && (
         <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
           <Typography>
-            Join <strong>{invite.orgName}</strong> as {roleName[invite.role]}. Members see the organization&apos;s licenses and keys.
+            Join <strong>{invite.orgName}</strong> as {roleName[invite.role]}{invite.role === 'provider' ? '. You see its licenses and keys, nothing else.' : ". Members see the organization's licenses and keys."}
           </Typography>
           <ActionButton action={acceptInviteAction} fields={{ token }} label="Accept invite" pendingLabel="Joining…" variant="contained" size="medium" />
         </Box>

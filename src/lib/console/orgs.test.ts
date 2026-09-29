@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { testDb } from '../db/testing';
-import { auditLog, invites, organizations, users } from '../db/schema';
+import { auditLog, invites, memberships, organizations, users } from '../db/schema';
 import { emailHash, type LicensePayload } from '../license/format';
 import { createLicenseStore, type LicenseRecord } from '../license/store';
 import {
@@ -328,7 +328,98 @@ describe('retention', () => {
     await createInvite(t.db, owner, org, 'old@x.example', 'member', new Date('2026-08-01'));
     await createInvite(t.db, owner, org, 'new@x.example', 'member', new Date('2026-09-27'));
     await t.db.insert(auditLog).values({ action: 'old', at: new Date('2024-01-01') });
-    expect(await pruneExpired(t.db, now)).toEqual({ sessions: 1, signInLinks: 1, invites: 1, auditLog: 1, leads: 0, refundRequests: 0, passkeyRows: 0 });
+    expect(await pruneExpired(t.db, now)).toEqual({ sessions: 1, signInLinks: 1, invites: 1, auditLog: 1, leads: 0, refundRequests: 0, passkeyRows: 0, memberships: 0 });
     expect((await t.db.select().from(invites)).map((i) => i.email)).toEqual(['new@x.example']);
+  });
+});
+
+describe('server provider', () => {
+  async function setup(accessUntil: Date | null = null, now = new Date()) {
+    const owner = await user('owner@x.example');
+    const provider = await user('host@provider.example');
+    const org = await createOrg(t.db, owner, orgInput('Org'));
+    await t.db.update(organizations).set({ stripeCustomerId: 'cus_ORG123' }).where(eq(organizations.id, org));
+    await addLicense(license('cs_org', 'owner@x.example'));
+    await claimLicense(t.db, owner, org, 'cs_org', true);
+    const { token } = await createInvite(t.db, owner, org, 'host@provider.example', 'provider', now, accessUntil);
+    await acceptInvite(t.db, provider, { token }, now);
+    return { owner, provider, org };
+  }
+
+  it('sees the licenses and keys, nothing else', async () => {
+    const { provider, org } = await setup();
+    expect((await getOrg(t.db, provider.id, org))?.role).toBe('provider');
+    const keys = await licensesForOrg(t.db, provider.id, org);
+    expect(keys.map((l) => l.session_id)).toEqual(['cs_org']);
+    expect(keys[0].token).toBe('ATL1.cs_org.sig');
+
+    // Team, invites, org settings, claiming: all not-found, as if there were nothing.
+    expect(await code(listMembers(t.db, provider.id, org))).toBe('not-found');
+    expect(await code(listInvites(t.db, provider.id, org))).toBe('not-found');
+    expect(await code(createInvite(t.db, provider, org, 'friend@x.example', 'member'))).toBe('not-found');
+    expect(await code(createInvite(t.db, provider, org, 'friend@x.example', 'provider'))).toBe('not-found');
+    expect(await code(updateOrg(t.db, provider, org, orgInput('Hacked')))).toBe('not-found');
+    expect(await code(changeRole(t.db, provider, org, provider.id, 'admin'))).toBe('not-found');
+    await addLicense(license('cs_prov', 'host@provider.example'));
+    expect(await code(claimLicense(t.db, provider, org, 'cs_prov', true))).toBe('not-found');
+  });
+
+  it('only owners and admins invite one; the end date is for providers and in the future', async () => {
+    const owner = await user('owner@x.example');
+    const member = await user('member@x.example');
+    const org = await createOrg(t.db, owner, orgInput('Org'));
+    const { token } = await createInvite(t.db, owner, org, 'member@x.example', 'member');
+    await acceptInvite(t.db, member, { token });
+    const now = new Date('2026-09-28T10:00:00Z');
+    expect(await code(createInvite(t.db, member, org, 'p@x.example', 'provider', now))).toBe('forbidden');
+    expect(await code(createInvite(t.db, owner, org, 'p@x.example', 'member', now, new Date('2026-10-09')))).toBe('invalid');
+    expect(await code(createInvite(t.db, owner, org, 'p@x.example', 'provider', now, new Date('2026-09-01')))).toBe('invalid');
+    await createInvite(t.db, owner, org, 'p@x.example', 'provider', now, new Date('2026-10-09T23:59:59Z'));
+    const [pending] = await listInvites(t.db, owner.id, org, now);
+    expect(pending).toMatchObject({ role: 'provider', accessUntil: new Date('2026-10-09T23:59:59Z') });
+    const [entry] = await t.db.select().from(auditLog).where(eq(auditLog.targetId, pending.id));
+    expect(entry.details).toEqual({ role: 'provider', access_until: '2026-10-09T23:59:59.000Z' });
+  });
+
+  it('loses access after the end date, everywhere, and is pruned', async () => {
+    const start = new Date(Date.now() - 3 * 24 * 60 * 60_000);
+    const end = new Date(Date.now() - 60_000);
+    const { owner, provider, org } = await setup(end, start);
+    const [row] = await t.db.select().from(memberships).where(eq(memberships.userId, provider.id));
+    expect(row.expiresAt).toEqual(end);
+
+    expect(await getOrg(t.db, provider.id, org)).toBeNull();
+    expect(await listOrgs(t.db, provider.id)).toEqual([]);
+    expect(await code(licensesForOrg(t.db, provider.id, org))).toBe('not-found');
+    expect((await listMembers(t.db, owner.id, org)).map((m) => m.role)).toEqual(['owner']);
+
+    const { pruneExpired } = await import('../db/prune');
+    expect((await pruneExpired(t.db)).memberships).toBe(1);
+    expect(await t.db.select().from(memberships).where(eq(memberships.userId, provider.id))).toEqual([]);
+    const [log] = await t.db.select().from(auditLog).where(eq(auditLog.action, 'member.expire'));
+    expect(log).toMatchObject({ orgId: org, targetId: provider.id, details: { role: 'provider' } });
+  });
+
+  it('keeps access before the end date', async () => {
+    const { provider, org } = await setup(new Date(Date.now() + 24 * 60 * 60_000));
+    expect((await licensesForOrg(t.db, provider.id, org)).length).toBe(1);
+    const [m] = (await listMembers(t.db, (await t.db.select().from(users).where(eq(users.email, 'owner@x.example')))[0].id, org)).filter((x) => x.role === 'provider');
+    expect(m.until).not.toBeNull();
+  });
+
+  it('the owner removes them any time, and it is logged', async () => {
+    const { owner, provider, org } = await setup();
+    await removeMember(t.db, owner, org, provider.id);
+    expect(await getOrg(t.db, provider.id, org)).toBeNull();
+    expect(await code(licensesForOrg(t.db, provider.id, org))).toBe('not-found');
+    const actions = (await t.db.select().from(auditLog).where(eq(auditLog.orgId, org))).map((a) => a.action);
+    expect(actions).toEqual(expect.arrayContaining(['invite.create', 'invite.accept', 'member.remove']));
+  });
+
+  it('promoted to member, the end date goes', async () => {
+    const { owner, provider, org } = await setup(new Date(Date.now() + 24 * 60 * 60_000));
+    await changeRole(t.db, owner, org, provider.id, 'member');
+    const [row] = await t.db.select().from(memberships).where(eq(memberships.userId, provider.id));
+    expect(row).toMatchObject({ role: 'member', expiresAt: null });
   });
 });

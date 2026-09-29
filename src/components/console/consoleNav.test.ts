@@ -2,17 +2,22 @@ import { describe, expect, it } from 'vitest';
 import { accountLinks, activeSection, navArea, navEntries, navEntriesFor, navGroups, sectionLinks, sections } from './consoleNav';
 
 describe('account menu', () => {
-  it('shows Admin only to admins', () => {
-    expect(accountLinks({ base: '', isAdmin: false }).map((l) => l.label)).toEqual(['Console home', 'Add an organization']);
-    expect(accountLinks({ base: '', isAdmin: true })).toEqual([
-      { label: 'Console home', href: '/licenses' },
-      { label: 'Admin', href: '/admin' },
-      { label: 'Add an organization', href: '/welcome' },
-    ]);
+  it('shows Admin only to admins; no Console home (the logo is home)', () => {
+    expect(accountLinks({ base: '', isAdmin: false })).toEqual([]);
+    expect(accountLinks({ base: '', isAdmin: true })).toEqual([{ label: 'Admin', href: '/admin' }]);
   });
 
   it('prefixes /console in development', () => {
-    expect(accountLinks({ base: '/console', isAdmin: true }).map((l) => l.href)).toEqual(['/console/licenses', '/console/admin', '/console/welcome']);
+    expect(accountLinks({ base: '/console', isAdmin: true }).map((l) => l.href)).toEqual(['/console/admin']);
+  });
+});
+
+describe('customer nav by role', () => {
+  it('shows a server provider Licenses only, and nothing without an organization', () => {
+    expect(navEntriesFor('org', '', 'provider').map((e) => e.label)).toEqual(['Licenses']);
+    expect(navGroups('org', '', 'provider')).toEqual([{ items: [{ label: 'Licenses', href: '/licenses' }] }]);
+    expect(navEntriesFor('org', '', null)).toEqual([]);
+    expect(navEntriesFor('org', '', 'member').map((e) => e.label)).toEqual(['Licenses', 'Team', 'Billing', 'Buy']);
   });
 });
 

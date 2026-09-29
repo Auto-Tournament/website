@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { roleLabel } from '@/lib/console/roles';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
@@ -15,17 +16,16 @@ const { color } = tokens;
 export const metadata: Metadata = { title: 'Members' };
 export const dynamic = 'force-dynamic';
 
-const roleLabel = { owner: 'Owner', admin: 'Admin', member: 'Member' } as const;
 
 export default async function Members() {
-  const { user, org } = await requireOrg();
+  const { user, org } = await requireOrg({ staff: true });
   const manage = canManage(org.role);
   const [members, pending] = await Promise.all([listMembers(db(), user.id, org.id), manage ? listInvites(db(), user.id, org.id) : Promise.resolve([])]);
   const owners = members.filter((m) => m.role === 'owner').length;
 
   return (
     <>
-      <PageTitle sub="Everyone here sees the organization's licenses and keys. Owners and admins invite and remove members and see invoices; only owners can make someone an owner.">
+      <PageTitle sub="Everyone here sees the organization's licenses and keys. Owners and admins invite and remove members and see invoices; only owners can make someone an owner. A server provider sees licenses and keys, nothing else.">
         Members
       </PageTitle>
 
@@ -49,6 +49,7 @@ export default async function Members() {
                 <Box sx={{ fontSize: '0.875rem', color: color.muted }}>
                   {m.name ? `${m.email} · ` : ''}
                   {roleLabel[m.role]} since {formatDay(m.since.toISOString().slice(0, 10))}
+                  {m.until ? `, until ${formatDay(m.until.toISOString().slice(0, 10))}` : ''}
                 </Box>
               </Box>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
@@ -81,7 +82,8 @@ export default async function Members() {
             {pending.map((i) => (
               <Box component="li" key={i.id} data-testid="pending-invite" sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
                 <Box sx={{ minWidth: 0, overflowWrap: 'anywhere' }}>
-                  {i.email} · {roleLabel[i.role]} · expires {formatDay(i.expiresAt.toISOString().slice(0, 10))}
+                  {i.email} · {roleLabel[i.role]}
+                  {i.accessUntil ? ` until ${formatDay(i.accessUntil.toISOString().slice(0, 10))}` : ''} · invite expires {formatDay(i.expiresAt.toISOString().slice(0, 10))}
                 </Box>
                 <ActionButton action={revokeInviteAction} fields={{ orgId: org.id, inviteId: i.id }} label="Withdraw" color="error" />
               </Box>

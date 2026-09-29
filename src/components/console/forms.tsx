@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -10,6 +10,7 @@ import { CaretDown } from '@phosphor-icons/react/dist/csr/CaretDown';
 import { tokens } from '@/theme/tokens';
 import { NavMenu } from '@/components/nav/NavMenu';
 import type { ActionState } from '@/app/console/actions';
+import { providerNote } from '@/lib/console/roles';
 
 const { color } = tokens;
 
@@ -196,6 +197,7 @@ export function OrgForm({
 /** Invite someone by email. */
 export function InviteForm({ action, orgId, canInviteOwner }: { action: Action; orgId: string; canInviteOwner: boolean }) {
   const [state, run, pending] = useActionState(action, null);
+  const [role, setRole] = useState('member');
   return (
     <Box
       component="form"
@@ -204,14 +206,30 @@ export function InviteForm({ action, orgId, canInviteOwner }: { action: Action; 
     >
       <input type="hidden" name="orgId" value={orgId} />
       <TextField name="email" label="Email" type="email" required autoComplete="off" slotProps={{ htmlInput: { maxLength: 254 } }} sx={{ minWidth: 0 }} />
-      <TextField select name="role" label="Role" defaultValue="member" slotProps={{ select: { native: true } }} sx={{ minWidth: 0 }}>
+      <TextField select name="role" label="Role" value={role} onChange={(e) => setRole(e.target.value)} slotProps={{ select: { native: true } }} sx={{ minWidth: 0 }}>
         <option value="member">Member</option>
         <option value="admin">Admin</option>
+        <option value="provider">Server provider</option>
         {canInviteOwner && <option value="owner">Owner</option>}
       </TextField>
       <Button type="submit" variant="contained" disabled={pending} sx={{ height: 56 }}>
         {pending ? 'Sending…' : 'Invite'}
       </Button>
+      {role === 'provider' && (
+        <Box sx={{ gridColumn: '1 / -1', display: 'grid', gap: 1 }}>
+          <Box component="p" data-testid="provider-note" sx={{ m: 0, fontSize: '0.875rem' }}>
+            {providerNote}. You can remove them any time.
+          </Box>
+          <TextField
+            name="accessUntil"
+            label="Access ends (optional)"
+            type="date"
+            helperText="After this day they no longer see anything. Leave empty for no end date."
+            slotProps={{ inputLabel: { shrink: true } }}
+            sx={{ maxWidth: '16rem' }}
+          />
+        </Box>
+      )}
       <Box sx={{ gridColumn: '1 / -1' }}>
         <Status state={state} />
       </Box>
@@ -238,6 +256,7 @@ export function RoleForm({ action, orgId, userId, role, allowOwner }: { action: 
       >
         <option value="member">Member</option>
         <option value="admin">Admin</option>
+        <option value="provider">Server provider</option>
         {(allowOwner || role === 'owner') && <option value="owner">Owner</option>}
       </TextField>
       <noscript>

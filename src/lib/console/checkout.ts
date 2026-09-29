@@ -8,6 +8,7 @@ import { currentUser, orgCookieName } from './session';
 import { stripeLivemode } from '@/lib/stripeMode';
 import { checkoutCustomerParams, type CheckoutPrefill } from './prefill';
 import { consoleOrigin } from './urls';
+import { isStaff } from './roles';
 
 export { checkoutCustomerParams, type CheckoutPrefill };
 
@@ -26,7 +27,8 @@ export async function consoleCheckoutPrefill(): Promise<CheckoutPrefill | null> 
     if (!user) return null;
     const orgId = (await cookies()).get(orgCookieName())?.value;
     const org = orgId ? await getOrg(db(), user.id, orgId) : null;
-    if (!org) return null;
+    // A server provider doesn't buy for the organization: checkout is as for a guest.
+    if (!org || !isStaff(org.role)) return null;
     // The org's Stripe customer (its saved billing details) only for owners and admins, like the billing page.
     const customer = org.stripeCustomerId && stripeLivemode() && canManage(org.role) ? org.stripeCustomerId : null;
     return { orgId: org.id, customer, email: customer ? null : verifiedEmail(user) };

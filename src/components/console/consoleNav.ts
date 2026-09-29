@@ -4,18 +4,20 @@
  * can read them.
  */
 
+import type { Role } from '../../lib/db/schema';
+import { orgPathAllowed } from '../../lib/console/roles';
+
 export type ConsoleLink = { label: string; href: string; note?: string };
 
 /** A console path with the console's base in front ('' on its own host, '/console' in development). */
 const at = (base: string, path: string) => (path === '/' ? base || '/' : `${base}${path}`);
 
-/** The account menu's links, top to bottom. Admin only for admins (the server decides who is one). */
+/**
+ * The account menu's links above Sign out: Admin, for admins only (the server
+ * decides who is one). The logo is the way home.
+ */
 export function accountLinks({ base, isAdmin }: { base: string; isAdmin: boolean }): ConsoleLink[] {
-  return [
-    { label: 'Console home', href: at(base, '/licenses') },
-    ...(isAdmin ? [{ label: 'Admin', href: at(base, '/admin') }] : []),
-    { label: 'Add an organization', href: at(base, '/welcome') },
-  ];
+  return isAdmin ? [{ label: 'Admin', href: at(base, '/admin') }] : [];
 }
 
 export type ConsoleArea = 'org' | 'admin';
@@ -91,11 +93,21 @@ export const sections: Record<ConsoleArea, ConsoleLink[]> = {
 };
 
 /**
+ * The customer area's entries for a role: a server provider sees Licenses
+ * only; with no organization (null) there are none. Undefined: all of them.
+ */
+function entriesFor(area: ConsoleArea, role?: Role | null): ConsoleNavEntry[] {
+  if (area !== 'org' || role === undefined) return navEntries[area];
+  if (role === null) return [];
+  return navEntries.org.filter((e) => e.kind === 'menu' || orgPathAllowed(role, e.href));
+}
+
+/**
  * An area's entries as they render on the current host: hrefs carry the
  * console base, and a menu's items keep their notes.
  */
-export function navEntriesFor(area: ConsoleArea, base: string): ConsoleNavEntry[] {
-  return navEntries[area].map((e) =>
+export function navEntriesFor(area: ConsoleArea, base: string, role?: Role | null): ConsoleNavEntry[] {
+  return entriesFor(area, role).map((e) =>
     e.kind === 'menu' ? { ...e, items: e.items.map((i) => ({ ...i, href: at(base, i.href) })) } : { ...e, href: at(base, e.href) },
   );
 }
@@ -105,14 +117,14 @@ export function navEntriesFor(area: ConsoleArea, base: string): ConsoleNavEntry[
  * buttons share one unheaded group, each menu is its own heading section, in
  * nav order.
  */
-export function navGroups(area: ConsoleArea, base: string): { heading?: string; items: ConsoleLink[] }[] {
+export function navGroups(area: ConsoleArea, base: string, role?: Role | null): { heading?: string; items: ConsoleLink[] }[] {
   const groups: { heading?: string; items: ConsoleLink[] }[] = [];
   let plain: ConsoleLink[] = [];
   const flushPlain = () => {
     if (plain.length) groups.push({ items: plain });
     plain = [];
   };
-  for (const e of navEntriesFor(area, base)) {
+  for (const e of navEntriesFor(area, base, role)) {
     if (e.kind === 'menu') {
       flushPlain();
       groups.push({ heading: e.label, items: e.items });
