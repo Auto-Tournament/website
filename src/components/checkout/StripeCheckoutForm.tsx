@@ -222,7 +222,7 @@ function Form({ order, country, onPaying, onInitFailed }: { order: CheckoutFormO
         await checkout.removePromotionCode();
       },
       pay: (input) => payWith(checkout, input, fetch, { free: isFreeOrder(checkout) }),
-      payment: <PaymentElement options={{ layout: { type: 'tabs' }, fields: { billingDetails: { address: 'never', email: 'never', name: 'auto' } } }} />,
+      payment: <PaymentElement options={{ layout: { type: 'tabs' }, fields: { billingDetails: { address: 'never', email: 'never', name: 'never' } } }} />,
     };
   }, [checkout]);
 
