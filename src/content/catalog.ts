@@ -124,7 +124,7 @@ export const releases = {
   /** Whether that csm release has csm link, instance mode, versioned CS2 updates and the Ready Up stack. */
   csmHasFleet: true,
   /** Newest platform 3.0 beta number (v3.0.0-beta.N). */
-  platformBeta: 21,
+  platformBeta: 22,
   /** Whether that beta has failover, auto-scaling, and webhooks with the teams API. */
   platformHasFleet: true,
 };
