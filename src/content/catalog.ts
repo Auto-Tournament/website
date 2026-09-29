@@ -89,6 +89,14 @@ export const repo = {
 
 const docs = 'https://docs.autotournament.gg';
 
+/** Each product's changelog in the docs, generated from its GitHub releases. */
+export const changelog = {
+  platform: `${docs}/reference/changelog/platform`,
+  readyUp: `${docs}/reference/changelog/ready-up`,
+  csm: `${docs}/reference/changelog/csm`,
+  cs2Plugin: `${docs}/reference/changelog/cs2-plugin`,
+};
+
 const readyUpInstall = `# from the server root (the folder that contains game/)
 curl -fsSL https://raw.githubusercontent.com/Auto-Tournament/ready-up/master/install.sh | bash -s -- --channel beta`;
 
@@ -249,6 +257,7 @@ export const platform: Product = {
   more: [
     { label: 'Docs', href: docs },
     { label: 'GitHub', href: repo.platform },
+    { label: 'Changelog', href: changelog.platform },
     { label: 'Licensing', href: `${docs}/reference/licensing` },
   ],
   license: 'polyform',
@@ -357,6 +366,7 @@ const readyUp: Product = {
   ],
   more: [
     { label: 'GitHub', href: repo.readyUp },
+    { label: 'Changelog', href: changelog.readyUp },
     { label: 'Compatibility', href: '/compatibility' },
     { label: 'Admin commands', href: `${repo.readyUp}/blob/master/docs/ADMINS.md` },
   ],
@@ -455,6 +465,7 @@ const csm: Product = {
   more: [
     { label: 'Docs', href: `${docs}/cs2/server-manager` },
     { label: 'GitHub', href: repo.csm },
+    { label: 'Changelog', href: changelog.csm },
     { label: 'Releases', href: `${repo.csm}/releases` },
   ],
   license: 'polyform',
