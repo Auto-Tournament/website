@@ -173,10 +173,10 @@ export function ContactForm({ emailAvailable = true }: { emailAvailable?: boolea
       >
         <TextField
           label="Website"
-          tabIndex={-1}
           autoComplete="off"
           value={honeypot}
           onChange={(e) => setHoneypot(e.target.value)}
+          slotProps={{ htmlInput: { tabIndex: -1 } }}
         />
       </Box>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'center' }}>
