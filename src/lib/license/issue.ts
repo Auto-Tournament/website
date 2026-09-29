@@ -70,10 +70,13 @@ export async function issueForSession(session: Stripe.Checkout.Session, now: Dat
       now,
     });
     const email = sessionEmail(session as unknown as SessionLike);
+    // From the checkout form's metadata only: never in the license payload, /verify, or third-party emails.
+    const buyerName = session.metadata?.buyer_name?.trim().slice(0, 100) || null;
     return {
       session_id: session.id,
       invoice_number: await invoiceNumber(stripeServer(), session.invoice),
       email_sha256: email ? emailHash(email) : null,
+      buyer_name: buyerName,
       livemode: session.livemode,
       dates_from_form: datesFromForm,
       payload,

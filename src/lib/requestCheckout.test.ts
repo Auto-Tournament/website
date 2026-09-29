@@ -48,7 +48,7 @@ describe('requestCheckout fallback', () => {
 });
 
 describe('saveCheckoutDetails', () => {
-  const details = { sessionId: 'cs_test_a1b2c3d4e5f6', company: 'X AS', eventName: 'X LAN', eventDates: '1 May 2027', vatId: '', business: true as const, terms: true as const };
+  const details = { sessionId: 'cs_test_a1b2c3d4e5f6', buyerName: 'Kari Nordmann', company: 'X AS', eventName: 'X LAN', eventDates: '1 May 2027', vatId: '', business: true as const, terms: true as const };
 
   it('POSTs the details and reads the field the server points at', async () => {
     expect(await saveCheckoutDetails(details, answer(200, { ok: 'saved' }))).toEqual({ ok: true });

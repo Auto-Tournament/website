@@ -169,6 +169,12 @@ export const licenses = pgTable(
     licenseId: text('license_id').notNull().unique(),
     invoiceNumber: text('invoice_number'),
     emailHash: text('email_hash'),
+    /**
+     * The person who bought, from the checkout form's "Your name" field.
+     * Never in the license payload, /verify, or an email to anyone but us.
+     * Null on licenses issued before this column existed.
+     */
+    buyerName: text('buyer_name'),
     livemode: boolean('livemode').notNull(),
     datesFromForm: boolean('dates_from_form').notNull(),
     /** Copied out of the payload for queries (the founder cap). */

@@ -37,6 +37,10 @@ export default function Privacy() {
         </li>
         <li>what you write to us</li>
       </ul>
+      <p id="event-or-client-name">
+        The event or client name you give us at checkout is only for us, to know who a license is running for: it is never printed on the license key,
+        the invoice or the public license check (see below).
+      </p>
       <p id="license-key">
         <strong>Your license key.</strong> When you pay by card, we issue a signed license key that you paste into the software. It contains a license id, your
         Stripe customer id, the business name you gave at checkout, the product, pack and server limit, the period, when it was issued, how long updates run

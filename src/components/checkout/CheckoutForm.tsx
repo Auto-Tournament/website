@@ -35,7 +35,7 @@ export type CheckoutAddress = { country: string; line1: string; line2: string; p
 /** Everything the buyer typed, handed to the adapter on Pay. */
 export type PayInput = Omit<CheckoutDetails, 'sessionId'> & { email: string; address: CheckoutAddress };
 
-export type FieldKey = 'email' | 'company' | 'eventName' | 'eventDates' | 'vatId' | 'business' | 'terms' | 'country' | 'line1' | 'postal_code' | 'city' | 'promo';
+export type FieldKey = 'buyerName' | 'email' | 'company' | 'eventName' | 'eventDates' | 'vatId' | 'business' | 'terms' | 'country' | 'line1' | 'postal_code' | 'city' | 'promo';
 
 export type PayResult = { ok: true } | { ok: false; error: string; field?: FieldKey };
 
@@ -98,6 +98,7 @@ export function formatMoney(minor: number, currency: string): string {
 }
 
 type Values = {
+  buyerName: string;
   email: string;
   company: string;
   eventName: string;
@@ -113,6 +114,7 @@ type Values = {
 };
 
 const empty: Values = {
+  buyerName: '',
   email: '',
   company: '',
   eventName: '',
@@ -134,8 +136,17 @@ export function validateForm(values: Values, sessionId: string, emailFixed: bool
   const errors: Errors = {};
   if (!emailFixed && !emailPattern.test(values.email.trim())) errors.email = 'Enter the email address the license and invoice go to.';
   // Report every field at once, not only the first.
-  const base = { sessionId, company: values.company, eventName: values.eventName, eventDates: values.eventDates, vatId: values.vatId, business: values.business, terms: values.terms };
-  const fields = ['company', 'eventName', 'eventDates', 'vatId', 'business', 'terms'] as const;
+  const base = {
+    sessionId,
+    buyerName: values.buyerName,
+    company: values.company,
+    eventName: values.eventName,
+    eventDates: values.eventDates,
+    vatId: values.vatId,
+    business: values.business,
+    terms: values.terms,
+  };
+  const fields = ['buyerName', 'company', 'eventName', 'eventDates', 'vatId', 'business', 'terms'] as const;
   for (const field of fields) {
     const probe: Record<string, unknown> = { ...base };
     // Replace every other field with a valid value, so each error is this field's own.
@@ -150,7 +161,7 @@ export function validateForm(values: Values, sessionId: string, emailFixed: bool
   return errors;
 }
 
-const validSample = { company: 'Valid AS', eventName: 'Valid event', eventDates: '1 January 2027', vatId: '', business: true, terms: true } as const;
+const validSample = { buyerName: 'Kari Nordmann', company: 'Valid AS', eventName: 'Valid event', eventDates: '1 January 2027', vatId: '', business: true, terms: true } as const;
 
 /* ------------------------------------------------------------------ fields */
 
@@ -495,8 +506,9 @@ const srOnlyOnPhone = { '@media (max-width: 899.95px)': srOnly } as const;
 
 /* --------------------------------------------------------------------- form */
 
-const fieldOrder: FieldKey[] = ['email', 'company', 'vatId', 'business', 'eventName', 'eventDates', 'country', 'line1', 'postal_code', 'city', 'terms'];
+const fieldOrder: FieldKey[] = ['buyerName', 'email', 'company', 'vatId', 'business', 'eventName', 'eventDates', 'country', 'line1', 'postal_code', 'city', 'terms'];
 const fieldNames: Record<FieldKey, string> = {
+  buyerName: 'Your name',
   email: 'Email',
   company: 'Company or organization',
   vatId: 'VAT ID',
@@ -575,6 +587,7 @@ export function CheckoutForm({
     onPaying?.(true);
     const r = await adapter
       .pay({
+      buyerName: values.buyerName,
       email: emailFixed ? (summary.email as string) : values.email.trim(),
       company: values.company,
       eventName: values.eventName,
@@ -659,6 +672,9 @@ export function CheckoutForm({
         )}
 
         <Section title="Contact">
+          <Field id={fid('buyerName')} label="Your name" hint="Who we're doing business with." error={errors.buyerName}>
+            {(p) => <Box component="input" autoComplete="name" maxLength={detailLimits.buyerName.max} placeholder="Kari Nordmann" {...p} {...text('buyerName')} sx={inputSx} />}
+          </Field>
           {emailFixed ? (
             <Box sx={{ color: color.ink2, fontSize: '0.9375rem' }}>
               The license and invoice go to <Box component="strong" sx={{ color: color.ink, fontWeight: 600 }}>{summary.email}</Box>
@@ -671,7 +687,7 @@ export function CheckoutForm({
         </Section>
 
         <Section title="Business details">
-          <Field id={fid('company')} label="Company or organization" hint="The licensee, as shown on the license and invoice." error={errors.company}>
+          <Field id={fid('company')} label="Company or organization" hint="Your own company. It's the licensee and goes on the invoice." error={errors.company}>
             {(p) => <Box component="input" autoComplete="organization" maxLength={detailLimits.company.max} placeholder="Northside LAN AS" {...p} {...text('company')} sx={inputSx} />}
           </Field>
           <Field id={fid('vatId')} label="VAT ID (optional)" hint="Printed on the invoice. Norway: your org. number." error={errors.vatId}>
@@ -683,7 +699,12 @@ export function CheckoutForm({
         </Section>
 
         <Section title="Event">
-          <Field id={fid('eventName')} label="Event or client name, and website" hint="Running it for a client? Name the client." error={errors.eventName}>
+          <Field
+            id={fid('eventName')}
+            label="Event, or the client you run it for"
+            hint="Private: only we see this. It's not on the license key, the invoice or the public license check."
+            error={errors.eventName}
+          >
             {(p) => <Box component="input" autoComplete="off" maxLength={detailLimits.eventName.max} placeholder="Northside LAN 2026, northsidelan.no" {...p} {...text('eventName')} sx={inputSx} />}
           </Field>
           <Field id={fid('eventDates')} label="Event date(s)" hint="Yearly or founding supporter: the start date." error={errors.eventDates}>

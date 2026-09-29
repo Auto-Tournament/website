@@ -321,6 +321,7 @@ describe('checkoutSessionParams', () => {
 describe('validateCheckoutDetails (our custom form)', () => {
   const good = {
     sessionId: 'cs_test_a1b2c3d4e5f6g7h8',
+    buyerName: '  Kari   Nordmann ',
     company: '  Example   LAN AS ',
     eventName: 'Example LAN, example.no',
     eventDates: '3-5 October 2026',
@@ -332,7 +333,7 @@ describe('validateCheckoutDetails (our custom form)', () => {
   it('accepts a full form, trimming and collapsing spaces, upper-casing the VAT ID', () => {
     expect(validateCheckoutDetails(good)).toEqual({
       ok: true,
-      value: { ...good, company: 'Example LAN AS', vatId: 'NO 123456789 MVA' },
+      value: { ...good, buyerName: 'Kari Nordmann', company: 'Example LAN AS', vatId: 'NO 123456789 MVA' },
     });
     expect(validateCheckoutDetails({ ...good, vatId: '' })).toMatchObject({ ok: true, value: { vatId: '' } });
   });
@@ -342,6 +343,8 @@ describe('validateCheckoutDetails (our custom form)', () => {
       const r = validateCheckoutDetails({ ...good, ...over });
       return r.ok ? null : r.field;
     };
+    expect(field({ buyerName: ' ' })).toBe('buyerName');
+    expect(field({ buyerName: 'x'.repeat(101) })).toBe('buyerName');
     expect(field({ company: ' ' })).toBe('company');
     expect(field({ company: 'x'.repeat(121) })).toBe('company');
     expect(field({ eventName: '' })).toBe('eventName');
@@ -351,6 +354,7 @@ describe('validateCheckoutDetails (our custom form)', () => {
     expect(field({ terms: 'yes' })).toBe('terms');
     expect(field({ sessionId: 'pi_123' })).toBe('sessionId');
     expect(field({ company: 'Evil\u0000Co' })).toBe('company');
+    expect(field({ buyerName: 'Evil\u0000Kari' })).toBe('buyerName');
   });
 
   it('rejects extra or missing keys', () => {
@@ -364,6 +368,7 @@ describe('validateCheckoutDetails (our custom form)', () => {
 describe('checkoutDetailsMetadata', () => {
   const details = {
     sessionId: 'cs_test_a1b2c3d4e5f6g7h8',
+    buyerName: 'Kari Nordmann',
     company: 'Example LAN AS',
     eventName: 'Example LAN',
     eventDates: '3-5 October 2026',
@@ -375,6 +380,7 @@ describe('checkoutDetailsMetadata', () => {
 
   it('writes the hosted custom-field keys, the VAT ID and the server time of acceptance', () => {
     expect(checkoutDetailsMetadata(details, at)).toEqual({
+      buyer_name: 'Kari Nordmann',
       company: 'Example LAN AS',
       eventname: 'Example LAN',
       eventdates: '3-5 October 2026',
@@ -390,8 +396,13 @@ describe('checkoutDetailsMetadata', () => {
     for (const k of protectedMetadataKeys) expect(keys).not.toContain(k);
   });
 
+  it('keeps buyer_name out of the hosted custom fields (Stripe caps those at 3)', () => {
+    expect(checkoutFormParams('https://autotournament.gg').custom_fields).toHaveLength(stripeMaxCustomFields);
+    expect(checkoutFormParams('https://autotournament.gg').custom_fields.map((f) => f.key)).not.toContain('buyername');
+  });
+
   it('stays within Stripe metadata limits (40-char keys, 500-char values)', () => {
-    const long = { ...details, company: 'c'.repeat(120), eventName: 'e'.repeat(200), eventDates: 'd'.repeat(100), vatId: 'V'.repeat(40) };
+    const long = { ...details, buyerName: 'n'.repeat(100), company: 'c'.repeat(120), eventName: 'e'.repeat(200), eventDates: 'd'.repeat(100), vatId: 'V'.repeat(40) };
     for (const [k, v] of Object.entries(checkoutDetailsMetadata(long, at))) {
       expect(k.length).toBeLessThanOrEqual(40);
       expect(v.length).toBeLessThanOrEqual(500);

@@ -152,6 +152,7 @@ export async function payWith(
         saved = await saveCheckoutDetails(
           {
             sessionId: checkout.id,
+            buyerName: input.buyerName,
             company: input.company,
             eventName: input.eventName,
             eventDates: input.eventDates,

@@ -21,6 +21,7 @@ import {
 import { testDb } from '../db/testing';
 import { licenses } from '../db/schema';
 import { createLicenseStore, importLicenseFile, type LicenseRecord } from './store';
+import { publicCheck } from './verify';
 
 /** A throwaway key made for this test run; nothing is committed. */
 function throwawayKey(): SigningKey {
@@ -158,6 +159,27 @@ describe('checkout session → payload', () => {
     });
     expect(datesFromForm).toBe(true);
     expect(p).toMatchObject({ licensee: 'Example LAN AS', valid_from: '2026-10-03', valid_to: '2026-10-05' });
+  });
+
+  it('never puts the event/client name or the buyer name in the payload', () => {
+    const custom = session({
+      customer_details: { email: 'buyer@example.com', business_name: null },
+      collected_information: null,
+      custom_fields: [],
+      metadata: {
+        pack: 'platform-l', period: 'event', servers: '34', tools: 'platform', max_servers: '40',
+        company: 'Example LAN AS', eventname: 'Northside LAN, a very private client name', eventdates: '3-5 October 2026',
+        buyer_name: 'Kari Nordmann', buyertype: 'business', terms_accepted_at: '2026-09-28T10:00:00.000Z',
+      },
+    });
+    const { payload: p } = payloadForSession(custom, {
+      kid: key.kid, id: 'L-3b', packId: 'platform-l', kind: 'event', maxServers: 40, now: new Date('2026-09-28T10:11:12.345Z'),
+    });
+    const json = JSON.stringify(p);
+    expect(json).not.toContain('Northside');
+    expect(json).not.toContain('Kari Nordmann');
+    expect(p).not.toHaveProperty('buyer_name');
+    expect(p).not.toHaveProperty('eventname');
   });
 
   it('prefers the hosted form fields over metadata of the same name', () => {
@@ -381,5 +403,34 @@ describe('store', () => {
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('/verify never shows the event/client name or the buyer name', () => {
+  it('publicCheck only ever surfaces licensee, pack, kind, duration, updates and the id', () => {
+    const payload: LicensePayload = {
+      v: 1,
+      kid: 'k1',
+      id: 'L-abc123',
+      customer: 'cus_1',
+      licensee: 'Example LAN AS',
+      product: 'platform',
+      pack: 'L',
+      max_servers: 40,
+      kind: 'event',
+      issued_at: '2026-09-28T10:00:00Z',
+      updates_until: '2026-10-05',
+      valid_from: '2026-10-03',
+      valid_to: '2026-10-05',
+    };
+    // A record shaped as if buyer_name or the event/client name had leaked
+    // onto it (they never do in practice: payloadForSession excludes them,
+    // and this record type has no such field); publicCheck must not surface
+    // them even so.
+    const record = { payload, livemode: true, buyer_name: 'Kari Nordmann', eventname: 'Northside LAN, a private client' } as unknown as Parameters<typeof publicCheck>[0];
+    const check = publicCheck(record, '2026-10-04');
+    const json = JSON.stringify(check);
+    expect(json).not.toContain('Kari Nordmann');
+    expect(json).not.toContain('Northside');
   });
 });

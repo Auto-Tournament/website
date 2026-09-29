@@ -24,6 +24,8 @@ export type LicenseRecord = {
   /** The invoice number from Stripe's receipt (e.g. ABCD1234-0001), when known. */
   invoice_number: string | null;
   email_sha256: string | null;
+  /** The buyer's own name from the checkout form's "Your name" field. Null: not given, or issued before this column existed. */
+  buyer_name?: string | null;
   livemode: boolean;
   /** Whether the event dates came from the checkout form (false: 5 days from the purchase day). */
   dates_from_form: boolean;
@@ -108,6 +110,7 @@ export function fromRow(row: Row): LicenseRecord {
     session_id: row.sessionId,
     invoice_number: row.invoiceNumber,
     email_sha256: row.emailHash,
+    buyer_name: row.buyerName,
     livemode: row.livemode,
     dates_from_form: row.datesFromForm,
     payload: row.payload,
@@ -136,6 +139,7 @@ export function toRow(r: LicenseRecord): typeof licenses.$inferInsert {
     licenseId: r.payload.id,
     invoiceNumber: r.invoice_number,
     emailHash: r.email_sha256,
+    buyerName: r.buyer_name ?? null,
     livemode: r.livemode,
     datesFromForm: r.dates_from_form,
     kind: r.payload.kind,

@@ -31,6 +31,7 @@ function post(body: unknown, contentType = 'application/json') {
 
 const details = {
   sessionId: 'cs_test_a1b2c3d4e5f6g7h8',
+  buyerName: 'Kari Nordmann',
   company: 'Example LAN AS',
   eventName: 'Example LAN, examplelan.no',
   eventDates: '3-5 October 2026',
@@ -59,6 +60,7 @@ describe('POST /api/checkout/details', () => {
     expect(retrieve).toHaveBeenCalledWith(details.sessionId);
     expect(update).toHaveBeenCalledWith(details.sessionId, {
       metadata: {
+        buyer_name: 'Kari Nordmann',
         company: 'Example LAN AS',
         eventname: 'Example LAN, examplelan.no',
         eventdates: '3-5 October 2026',

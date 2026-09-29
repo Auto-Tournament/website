@@ -301,6 +301,7 @@ export function checkoutSessionParams({
 
 /** Limits for the fields our custom form sends to /api/checkout/details. */
 export const detailLimits = {
+  buyerName: { min: 2, max: 100 },
   company: { min: 2, max: 120 },
   eventName: { min: 2, max: 200 },
   eventDates: { min: 4, max: 100 },
@@ -310,6 +311,12 @@ export const detailLimits = {
 /** What our form collects that Stripe's elements mode can't: see checkoutFormParams. */
 export type CheckoutDetails = {
   sessionId: string;
+  /**
+   * The person buying, so we always know who bought (not just the company).
+   * Kept in session metadata and on the license row only; never in the
+   * license key payload, /verify, or an email to anyone but us.
+   */
+  buyerName: string;
   company: string;
   eventName: string;
   eventDates: string;
@@ -321,7 +328,7 @@ export type CheckoutDetails = {
 
 export type DetailsValidation = { ok: true; value: CheckoutDetails } | { ok: false; error: string; field?: keyof CheckoutDetails };
 
-const detailKeys = ['sessionId', 'company', 'eventName', 'eventDates', 'vatId', 'business', 'terms'] as const;
+const detailKeys = ['sessionId', 'buyerName', 'company', 'eventName', 'eventDates', 'vatId', 'business', 'terms'] as const;
 
 /** cs_test_… / cs_live_…; the same shape the thanks page accepts. */
 const sessionIdPattern = /^cs_(?:live|test)_[A-Za-z0-9]{10,250}$/;
@@ -344,7 +351,7 @@ export function validateCheckoutDetails(body: unknown): DetailsValidation {
   }
   if (typeof obj.sessionId !== 'string' || !sessionIdPattern.test(obj.sessionId)) return fail('Invalid session.', 'sessionId');
 
-  const text = (key: 'company' | 'eventName' | 'eventDates', label: string): string | DetailsValidation => {
+  const text = (key: 'buyerName' | 'company' | 'eventName' | 'eventDates', label: string): string | DetailsValidation => {
     const raw = obj[key];
     if (typeof raw !== 'string' || controlChars.test(raw)) return fail(`Enter ${label}.`, key);
     const value = raw.trim().replace(/\s+/g, ' ');
@@ -353,6 +360,8 @@ export function validateCheckoutDetails(body: unknown): DetailsValidation {
     if (value.length > max) return fail(`Keep ${label} under ${max} characters.`, key);
     return value;
   };
+  const buyerName = text('buyerName', 'your name');
+  if (typeof buyerName !== 'string') return buyerName;
   const company = text('company', 'the company or organization name');
   if (typeof company !== 'string') return company;
   const eventName = text('eventName', 'the event or client name');
@@ -366,7 +375,7 @@ export function validateCheckoutDetails(body: unknown): DetailsValidation {
 
   if (obj.business !== true) return fail('Confirm that you are buying for a business.', 'business');
   if (obj.terms !== true) return fail('Accept the terms to continue.', 'terms');
-  return { ok: true, value: { sessionId: obj.sessionId, company, eventName, eventDates, vatId, business: true, terms: true } };
+  return { ok: true, value: { sessionId: obj.sessionId, buyerName, company, eventName, eventDates, vatId, business: true, terms: true } };
 }
 
 /**
@@ -376,9 +385,14 @@ export function validateCheckoutDetails(body: unknown): DetailsValidation {
  * sent, and Stripe merges metadata by key, so pack, period, max_servers and
  * founder (set when the session was created) can't be changed through it.
  * `accepted` is the server's time, not the browser's.
+ *
+ * `buyer_name` has no hosted equivalent (custom fields are capped at 3, and
+ * hosted Checkout is already full): it is written only from our own form.
+ * It never goes in the license payload or /verify — see payloadForSession.
  */
 export function checkoutDetailsMetadata(details: CheckoutDetails, accepted: Date): Record<string, string> {
   return {
+    buyer_name: details.buyerName,
     company: details.company,
     eventname: details.eventName,
     eventdates: details.eventDates,

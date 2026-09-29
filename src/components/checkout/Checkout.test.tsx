@@ -234,10 +234,11 @@ async function openForm(fetchMock = answer(200, { clientSecret: 'cs_test_1_secre
 const type = (label: string | RegExp, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
 
 function fillValid({ vat = '' }: { vat?: string } = {}) {
+  type('Your name', 'Kari Nordmann');
   type('Email', 'buyer@example.com');
   type('Company or organization', 'Example LAN AS');
   type('VAT ID (optional)', vat);
-  type('Event or client name, and website', 'Example LAN, examplelan.no');
+  type('Event, or the client you run it for', 'Example LAN, examplelan.no');
   type('Event date(s)', '3-5 October 2026');
   type('Street address', 'Storgata 1');
   type('Postal code', '2815');
@@ -251,7 +252,7 @@ describe('custom checkout form', () => {
     await openForm();
     fireEvent.click(screen.getByTestId('checkout-pay'));
     const errorSummary = await screen.findByTestId('checkout-error-summary');
-    expect(errorSummary.textContent).toContain('9 fields need attention');
+    expect(errorSummary.textContent).toContain('10 fields need attention');
     await waitFor(() => expect(document.activeElement).toBe(errorSummary));
     // Each entry links to its field and moves focus there.
     const link = screen.getByRole('link', { name: /^Company or organization:/ });
@@ -259,7 +260,7 @@ describe('custom checkout form', () => {
     expect(document.activeElement).toBe(screen.getByLabelText('Company or organization'));
     expect(screen.getByTestId('checkout-pay').hasAttribute('disabled')).toBe(false);
     const form = screen.getByTestId('checkout-form').textContent ?? '';
-    for (const msg of ['Enter the email address', 'Enter the company', 'Enter the event or client name', 'Enter the event date', 'Enter the street address', 'Enter the postal code', 'Enter the city', 'Confirm that you are buying for a business', 'Accept the terms']) {
+    for (const msg of ['Enter your name', 'Enter the email address', 'Enter the company', 'Enter the event or client name', 'Enter the event date', 'Enter the street address', 'Enter the postal code', 'Enter the city', 'Confirm that you are buying for a business', 'Accept the terms']) {
       expect(form).toContain(msg);
     }
     expect(screen.getByLabelText('Company or organization').getAttribute('aria-invalid')).toBe('true');
@@ -287,6 +288,7 @@ describe('custom checkout form', () => {
     expect(details).toBeDefined();
     expect(JSON.parse(String(details?.[1]?.body))).toEqual({
       sessionId: 'cs_test_1abcdefghijk',
+      buyerName: 'Kari Nordmann',
       company: 'Example LAN AS',
       eventName: 'Example LAN, examplelan.no',
       eventDates: '3-5 October 2026',
