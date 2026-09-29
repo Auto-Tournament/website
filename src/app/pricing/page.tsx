@@ -286,6 +286,37 @@ function faqFor(packs: readonly Pack[]): { q: string; a: React.ReactNode }[] {
 
 const list = { m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 1.5, color: color.ink2 } as const;
 
+/** FAQPage JSON-LD: only the plain-string answers (one FAQ item is JSX and is skipped). */
+function faqJsonLd(faq: { q: string; a: React.ReactNode }[]) {
+  const entries = faq.filter((item): item is { q: string; a: string } => typeof item.a === 'string');
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: entries.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  };
+}
+
+/** SoftwareApplication offers, one per pack, priced per event (cents → EUR). */
+function offersJsonLd(packs: readonly Pack[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Auto Tournament',
+    url: 'https://autotournament.gg',
+    offers: packs.map((pack) => ({
+      '@type': 'Offer',
+      name: pack.name,
+      price: (pack.prices.event / 100).toFixed(2),
+      priceCurrency: 'EUR',
+      url: 'https://autotournament.gg/pricing',
+    })),
+  };
+}
+
 export default async function Pricing({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   // The guide's answers live in the query, so a reload or a shared link (or a browser without JavaScript) lands on the same step.
   const initial = parseAnswers(await searchParams);
@@ -305,6 +336,8 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
   const faq = faqFor(packs);
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd(faq)) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(offersJsonLd(packs)) }} />
       <Nav />
       <CheckoutProvider publishableKey={publishableKey} country={countryFromHeader((await headers()).get('cf-ipcountry'))}>
       <main>
