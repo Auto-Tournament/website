@@ -65,6 +65,7 @@ describe('licenseDurationText', () => {
 describe('updatesText', () => {
   it('event/yearly', () => {
     expect(updatesText({ updates_until: '2026-10-16' })).toBe('Includes every version released up to 16 October 2026, and later bugfixes for those versions');
+    expect(updatesText({ updates_until: '2026-10-16', kind: 'event' })).toBe('Includes every version released up to 16 October 2026');
   });
   it('founder', () => {
     expect(updatesText({ updates_until: LIFETIME })).toBe('Includes all future versions (lifetime updates)');
