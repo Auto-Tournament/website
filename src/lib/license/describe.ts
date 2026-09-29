@@ -107,10 +107,11 @@ export function licenseDurationText(license: Pick<LicensePayload, 'kind' | 'issu
  * bugfixes for those versions" / "Includes all future versions (lifetime
  * updates)".
  */
-export function updatesText(license: Pick<LicensePayload, 'updates_until'>): string {
-  return license.updates_until === LIFETIME
-    ? 'Includes all future versions (lifetime updates)'
-    : `Includes every version released up to ${formatDay(license.updates_until)}, and later bugfixes for those versions`;
+export function updatesText(license: Pick<LicensePayload, 'updates_until'> & Partial<Pick<LicensePayload, 'kind'>>): string {
+  if (license.updates_until === LIFETIME) return 'Includes all future versions (lifetime updates)';
+  // An event license is only for its dates, so it covers what exists by then and nothing released later.
+  if (license.kind === 'event') return `Includes every version released up to ${formatDay(license.updates_until)}`;
+  return `Includes every version released up to ${formatDay(license.updates_until)}, and later bugfixes for those versions`;
 }
 
 /** What the license lets the buyer do, in a sentence or three (Commercial License Terms, sections 5 to 8). */
