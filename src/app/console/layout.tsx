@@ -1,15 +1,15 @@
 import type { Metadata } from 'next';
 import Container from '@mui/material/Container';
 import { tokens } from '@/theme/tokens';
-import { SiteNav } from '@/components/nav/SiteNav';
 import type { NavAccount } from '@/components/nav/AccountMenu';
-import { Footer } from '@/components/Footer';
+import { ConsoleNavBar, type ConsoleOrgSwitch } from '@/components/console/ConsoleNavBar';
+import { ConsoleFooter } from '@/components/console/ConsoleFooter';
 import { accountLinks } from '@/components/console/consoleNav';
 import { isAdminUser } from '@/lib/admin/access';
-import { currentUser } from '@/lib/console/session';
+import { currentOrg, currentUser } from '@/lib/console/session';
 import { consoleBase, consoleHref, consoleOnOwnHost } from '@/lib/console/urls';
 import { DEFAULT_SITE_URL, siteUrl } from '@/lib/site';
-import { signOutAction } from './actions';
+import { signOutAction, switchOrgAction } from './actions';
 
 const { color } = tokens;
 
@@ -33,18 +33,27 @@ function siteForConsole(): string {
   return consoleOnOwnHost() ? (siteUrl() ?? DEFAULT_SITE_URL) : '';
 }
 
-// The site's own nav and footer, so the rest of the site is always a click
-// away; the account menu takes the Console entry's place. No shader behind the
-// console (src/components/background/background.ts): the flat paper colour.
+// The console's own frame: one navbar (src/components/console/ConsoleNavBar.tsx)
+// with only console things and a way back to autotournament.gg, and a slim
+// one-line footer. No site nav, no site footer, no shader behind the console
+// (src/components/background/background.ts): the flat paper colour.
 export default async function ConsoleLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser();
   const site = siteForConsole();
-  const account: NavAccount = user
-    ? { signedIn: true, email: user.email, links: accountLinks({ base: consoleBase(), isAdmin: isAdminUser(user) }), signOut: signOutAction }
+  const base = consoleBase();
+  const account: NavAccount | undefined = user
+    ? { signedIn: true, email: user.email, links: accountLinks({ base, isAdmin: isAdminUser(user) }), signOut: signOutAction }
     : { signedIn: false, signIn: consoleHref('/signin') };
+
+  // The organization switcher's data: only signed-in users with an organization have one.
+  const org = user ? await currentOrg(user) : null;
+  const orgSwitch: ConsoleOrgSwitch | undefined = org
+    ? { orgs: org.orgs.map((o) => ({ id: o.id, name: o.name })), current: org.org.id, action: switchOrgAction }
+    : undefined;
+
   return (
     <>
-      <SiteNav site={site} account={account} />
+      <ConsoleNavBar base={base} account={account} org={orgSwitch} />
       <Container
         component="main"
         maxWidth="md"
@@ -53,7 +62,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       >
         {children}
       </Container>
-      <Footer site={site} consoleHome={consoleHref('/')} />
+      <ConsoleFooter site={site} />
     </>
   );
 }

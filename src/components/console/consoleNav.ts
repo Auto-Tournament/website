@@ -63,3 +63,15 @@ export function activeSection(area: ConsoleArea, pathname: string): string | nul
     .sort((a, b) => b.length - a.length)[0];
   return hit ?? null;
 }
+
+/**
+ * Which area a console page belongs to, for the single top nav bar: 'admin'
+ * inside the admin CRM, 'org' inside an organization's pages, or null on
+ * pages that are neither (sign-in, welcome, invite, passkey setup, refunds) —
+ * those show the bar with just the back link, logo and account menu.
+ */
+export function navArea(pathname: string): ConsoleArea | null {
+  if (activeSection('admin', pathname)) return 'admin';
+  if (activeSection('org', pathname)) return 'org';
+  return null;
+}

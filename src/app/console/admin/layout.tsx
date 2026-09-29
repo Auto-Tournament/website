@@ -1,12 +1,10 @@
 import type { Metadata } from 'next';
 import Box from '@mui/material/Box';
-import { ConsoleSubNav } from '@/components/console/ConsoleSubNav';
 import { requireAdmin } from '@/lib/admin/guard';
 import { gateFor } from '@/lib/admin/approval';
 import { passkeysOf } from '@/lib/admin/passkeys';
 import { PasskeyCheck, PasskeySetup } from '@/components/admin/Passkeys';
 import { db } from '@/lib/db/client';
-import { consoleBase } from '@/lib/console/urls';
 
 export const metadata: Metadata = { title: { default: 'Admin', template: '%s · Admin · Auto Tournament console' } };
 export const dynamic = 'force-dynamic';
@@ -15,7 +13,8 @@ export const dynamic = 'force-dynamic';
 // a 404. Each page and action checks again: a layout alone doesn't guard them.
 // Then the passkey gate (src/lib/admin/passkeys.ts): no passkey yet → only
 // "Set up a passkey"; this session not checked in 12 hours → only the check.
-// The actions and the export check the gate themselves too.
+// The actions and the export check the gate themselves too. The admin
+// sections live in the console's single navbar now (ConsoleNav.tsx).
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await requireAdmin();
   const gate = await gateFor(user);
@@ -29,8 +28,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
   return (
     <Box data-admin-wide sx={{ minWidth: 0 }}>
-      <ConsoleSubNav area="admin" base={consoleBase()} title="Admin" />
-      <Box sx={{ minWidth: 0 }}>{children}</Box>
+      {children}
     </Box>
   );
 }

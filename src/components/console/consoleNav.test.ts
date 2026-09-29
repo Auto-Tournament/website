@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { accountLinks, activeSection, sectionLinks, sections } from './consoleNav';
+import { accountLinks, activeSection, navArea, sectionLinks, sections } from './consoleNav';
 
 describe('account menu', () => {
   it('shows Admin only to admins', () => {
@@ -37,5 +37,17 @@ describe('console sub-nav', () => {
     expect(activeSection('admin', '/admin/licenses/new')).toBe('/admin/licenses/new');
     expect(activeSection('admin', '/admin/licenses/L-1')).toBe('/admin/licenses');
     expect(activeSection('admin', '/admin/orders/o1')).toBeNull();
+  });
+});
+
+describe('the single console nav bar', () => {
+  it('places a page in the admin or organization area, or neither', () => {
+    expect(navArea('/admin')).toBe('admin');
+    expect(navArea('/console/admin/leads')).toBe('admin');
+    expect(navArea('/licenses')).toBe('org');
+    expect(navArea('/console/billing')).toBe('org');
+    expect(navArea('/signin')).toBeNull();
+    expect(navArea('/welcome')).toBeNull();
+    expect(navArea('/invite')).toBeNull();
   });
 });
