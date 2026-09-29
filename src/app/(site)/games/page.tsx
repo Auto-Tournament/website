@@ -14,7 +14,7 @@ const { color, radius } = tokens;
 
 const title = 'Games we support';
 const description =
-  'Counter-Strike 2 is built into Auto Tournament, with its own plugins and tools. In 3.0, every other game runs on manual reporting: captains report the score and the other captain agrees.';
+  'Counter-Strike 2 comes as a module that ships with Auto Tournament, with its own plugins and tools. In 3.0, every other game runs on manual reporting: captains report the score and the other captain agrees.';
 
 export const metadata: Metadata = {
   title,
@@ -37,7 +37,7 @@ export default function GamesPage() {
             </Box>
           </Typography>
           <Typography sx={{ mt: 3, maxWidth: '58ch', color: color.ink2, fontSize: '1.125rem' }}>
-            Each game is a module. Counter-Strike 2 is built in: the platform talks to your servers and reads every round. Pick a game to see its plugins, its tools
+            Each game is a module. The CS2 module ships with the platform: the match plugin on your servers reports every round back. Pick a game to see its plugins, its tools
             and what commercial use needs.
           </Typography>
         </Container>

@@ -158,7 +158,7 @@ export const platform: Product = {
     { label: 'Formats', value: 'Single and double elimination, Swiss, round robin, shuffle' },
     { label: 'Map veto', value: 'Bo1, Bo3 and Bo5, in the browser' },
     { label: 'Runs on', value: 'One Docker host' },
-    { label: 'Games', value: 'CS2 built in, more as modules' },
+    { label: 'Games', value: 'CS2 module included, more games as modules' },
   ],
   primary: { label: 'Install Auto Tournament', href: `${docs}/getting-started/install` },
   secondary: { label: 'View on GitHub', href: repo.platform },
@@ -231,7 +231,7 @@ export const platform: Product = {
       id: 'games',
       title: 'Games as modules',
       body: [
-        'Counter-Strike 2 is built in: the platform talks to the game servers and reads every round. In 3.0, any other game runs on manual reporting: a captain reports the score, the other captain agrees, and an admin settles a dispute. Each of those games is a small file called a game pack.',
+        'The CS2 module ships with the platform: the match plugin on your game servers reports every round back. In 3.0, any other game runs on manual reporting: a captain reports the score, the other captain agrees, and an admin settles a dispute. Each of those games is a small file called a game pack.',
       ],
       links: [
         { label: 'Games we support', href: '/games' },
@@ -733,10 +733,10 @@ export const games: Game[] = [
     slug: 'cs2',
     name: 'Counter-Strike 2',
     image: '/games/counter-strike-2.webp',
-    badge: { label: 'Built in', tone: 'stable' },
+    badge: { label: 'Included', tone: 'stable' },
     line: 'Your own servers. Veto, live scores, demos and stats.',
     summary:
-      'Auto Tournament talks to your CS2 servers: it loads each match, reads every round, and records the result and the demo. These are the plugins and tools that run on the servers.',
+      'With the CS2 module, Auto Tournament loads each match on your CS2 servers, and the match plugin reports every round, the result and the demo back. These are the plugins and tools that run on the servers.',
     description:
       'Counter-Strike 2 with Auto Tournament: the Ready Up match plugin, CS2 Server Manager, skins and Midas, and what commercial use needs.',
     tools: [readyUp, csm, skins, midas],

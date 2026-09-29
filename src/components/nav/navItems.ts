@@ -60,7 +60,7 @@ export const menus: NavMenu[] = [
       {
         heading: 'Games',
         items: [
-          { label: 'All games', href: '/games', note: 'CS2 built in. More games as modules.', icon: 'games' },
+          { label: 'All games', href: '/games', note: 'CS2 module included. More games as modules.', icon: 'games' },
           { label: 'Counter-Strike 2', href: '/games/cs2', note: 'Plugins, tools and commercial use for CS2.', icon: 'cs2' },
         ],
       },

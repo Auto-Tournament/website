@@ -53,7 +53,7 @@ export function Hero() {
           </Typography>
           <Typography sx={{ mt: 3, maxWidth: '46ch', color: color.ink2, fontSize: '1.125rem' }}>
             Create the tournament and add your servers. Auto Tournament runs the veto, loads every match, tracks the scores and moves the bracket on. Self-hosted,
-            source available, with CS2 built in.
+            source available, with a CS2 module included.
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 4 }}>
             <Button variant="contained" href={links.install}>
@@ -176,7 +176,7 @@ export function Games() {
       <Box sx={{ maxWidth: '40rem', display: 'grid', gap: 2 }}>
         <Typography variant="h2">CS2 today. More games as modules.</Typography>
         <Typography sx={{ color: color.ink2 }}>
-          Games plug in as modules. CS2 ships built in. The rest are planned, starting with games that let you host servers or run lobbies through an API.
+          Games plug in as modules. The CS2 module ships with the platform. The rest are planned, starting with games that let you host servers or run lobbies through an API.
         </Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 1 }}>
           <Button variant="outlined" href="/games">
@@ -206,7 +206,7 @@ export function Games() {
               ...(g.built && { '&:hover': { bgcolor: color.paper3 } }),
             }}
           >
-            <Chip size="small" color={g.built ? 'primary' : 'default'} label={g.built ? 'Built in' : 'Planned'} sx={{ justifySelf: 'start' }} />
+            <Chip size="small" color={g.built ? 'primary' : 'default'} label={g.built ? 'Included' : 'Planned'} sx={{ justifySelf: 'start' }} />
             <Typography variant="h3">{g.name}</Typography>
             <Typography sx={{ color: color.muted, fontSize: '0.875rem' }}>{g.note}</Typography>
           </Box>
