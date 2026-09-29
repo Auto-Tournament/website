@@ -4,9 +4,11 @@
  * pre-emit critique: P4 H5 E4 S5 R4 V4
  */
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Container from '@mui/material/Container';
+import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
 import { Footer, Nav } from '@/components/sections';
@@ -15,7 +17,6 @@ import {
   earnMoneyRule,
   formatEuro,
   founderBadge,
-  founderSalesOpen,
   founderLifetime,
   founderShutdownPromise,
   founderTerms,
@@ -35,11 +36,10 @@ import {
   type PackId,
   type Period,
 } from '@/components/pricing';
-import { getPacks } from '@/lib/stripePrices';
+import { getPricingData } from '@/lib/pricingData';
 import { PackPricing } from '@/components/PackPricing';
-import { licenseStore } from '@/lib/license/store';
 import { PackFinder } from '@/components/PackFinder';
-import { parseAnswers } from '@/components/findPack';
+import { parseAnswers, type Answers, type StepId } from '@/components/findPack';
 import { Disclosure } from '@/components/Disclosure';
 import { Alternatives, ProductStack } from '@/components/PricingGuide';
 import { CheckoutProvider } from '@/components/checkout/Checkout';
@@ -317,31 +317,189 @@ function offersJsonLd(packs: readonly Pack[]) {
   };
 }
 
-export default async function Pricing({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  // The guide's answers live in the query, so a reload or a shared link (or a browser without JavaScript) lands on the same step.
-  const initial = parseAnswers(await searchParams);
-  // Plain numbers only go to the client components; the Stripe price ids stay here.
-  const priceSource = await getPacks();
-  let founderOpen = true;
-  try {
-    founderOpen = founderSalesOpen(await licenseStore().founderCount());
-  } catch {
-    founderOpen = founderSalesOpen(0);
-  }
-  const { packs } = priceSource;
-  const pricesAvailable = priceSource.source === 'stripe';
-  // Read at request time (the image is built without .env): Embedded Checkout when set.
+/** Publishable key + CF-IPCountry, gated on whether Stripe actually answered with real prices. */
+async function checkoutConfig() {
+  const { pricesAvailable } = await getPricingData();
   const publishableKey = pricesAvailable ? stripePublishableKey() : null;
+  const country = countryFromHeader((await headers()).get('cf-ipcountry'));
+  return { publishableKey, country };
+}
+
+/** 1 · The guide: a few questions, one answer. Needs packs + founder status, so it streams in. */
+async function GuideAsync({ initial }: { initial: { answers: Answers; at?: StepId } }) {
+  const [{ packs, pricesAvailable, founderOpen }, { publishableKey, country }] = await Promise.all([getPricingData(), checkoutConfig()]);
+  return (
+    <CheckoutProvider publishableKey={publishableKey} country={country}>
+      <PackFinder packs={packs} pricesAvailable={pricesAvailable} founderOpen={founderOpen} initial={initial} />
+    </CheckoutProvider>
+  );
+}
+
+function GuideSkeleton() {
+  return (
+    <Box aria-hidden sx={{ border: `1px solid ${color.rule}`, borderRadius: `${radius.md}px`, p: { xs: 2.5, md: 3 }, display: 'grid', gap: 1.5, minHeight: 320 }}>
+      <Skeleton variant="text" width="60%" height={28} />
+      <Skeleton variant="rounded" height={56} />
+      <Skeleton variant="rounded" height={56} />
+      <Skeleton variant="rounded" height={56} />
+      <Skeleton variant="rounded" height={44} width={160} />
+    </Box>
+  );
+}
+
+/** 3 · The pack cards + founding supporter strip. Same data as the guide, shared via getPricingData's request cache. */
+async function PacksAsync() {
+  const [{ packs, pricesAvailable, founderOpen }, { publishableKey, country }] = await Promise.all([getPricingData(), checkoutConfig()]);
+  return (
+    <>
+      <CheckoutProvider publishableKey={publishableKey} country={country}>
+        <PackPricing packs={packs} pricesAvailable={pricesAvailable} founderOpen={founderOpen} />
+      </CheckoutProvider>
+      <Typography sx={{ mt: 3, maxWidth: '62ch', color: color.muted, fontSize: '0.875rem' }}>
+        {pricingVersion}. If a price doesn&apos;t fit your case,{' '}
+        <Box component="a" href={`${links.contact}?topic=quote`} target="_blank" rel="noopener" sx={underline}>
+          contact us
+        </Box>{' '}
+        and we&apos;ll work it out.
+      </Typography>
+    </>
+  );
+}
+
+function PackCardsSkeleton() {
+  return (
+    <Box aria-hidden sx={{ display: 'grid', gap: { xs: 1.5, md: 3 }, gridTemplateColumns: { xs: 'minmax(0,1fr)', md: 'repeat(3, minmax(0,1fr))' }, minHeight: 480 }}>
+      {[0, 1, 2].map((i) => (
+        <Skeleton key={i} variant="rounded" height={440} sx={{ bgcolor: color.paper3 }} />
+      ))}
+    </Box>
+  );
+}
+
+/** 4 · How it compares. Folded by default, but still needs packs for the numbers in the table. */
+async function AlternativesAsync() {
+  const { packs } = await getPricingData();
+  return <Alternatives packs={packs} />;
+}
+
+/** 8 (rules + founder terms) and 9 (examples, FAQ): all depend on packs for their numbers/prices. */
+async function PackRulesAsync() {
+  const { packs } = await getPricingData();
+  return (
+    <Box component="ul" data-testid="pack-rules" sx={list}>
+      {[
+        serverLimitRule,
+        ...packRules(packs),
+        'What counts is what you run: CS2 Server Manager and Ready Up each need a license for commercial use; MatchZy Enhanced never does. Either or both of them is a Servers pack.',
+        'A Platform pack covers the game packs used with it. There is no separate price for game packs.',
+      ].map((item) => (
+        <Box key={item} component="li" sx={bullet}>
+          {item}
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
+async function FounderTermsAsync() {
+  const { packs } = await getPricingData();
+  return (
+    <>
+      <Chip size="small" variant="outlined" label={founderBadge} sx={{ mb: 2, maxWidth: '100%', height: 'auto', py: 0.25, '& .MuiChip-label': { whiteSpace: 'normal' } }} />
+      <Box component="ul" sx={list}>
+        {[...founderTerms(packs), `${founderUpdateWarning}.`, neverLockOut].map((item) => (
+          <Box key={item} component="li" sx={bullet}>
+            {item}
+          </Box>
+        ))}
+      </Box>
+    </>
+  );
+}
+
+async function ExamplesAsync() {
+  const { packs } = await getPricingData();
   const examples = examplesFor(packs);
+  return (
+    <Box component="ul" sx={{ ...list, gap: 0 }}>
+      {examples.map((ex) => (
+        <Box
+          component="li"
+          key={ex.scenario}
+          sx={{
+            py: 2,
+            borderBottom: `1px solid ${color.rule}`,
+            '&:first-of-type': { pt: 0 },
+            '&:last-of-type': { borderBottom: 0, pb: 0 },
+            display: 'grid',
+            gridTemplateColumns: { xs: 'minmax(0,1fr)', sm: 'minmax(0,1fr) auto' },
+            gap: { xs: 1, sm: 3 },
+            alignItems: 'start',
+          }}
+        >
+          <div>
+            <Typography sx={{ color: color.ink }}>{ex.scenario}</Typography>
+            <Typography sx={{ mt: 0.5, color: color.muted, fontSize: '0.875rem' }}>{ex.why}</Typography>
+          </div>
+          <Chip
+            size="small"
+            color={ex.verdict === 'Free' || ex.verdict === 'No license needed' ? 'default' : 'primary'}
+            label={ex.verdict}
+            sx={{ justifySelf: { xs: 'start', sm: 'end' } }}
+          />
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
+async function FaqListAsync() {
+  const { packs } = await getPricingData();
+  const faq = faqFor(packs);
+  return (
+    <>
+      {faq.map((item, i) => (
+        <Disclosure key={item.q} id={`faq-${i + 1}`} title={item.q}>
+          <Typography component="div">{item.a}</Typography>
+        </Disclosure>
+      ))}
+    </>
+  );
+}
+
+/** JSON-LD: invisible, so it streams in without a fallback. */
+async function PricingJsonLd() {
+  const { packs } = await getPricingData();
   const faq = faqFor(packs);
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd(faq)) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(offersJsonLd(packs)) }} />
+    </>
+  );
+}
+
+function disclosureTextSkeleton(lines = 3) {
+  return (
+    <Box aria-hidden sx={{ display: 'grid', gap: 1 }}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <Skeleton key={i} variant="text" height={20} width={i === lines - 1 ? '70%' : '100%'} />
+      ))}
+    </Box>
+  );
+}
+
+export default async function Pricing({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  // The guide's answers live in the query, so a reload or a shared link (or a browser without JavaScript) lands on the same step.
+  const initial = parseAnswers(await searchParams);
+  return (
+    <>
+      <Suspense fallback={null}>
+        <PricingJsonLd />
+      </Suspense>
       <Nav />
-      <CheckoutProvider publishableKey={publishableKey} country={countryFromHeader((await headers()).get('cf-ipcountry'))}>
       <main>
-        {/* 1 · The rule, then the guide: a few questions, one answer. */}
+        {/* 1 · The rule, then the guide: a few questions, one answer. The h1 renders immediately; only the guide waits on packs/founder data. */}
         <Box component="section" id="guide" aria-labelledby="pricing-title" sx={{ scrollMarginTop: 80 }}>
           {/* Old links (#calculator, #setups, #free) land on the guide. */}
           <Box component="span" id="calculator" aria-hidden sx={{ display: 'block', height: 0 }} />
@@ -361,7 +519,9 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
                   to see if you need one, and which.
                 </Typography>
               </div>
-              <PackFinder packs={packs} pricesAvailable={pricesAvailable} founderOpen={founderOpen} initial={initial} />
+              <Suspense fallback={<GuideSkeleton />}>
+                <GuideAsync initial={initial} />
+              </Suspense>
               <Typography sx={{ color: color.muted, fontSize: '0.875rem' }}>
                 Rather compare everything yourself?{' '}
                 <Box component="a" href="#packs" sx={underline}>
@@ -377,7 +537,7 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
           </Container>
         </Box>
 
-        {/* 2 · What each product is, as one diagram, folded. */}
+        {/* 2 · What each product is, as one diagram, folded. No packs data needed: renders with the shell. */}
         <Container maxWidth="lg" component="section" aria-labelledby="details-title" sx={{ pt: { xs: 5, md: 8 } }}>
           <Typography id="details-title" variant="h2" sx={{ mb: { xs: 2, md: 3 } }}>
             The details
@@ -421,14 +581,9 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
               one event is up to 5 days in a row. Yearly is 12 months with unlimited events, and never renews by itself.
             </Box>
           </Box>
-          <PackPricing packs={packs} pricesAvailable={pricesAvailable} founderOpen={founderOpen} />
-          <Typography sx={{ mt: 3, maxWidth: '62ch', color: color.muted, fontSize: '0.875rem' }}>
-            {pricingVersion}. If a price doesn&apos;t fit your case,{' '}
-            <Box component="a" href={`${links.contact}?topic=quote`} target="_blank" rel="noopener" sx={underline}>
-              contact us
-            </Box>{' '}
-            and we&apos;ll work it out.
-          </Typography>
+          <Suspense fallback={<PackCardsSkeleton />}>
+            <PacksAsync />
+          </Suspense>
         </Section>
 
         {/* 4 · How it compares, from checked sources only, folded. */}
@@ -437,7 +592,9 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
             <Typography sx={{ mb: 3, color: color.ink2, maxWidth: '62ch' }}>
               Public prices, checked on 28 September 2026, each with its source. Where an alternative does something we don’t, it says so.
             </Typography>
-            <Alternatives packs={packs} />
+            <Suspense fallback={disclosureTextSkeleton(6)}>
+              <AlternativesAsync />
+            </Suspense>
           </Disclosure>
         </Container>
 
@@ -459,29 +616,15 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
         >
           <div>
             <Disclosure id="rules" title="Pack rules">
-              <Box component="ul" data-testid="pack-rules" sx={list}>
-                {[
-                  serverLimitRule,
-                  ...packRules(packs),
-                  'What counts is what you run: CS2 Server Manager and Ready Up each need a license for commercial use; MatchZy Enhanced never does. Either or both of them is a Servers pack.',
-                  'A Platform pack covers the game packs used with it. There is no separate price for game packs.',
-                ].map((item) => (
-                  <Box key={item} component="li" sx={bullet}>
-                    {item}
-                  </Box>
-                ))}
-              </Box>
+              <Suspense fallback={disclosureTextSkeleton(4)}>
+                <PackRulesAsync />
+              </Suspense>
             </Disclosure>
 
             <Disclosure id="founder-terms" title="Founding supporter terms">
-              <Chip size="small" variant="outlined" label={founderBadge} sx={{ mb: 2, maxWidth: '100%', height: 'auto', py: 0.25, '& .MuiChip-label': { whiteSpace: 'normal' } }} />
-              <Box component="ul" sx={list}>
-                {[...founderTerms(packs), `${founderUpdateWarning}.`, neverLockOut].map((item) => (
-                  <Box key={item} component="li" sx={bullet}>
-                    {item}
-                  </Box>
-                ))}
-              </Box>
+              <Suspense fallback={disclosureTextSkeleton(4)}>
+                <FounderTermsAsync />
+              </Suspense>
             </Disclosure>
 
             <Disclosure id="commercial-use" title="What counts as commercial use">
@@ -505,35 +648,9 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
             </Disclosure>
 
             <Disclosure id="examples" title="Examples">
-              <Box component="ul" sx={{ ...list, gap: 0 }}>
-                {examples.map((ex) => (
-                  <Box
-                    component="li"
-                    key={ex.scenario}
-                    sx={{
-                      py: 2,
-                      borderBottom: `1px solid ${color.rule}`,
-                      '&:first-of-type': { pt: 0 },
-                      '&:last-of-type': { borderBottom: 0, pb: 0 },
-                      display: 'grid',
-                      gridTemplateColumns: { xs: 'minmax(0,1fr)', sm: 'minmax(0,1fr) auto' },
-                      gap: { xs: 1, sm: 3 },
-                      alignItems: 'start',
-                    }}
-                  >
-                    <div>
-                      <Typography sx={{ color: color.ink }}>{ex.scenario}</Typography>
-                      <Typography sx={{ mt: 0.5, color: color.muted, fontSize: '0.875rem' }}>{ex.why}</Typography>
-                    </div>
-                    <Chip
-                      size="small"
-                      color={ex.verdict === 'Free' || ex.verdict === 'No license needed' ? 'default' : 'primary'}
-                      label={ex.verdict}
-                      sx={{ justifySelf: { xs: 'start', sm: 'end' } }}
-                    />
-                  </Box>
-                ))}
-              </Box>
+              <Suspense fallback={disclosureTextSkeleton(6)}>
+                <ExamplesAsync />
+              </Suspense>
             </Disclosure>
 
             <Disclosure id="licenses" title="What’s licensed how">
@@ -623,15 +740,12 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
         {/* 9 · FAQ, one question per fold. */}
         <Section id="faq" title="FAQ" pad="tight" split>
           <div>
-            {faq.map((item, i) => (
-              <Disclosure key={item.q} id={`faq-${i + 1}`} title={item.q}>
-                <Typography component="div">{item.a}</Typography>
-              </Disclosure>
-            ))}
+            <Suspense fallback={disclosureTextSkeleton(8)}>
+              <FaqListAsync />
+            </Suspense>
           </div>
         </Section>
       </main>
-      </CheckoutProvider>
       <Footer />
     </>
   );
