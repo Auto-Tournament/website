@@ -1,6 +1,7 @@
 import { lt, or, and, eq, isNotNull, ne, sql } from 'drizzle-orm';
 import type { Db } from './client';
 import { prunePasskeyRows } from '../admin/passkeys';
+import { pruneCheckins } from '../license/checkinStore';
 import { auditLog, invites, leads, memberships, refundRequests, sessions, verificationTokens } from './schema';
 
 /** How long the console keeps what it no longer needs (also in the privacy policy, section 4). */
@@ -28,7 +29,7 @@ export function monthsBefore(now: Date, months: number): Date {
  * contact form leads 24 months after their last activity, refund requests
  * whose confirmation link expired, and finished ones after 30 days, and
  * memberships whose access ended (server providers), each with an activity
- * log entry.
+ * log entry, and license check-ins 90 days after the instance was last seen.
  * Runs at startup and then daily (src/lib/db/startup.ts).
  */
 export async function pruneExpired(db: Db, now = new Date()): Promise<Record<string, number>> {
@@ -41,7 +42,7 @@ export async function pruneExpired(db: Db, now = new Date()): Promise<Record<str
       ended.map((m) => ({ actorUserId: null, action: 'member.expire', orgId: m.orgId, targetType: 'user', targetId: m.userId, details: { role: m.role } })),
     );
   }
-  const [s, v, i, a, l, r, p] = await Promise.all([
+  const [s, v, i, a, l, r, p, c] = await Promise.all([
     db.delete(sessions).where(lt(sessions.expires, now)).returning({ x: sessions.userId }),
     db.delete(verificationTokens).where(lt(verificationTokens.expires, now)).returning({ x: verificationTokens.expires }),
     db
@@ -66,6 +67,7 @@ export async function pruneExpired(db: Db, now = new Date()): Promise<Record<str
       )
       .returning({ x: refundRequests.id }),
     prunePasskeyRows(db, now),
+    pruneCheckins(db, now),
   ]);
-  return { sessions: s.length, signInLinks: v.length, invites: i.length, auditLog: a.length, leads: l.length, refundRequests: r.length, passkeyRows: p, memberships: ended.length };
+  return { sessions: s.length, signInLinks: v.length, invites: i.length, auditLog: a.length, leads: l.length, refundRequests: r.length, passkeyRows: p, memberships: ended.length, licenseCheckins: c };
 }

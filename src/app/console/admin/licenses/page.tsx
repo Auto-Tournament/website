@@ -8,6 +8,8 @@ import { requireAdmin } from '@/lib/admin/guard';
 import { adminStatusLabel, endsOn, LIST_LIMIT, listLicenses, listOrders, type AdminStatus } from '@/lib/admin/licenses';
 import { formatDay, kindNames, packName, todayUtc } from '@/lib/license/describe';
 import { consoleHref } from '@/lib/console/urls';
+import { usageForLicenses } from '@/lib/license/checkinStore';
+import type { Usage } from '@/lib/license/checkin';
 
 export const metadata: Metadata = { title: 'Licenses' };
 export const dynamic = 'force-dynamic';
@@ -17,12 +19,22 @@ const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v.sli
 
 const statuses: (AdminStatus | 'current')[] = ['current', 'active', 'upcoming', 'expired', 'updates-ended', 'replaced', 'refunded', 'revoked', 'test'];
 
+/** Instances and servers from the check-ins, with the overuse flag. */
+function usageCell(u: Usage | undefined) {
+  if (!u || u.instances.length === 0) return null;
+  const text = `${u.instances.length} inst. · ${u.windowServers} srv`;
+  if (u.overServers) return <Badge tone="bad">Overuse · {text}</Badge>;
+  if (u.outsideDates) return <Badge tone={u.fullEventOutside ? 'bad' : 'warn'}>Outside dates · {text}</Badge>;
+  return <Muted>{text}</Muted>;
+}
+
 export default async function AdminLicenses({ searchParams }: { searchParams: Promise<Search> }) {
   await requireAdmin();
   const sp = await searchParams;
   const filters = { q: one(sp.q), status: one(sp.status) as AdminStatus | 'current' | '', kind: one(sp.kind), product: one(sp.product), source: one(sp.source) };
   const today = todayUtc();
   const [{ rows, more }, unpaid] = await Promise.all([listLicenses(db(), filters, today), listOrders(db(), 'unpaid')]);
+  const usage = await usageForLicenses(db(), rows.map((r) => r.record.payload));
   const href = (p: string) => consoleHref(p);
 
   return (
@@ -94,6 +106,7 @@ export default async function AdminLicenses({ searchParams }: { searchParams: Pr
           { key: 'licensee', label: 'Licensee' },
           { key: 'pack', label: 'Pack' },
           { key: 'status', label: 'Status' },
+          { key: 'usage', label: 'In use' },
           { key: 'dates', label: 'Issued / ends' },
           { key: 'org', label: 'Organization' },
           { key: 'amount', label: 'Amount', align: 'right' },
@@ -115,6 +128,7 @@ export default async function AdminLicenses({ searchParams }: { searchParams: Pr
               ),
               pack: `${packName(r.payload)} · ${kindNames[r.payload.kind]}`,
               status: <Badge tone={statusTone[status]}>{adminStatusLabel[status]}</Badge>,
+              usage: usageCell(usage.get(r.payload.id)),
               dates: (
                 <>
                   {day(r.payload.issued_at)}

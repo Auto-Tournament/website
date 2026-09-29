@@ -225,8 +225,11 @@ export default async function Terms() {
       <H2 id="license-checks">18. License checks</H2>
       <p>{neverLockOut}</p>
       <p>
-        We may later add a daily check-in that sends only the license key id, the software version and the number of servers. It will be optional, described
-        here before it starts, and off for non-commercial use.
+        An Auto Tournament instance with a license key saved checks in with us once a day (and at startup and when the key changes). It sends the
+        key (to check its signature), a random instance id, the number of servers, the software version and a few activity counts, never names or
+        player data; the details are in the <a href="/privacy#license-checkin">privacy policy</a>. Without a key, nothing is sent, and removing the key
+        stops it. The check-in never blocks, disables or slows anything: if a key is used on more servers than its pack, or an event license outside
+        its dates, you see a note, and we may contact you.
       </p>
 
       <H2 id="prices">19. Prices and contact</H2>

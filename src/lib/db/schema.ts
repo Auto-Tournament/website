@@ -505,3 +505,59 @@ export const freeLans = pgTable('free_lan_confirmations', {
   createdBy: text('created_by'),
   createdAt: at('created_at').notNull().defaultNow(),
 });
+
+// ---------------------------------------------------------------------------
+// License check-ins (src/lib/license/checkin.ts, POST /api/licenses/checkin)
+
+export type CheckinDeclared = 'none' | 'testing' | 'new_event' | 'dates_moved';
+
+/**
+ * One row per (license, instance): an instance that has the license key saved
+ * checks in once a day. Only the license id is kept, never the key itself;
+ * the instance id is a random UUID the instance made for itself. No IP
+ * address, host name or player data. Deleted 90 days after last_seen
+ * (src/lib/db/prune.ts).
+ */
+export const licenseCheckins = pgTable(
+  'license_checkins',
+  {
+    licenseId: text('license_id').notNull(),
+    instanceId: uuid('instance_id').notNull(),
+    firstSeen: at('first_seen').notNull().defaultNow(),
+    lastSeen: at('last_seen').notNull().defaultNow(),
+    serverCount: integer('server_count').notNull(),
+    platformVersion: text('platform_version').notNull(),
+    /** The instance's latest answer to "what's this?" for an event license used outside its dates. */
+    declared: text('declared').$type<CheckinDeclared>().notNull().default('none'),
+  },
+  (t) => [primaryKey({ columns: [t.licenseId, t.instanceId] }), index('license_checkins_last_seen_idx').on(t.lastSeen)],
+);
+
+/**
+ * Activity counts per (license, instance, UTC day of the check-in): finished
+ * matches, tournaments with activity and the largest of them in teams. Numbers
+ * only. Used for event licenses (activity outside the event dates). Deleted
+ * after 90 days.
+ */
+export const licenseCheckinDays = pgTable(
+  'license_checkin_days',
+  {
+    licenseId: text('license_id').notNull(),
+    instanceId: uuid('instance_id').notNull(),
+    /** YYYY-MM-DD (UTC). */
+    day: text('day').notNull(),
+    matches: integer('matches').notNull().default(0),
+    tournaments: integer('tournaments').notNull().default(0),
+    maxTeams: integer('max_teams').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.licenseId, t.instanceId, t.day] }), index('license_checkin_days_day_idx').on(t.day)],
+);
+
+/** One internal email per license per day at most (usage above the pack, or an event outside its dates). */
+export const licenseUsageAlerts = pgTable('license_usage_alerts', {
+  licenseId: text('license_id').primaryKey(),
+  /** YYYY-MM-DD (UTC) of the last email. */
+  lastEmailedDay: text('last_emailed_day').notNull(),
+  reason: text('reason').notNull(),
+  updatedAt: at('updated_at').notNull().defaultNow(),
+});

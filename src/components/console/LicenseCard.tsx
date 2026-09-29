@@ -30,6 +30,7 @@ export function LicenseCard({
   checkUrl,
   versions,
   children,
+  usage,
 }: {
   license: LicensePayload;
   token: string;
@@ -41,6 +42,8 @@ export function LicenseCard({
   versions: RepoCoverage[] | null;
   /** Actions for this license (such as "Add to <org>"). */
   children?: React.ReactNode;
+  /** Where the key is in use (the daily check-ins), shown last. */
+  usage?: React.ReactNode;
 }) {
   const hint = livemode ? statusHint(license, new Date(`${today}T00:00:00Z`)) : '';
   const rows: [string, React.ReactNode][] = [
@@ -89,6 +92,7 @@ export function LicenseCard({
           </Box>
         </Box>
       )}
+      {usage}
     </Box>
   );
 }

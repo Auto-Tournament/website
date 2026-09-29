@@ -15,8 +15,11 @@ import { isStaff } from '@/lib/console/roles';
 import { consoleHref } from '@/lib/console/urls';
 import { repoLines, repoNames, reposFor } from '@/lib/releases/github';
 import { coverageFor, type Line } from '@/lib/releases/versions';
-import { siteUrl } from '@/lib/site';
+import { DEFAULT_SITE_URL, siteUrl } from '@/lib/site';
 import { claimLicenseAction } from '../../actions';
+import { LicenseUsage } from '@/components/console/LicenseUsage';
+import { customerNotice } from '@/lib/license/checkin';
+import { usageForLicenses } from '@/lib/license/checkinStore';
 
 const { color } = tokens;
 
@@ -41,7 +44,10 @@ export default async function Licenses() {
   const staff = isStaff(org.role);
   // A server provider sees the organization's licenses and keys, and nothing to add or buy.
   const [records, mine] = await Promise.all([licensesForOrg(db(), user.id, org.id), staff ? unassignedLicenses(db(), user) : Promise.resolve([])]);
-  const lines = records.length > 0 ? await releaseLinesFor(records) : null;
+  const [lines, usage] = await Promise.all([
+    records.length > 0 ? releaseLinesFor(records) : Promise.resolve(null),
+    usageForLicenses(db(), records.map((r) => r.payload)),
+  ]);
   const site = siteUrl() ?? '';
   const today = todayUtc();
 
@@ -106,6 +112,11 @@ export default async function Licenses() {
           today={today}
           checkUrl={`${site}/verify/${r.payload.id}`}
           versions={versionsFor(r, lines)}
+          usage={
+            usage.has(r.payload.id) ? (
+              <LicenseUsage usage={usage.get(r.payload.id)!} notice={customerNotice(r.payload, usage.get(r.payload.id)!, `${site || DEFAULT_SITE_URL}/pricing`)} />
+            ) : null
+          }
         />
       ))}
     </>
