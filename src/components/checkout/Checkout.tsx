@@ -25,6 +25,7 @@
  * doesn't load it on import).
  */
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -41,7 +42,6 @@ import { WarningCircle } from '@phosphor-icons/react/dist/csr/WarningCircle';
 import { X } from '@phosphor-icons/react/dist/csr/X';
 import { loadStripe } from '@stripe/stripe-js/pure';
 import type { Stripe } from '@stripe/stripe-js';
-import { StripeCheckoutForm } from './StripeCheckoutForm';
 import { tokens } from '@/theme/tokens';
 import { fontDisplay } from '@/theme/theme';
 import { formatEuro, periodLabels, vatShort, type Period } from '@/components/pricing';
@@ -225,6 +225,14 @@ function FormSkeleton() {
     </Box>
   );
 }
+
+// @stripe/react-stripe-js/checkout and the MUI date picker (used by CheckoutForm,
+// which StripeCheckoutForm renders) only ship to the browser once someone opens
+// the dialog, not on every /pricing load.
+const StripeCheckoutForm = dynamic(() => import('./StripeCheckoutForm').then((mod) => mod.StripeCheckoutForm), {
+  ssr: false,
+  loading: FormSkeleton,
+});
 
 function Status({ children, spinner = false }: { children: ReactNode; spinner?: boolean }) {
   return (
