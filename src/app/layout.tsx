@@ -20,7 +20,7 @@ const mono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono', preload: 
 const url = 'https://autotournament.gg';
 const title = 'Auto Tournament: the tournament runs, you play';
 const description =
-  'Ditch the spreadsheet. Auto Tournament is a free, self-hosted tournament platform: it builds the bracket, runs the map veto, puts every match on a free server and records the results. Source available, with CS2 built in.';
+  'Ditch the spreadsheet. Auto Tournament is a free, self-hosted tournament platform: it builds the bracket, runs the map veto, puts every match on a free server and records the results. Source available, with CS2 module included.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(url),
@@ -37,13 +37,13 @@ export const metadata: Metadata = {
     url,
     siteName: 'Auto Tournament',
     title,
-    description: 'Free, self-hosted tournament platform. Brackets, map veto, servers and results run themselves. CS2 built in.',
+    description: 'Free, self-hosted tournament platform. Brackets, map veto, servers and results run themselves. CS2 module included.',
     locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
     title,
-    description: 'Free, self-hosted tournament platform. Brackets, map veto, servers and results run themselves. CS2 built in.',
+    description: 'Free, self-hosted tournament platform. Brackets, map veto, servers and results run themselves. CS2 module included.',
   },
   robots: { index: true, follow: true },
   category: 'technology',

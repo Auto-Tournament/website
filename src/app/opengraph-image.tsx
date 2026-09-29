@@ -6,7 +6,7 @@ import { hex } from '@/theme/tokens';
 /* Hallmark · OG image · genre: atmospheric · same tokens as the site
  * dark paper + one warm bloom, ram as the background figure, Sora headline, Geist body. */
 
-export const alt = 'Auto Tournament: the tournament runs, you play. Self-hosted tournament platform, CS2 built in.';
+export const alt = 'Auto Tournament: the tournament runs, you play. Self-hosted tournament platform, CS2 module included.';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 export const dynamic = 'force-static';
@@ -56,7 +56,7 @@ export default async function OpengraphImage() {
               </div>
             </div>
             <div style={{ marginTop: 26, fontSize: 27, lineHeight: 1.4, color: color.ink2, maxWidth: 580 }}>
-              Brackets, map veto, servers and results run themselves. Self-hosted, source available, CS2 built in.
+              Brackets, map veto, servers and results run themselves. Self-hosted, source available, CS2 module included.
             </div>
           </div>
 
