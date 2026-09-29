@@ -120,7 +120,7 @@ function stripeFor(key: string): Promise<Stripe | null> {
   });
 }
 
-export function CheckoutProvider({ publishableKey, children }: { publishableKey: string | null; children: ReactNode }) {
+export function CheckoutProvider({ publishableKey, country = null, children }: { publishableKey: string | null; /** From CF-IPCountry, read by the page. */ country?: string | null; children: ReactNode }) {
   const [view, setView] = useState<CheckoutView>({ phase: 'closed' });
   // Set when Stripe says the buyer pressed Pay, cleared when that failed: closing then asks first.
   const [paying, setPaying] = useState(false);
@@ -182,7 +182,7 @@ export function CheckoutProvider({ publishableKey, children }: { publishableKey:
   return (
     <CheckoutContext.Provider value={api}>
       {children}
-      {publishableKey && <CheckoutDialog view={view} onClose={close} onRetry={buyEmbedded} onPaying={setPaying} onInitFailed={fallBackToHosted} />}
+      {publishableKey && <CheckoutDialog view={view} country={country} onClose={close} onRetry={buyEmbedded} onPaying={setPaying} onInitFailed={fallBackToHosted} />}
     </CheckoutContext.Provider>
   );
 }
@@ -237,6 +237,7 @@ function Status({ children, spinner = false }: { children: ReactNode; spinner?: 
 
 export function CheckoutDialog({
   view,
+  country = null,
   onClose,
   onRetry,
   onPaying,
@@ -244,6 +245,7 @@ export function CheckoutDialog({
   renderForm,
 }: {
   view: CheckoutView;
+  country?: string | null;
   onClose: () => void;
   onRetry: (order: CheckoutOrder) => void;
   onPaying: (paying: boolean) => void;
@@ -383,6 +385,7 @@ export function CheckoutDialog({
                 stripe={view.stripe}
                 clientSecret={view.clientSecret}
                 order={{ packName: view.order.packName, period: view.order.period, maxServers: view.order.maxServers, servers: view.order.payload.servers }}
+                country={country}
                 onPaying={onPaying}
                 onInitFailed={() => onInitFailed?.(view.order)}
               />

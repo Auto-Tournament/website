@@ -4,7 +4,9 @@
  *
  * Relative imports on purpose: vitest runs this file without the `@/` alias.
  */
-import { addDays, LIFETIME, type LicensePayload } from './format';
+import type { Period } from '../../components/pricing';
+import { addDays, addMonths, EVENT_MAX_DAYS, LIFETIME } from './dates';
+import type { LicensePayload } from './format';
 
 const MONTH_NAMES = [
   'January',
@@ -93,7 +95,8 @@ export function licenseDurationText(license: Pick<LicensePayload, 'kind' | 'issu
     const to = license.valid_to ?? license.updates_until;
     return `One event: ${formatRange(from, to)} (${plural(dayCount(from, to), 'day')})`;
   }
-  const start = license.issued_at.slice(0, 10);
+  // 12 months ending the day before updates_until: the start day chosen at checkout.
+  const start = addMonths(license.updates_until, -12);
   const end = addDays(license.updates_until, -1);
   return `12 months: ${formatRange(start, end)}`;
 }
@@ -185,4 +188,17 @@ export function statusHint(license: Pick<LicensePayload, 'kind' | 'issued_at' | 
 /** UTC today, YYYY-MM-DD. */
 export function todayUtc(now: Date = new Date()): string {
   return now.toISOString().slice(0, 10);
+}
+
+/**
+ * The live line under the checkout's start-date picker, for a start day
+ * (YYYY-MM-DD):
+ * - event: "Valid 3–7 October 2026 (5 days)"
+ * - yearly: "Valid 3 October 2026 – 2 October 2027"
+ * - founder: "Starts 3 October 2026. Updates for life."
+ */
+export function checkoutValidityText(kind: Period, start: string): string {
+  if (kind === 'founder') return `Starts ${formatDay(start)}. Updates for life.`;
+  if (kind === 'event') return `Valid ${formatRange(start, addDays(start, EVENT_MAX_DAYS - 1))} (${plural(EVENT_MAX_DAYS, 'day')})`;
+  return `Valid ${formatRange(start, addDays(addMonths(start, 12), -1))}`;
 }

@@ -4,6 +4,8 @@ import Typography from '@mui/material/Typography';
 import { founderSalesOpen } from '@/components/pricing';
 import { PackPricing } from '@/components/PackPricing';
 import { CheckoutProvider } from '@/components/checkout/Checkout';
+import { headers } from 'next/headers';
+import { countryFromHeader } from '@/lib/country';
 import { stripePublishableKey } from '@/lib/stripePublishable';
 import { PageTitle } from '@/components/console/ConsoleShell';
 import { canManage, verifiedEmail } from '@/lib/console/orgs';
@@ -46,7 +48,7 @@ export default async function Buy() {
         Buy a license
       </PageTitle>
       <Box sx={{ mt: 2 }}>
-        <CheckoutProvider publishableKey={prices.source === 'stripe' ? stripePublishableKey() : null}>
+        <CheckoutProvider publishableKey={prices.source === 'stripe' ? stripePublishableKey() : null} country={countryFromHeader((await headers()).get('cf-ipcountry'))}>
           <PackPricing packs={prices.packs} pricesAvailable={prices.source === 'stripe'} founderOpen={founderOpen} />
         </CheckoutProvider>
       </Box>

@@ -43,6 +43,8 @@ import { parseAnswers } from '@/components/findPack';
 import { Disclosure } from '@/components/Disclosure';
 import { Alternatives, ProductStack } from '@/components/PricingGuide';
 import { CheckoutProvider } from '@/components/checkout/Checkout';
+import { headers } from 'next/headers';
+import { countryFromHeader } from '@/lib/country';
 import { stripePublishableKey } from '@/lib/stripePublishable';
 
 const { color, radius } = tokens;
@@ -304,7 +306,7 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
   return (
     <>
       <Nav />
-      <CheckoutProvider publishableKey={publishableKey}>
+      <CheckoutProvider publishableKey={publishableKey} country={countryFromHeader((await headers()).get('cf-ipcountry'))}>
       <main>
         {/* 1 · The rule, then the guide: a few questions, one answer. */}
         <Box component="section" id="guide" aria-labelledby="pricing-title" sx={{ scrollMarginTop: 80 }}>

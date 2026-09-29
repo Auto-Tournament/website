@@ -50,8 +50,13 @@ const actions = {
       return { type: 'error', error: { message: 'server update failed' } };
     }
   }),
-  confirm: vi.fn(async (_args: unknown): Promise<Result> => {
+  updateBillingAddress: vi.fn(async (_address: unknown): Promise<Result> => ok),
+  confirm: vi.fn(async (args: unknown): Promise<Result> => {
     requirePaymentElement();
+    // Stripe.js with automatic tax: the address goes through updateBillingAddress, never confirm().
+    if (args && typeof args === 'object' && 'billingAddress' in args) {
+      throw new IntegrationError('You cannot provide `billingAddress` in confirm() when using automatic tax. Please use updateBillingAddress() instead.');
+    }
     return ok;
   }),
 };
@@ -232,6 +237,8 @@ async function openForm(fetchMock = answer(200, { clientSecret: 'cs_test_1_secre
 }
 
 const type = (label: string | RegExp, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
+// The date picker: its label names both the spinbutton group and its hidden input, which takes a typed date.
+const setStart = (value: string) => fireEvent.change(screen.getByLabelText('From when should the license be valid?', { selector: 'input' }), { target: { value } });
 
 function fillValid({ vat = '' }: { vat?: string } = {}) {
   type('Your name', 'Kari Nordmann');
@@ -239,7 +246,8 @@ function fillValid({ vat = '' }: { vat?: string } = {}) {
   type('Company or organization', 'Example LAN AS');
   type('VAT ID (optional)', vat);
   type('Event, or the client you run it for', 'Example LAN, examplelan.no');
-  type('Event date(s)', '3-5 October 2026');
+  setStart('03/10/2030');
+  fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'NO' } });
   type('Street address', 'Storgata 1');
   type('Postal code', '2815');
   type('City', 'Gjøvik');
@@ -260,7 +268,7 @@ describe('custom checkout form', () => {
     expect(document.activeElement).toBe(screen.getByLabelText('Company or organization'));
     expect(screen.getByTestId('checkout-pay').hasAttribute('disabled')).toBe(false);
     const form = screen.getByTestId('checkout-form').textContent ?? '';
-    for (const msg of ['Enter your name', 'Enter the email address', 'Enter the company', 'Enter the event or client name', 'Enter the event date', 'Enter the street address', 'Enter the postal code', 'Enter the city', 'Confirm that you are buying for a business', 'Accept the terms']) {
+    for (const msg of ['Enter your name', 'Enter the email address', 'Enter the company', 'Enter the event or client name', 'Choose the date the license starts', 'Enter the street address', 'Enter the postal code', 'Enter the city', 'Confirm that you are buying for a business', 'Accept the terms']) {
       expect(form).toContain(msg);
     }
     expect(screen.getByLabelText('Company or organization').getAttribute('aria-invalid')).toBe('true');
@@ -277,7 +285,7 @@ describe('custom checkout form', () => {
     for (const a of [terms, sale]) expect(a.getAttribute('target')).toBe('_blank');
   });
 
-  it('pays: VAT ID to Stripe as a tax ID, our fields to /api/checkout/details, then confirm with email and billing address', async () => {
+  it('pays: VAT ID to Stripe as a tax ID, our fields to /api/checkout/details, the billing address to the session, then confirm with the email', async () => {
     const fetchMock = await openForm();
     fillValid({ vat: '123 456 789' });
     fireEvent.click(screen.getByTestId('checkout-pay'));
@@ -291,17 +299,42 @@ describe('custom checkout form', () => {
       buyerName: 'Kari Nordmann',
       company: 'Example LAN AS',
       eventName: 'Example LAN, examplelan.no',
-      eventDates: '3-5 October 2026',
+      eventDates: '2030-10-03',
       vatId: '123 456 789',
       business: true,
       terms: true,
     });
-    expect(actions.confirm).toHaveBeenCalledWith({
-      email: 'buyer@example.com',
-      billingAddress: { name: 'Example LAN AS', address: { country: 'NO', line1: 'Storgata 1', line2: null, postal_code: '2815', city: 'Gjøvik' } },
-    });
+    expect(actions.updateBillingAddress).toHaveBeenCalledWith({ name: 'Example LAN AS', address: { country: 'NO', line1: 'Storgata 1', line2: null, postal_code: '2815', city: 'Gjøvik' } });
+    expect(actions.updateBillingAddress.mock.invocationCallOrder[0]).toBeLessThan(actions.confirm.mock.invocationCallOrder[0]);
+    expect(actions.confirm).toHaveBeenCalledWith({ email: 'buyer@example.com' });
+    await waitFor(() => expect(actions.confirm.mock.results[0]?.type).toBe('return'));
+    await expect(actions.confirm.mock.results[0].value).resolves.toEqual(ok);
     // Processing: the button stays busy while Stripe leaves for the thanks page.
     expect(screen.getByTestId('checkout-pay').textContent).toContain('Processing');
+  });
+
+  it('shows a rejected billing address as a form error and does not confirm', async () => {
+    await openForm();
+    actions.updateBillingAddress.mockResolvedValueOnce({ type: 'error', error: { message: 'Enter a valid postal code.' } });
+    fillValid();
+    fireEvent.click(screen.getByTestId('checkout-pay'));
+    expect((await screen.findByTestId('checkout-form-error')).textContent).toContain('Enter a valid postal code.');
+    expect(actions.confirm).not.toHaveBeenCalled();
+  });
+
+  it('start date: a date picker with a live validity line; past days are refused', async () => {
+    await openForm();
+    expect(screen.queryByTestId('checkout-validity')).toBeNull();
+    setStart('03/10/2030');
+    expect(screen.getByTestId('checkout-validity').textContent).toBe('Valid 3 October 2030 – 2 October 2031');
+    // Keyboard and screen readers: day, month and year spinbuttons in a group named by our label.
+    const group = screen.getByRole('group', { name: 'From when should the license be valid?' });
+    expect(group.querySelectorAll('[role="spinbutton"]').length).toBe(3);
+    expect(screen.getByRole('button', { name: /calendar/i })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Choose your country' })).toBeTruthy();
+    setStart('01/01/2020');
+    fireEvent.click(screen.getByTestId('checkout-pay'));
+    expect((await screen.findByTestId('checkout-error-summary')).textContent).toMatch(/License start date: (Choose today or a later date|Enter a date)/);
   });
 
   it('shows a declined card as a form error and lets the buyer try again', async () => {

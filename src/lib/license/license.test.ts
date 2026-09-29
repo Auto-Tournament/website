@@ -97,8 +97,9 @@ describe('dates', () => {
     expect(licenseDates('event', '2026-09-28', '2030-01-01').fromForm).toBe(false);
   });
 
-  it('year: updates 12 months from the purchase, no end to the rights', () => {
-    expect(licenseDates('year', '2026-09-28', '2026-10-15')).toEqual({ updates_until: '2027-09-28', fromForm: false });
+  it('year: updates 12 months from the start day chosen at checkout (else the purchase), no end to the rights', () => {
+    expect(licenseDates('year', '2026-09-28', '2026-10-15')).toEqual({ updates_until: '2027-10-15', fromForm: true });
+    expect(licenseDates('year', '2026-09-28', undefined)).toEqual({ updates_until: '2027-09-28', fromForm: false });
   });
 
   it('founder: lifetime updates, no period', () => {
