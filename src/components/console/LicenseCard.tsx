@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
-import { CodeBlock } from '../CodeBlock';
+import { LicenseKeyField } from '../LicenseKeyField';
 import { DetailList, PublicCheckLink } from '../LicenseKeyView';
 import { kindNames, licenseDurationText, packName, productContents, statusHint, statusText } from '@/lib/license/describe';
 import type { LicensePayload } from '@/lib/license/format';
@@ -64,7 +64,7 @@ export function LicenseCard({
       <DetailList rows={rows} />
       <Box>
         <Box sx={{ color: color.muted, fontSize: '0.875rem', mb: 0.75 }}>License key</Box>
-        <CodeBlock code={token} what="license key" size="sm" />
+        <LicenseKeyField token={token} />
       </Box>
       <PublicCheckLink url={checkUrl} />
       {versions && (

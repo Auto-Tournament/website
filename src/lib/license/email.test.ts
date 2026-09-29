@@ -55,11 +55,11 @@ describe('describe', () => {
 });
 
 describe('license email', () => {
-  it('has the key, the details and the links', () => {
+  it('has the details and the links, but never the key itself', () => {
     const mail = licenseEmail(record(), site);
     expect(mail.subject).toBe('Your Auto Tournament license key — L-test');
     for (const body of [mail.text, mail.html]) {
-      expect(body).toContain('ATL1.payload.sig');
+      expect(body).not.toContain('ATL1.payload.sig');
       expect(body).toContain('Platform L');
       expect(body).toContain('Up to 40 game servers');
       expect(body).toContain('One event: 3–5 October 2026 (3 days)');
@@ -69,6 +69,12 @@ describe('license email', () => {
       expect(body).toContain(`${site}/terms`);
       expect(body).toContain('938 566 674');
     }
+  });
+
+  it('never contains the license token, in text or HTML', () => {
+    const mail = licenseEmail(record('cs_test_1', { token: 'ATL1.super-secret-payload.sig' }), site);
+    expect(mail.text).not.toContain('ATL1.super-secret-payload.sig');
+    expect(mail.html).not.toContain('ATL1.super-secret-payload.sig');
   });
 
   it('leaves out an unknown invoice number', () => {

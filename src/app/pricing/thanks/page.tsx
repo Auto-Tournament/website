@@ -12,7 +12,6 @@ import { clientIp, createRateLimiter } from '@/lib/checkout';
 import { CHECKOUT_SESSION_ID } from '@/lib/license/format';
 import { issueForSession, stripeServer } from '@/lib/license/issue';
 import { licenseSigningKey } from '@/lib/license/keys';
-import { emailConfig } from '@/lib/email/postmark';
 import { siteUrl } from '@/lib/site';
 import { consoleEnabled } from '@/lib/console/auth';
 import { consoleUrl } from '@/lib/console/urls';
@@ -80,8 +79,8 @@ export default async function Thanks({ searchParams }: { searchParams: Promise<R
           {state.kind === 'license' && (
             <>
               <Typography sx={{ mt: 3, maxWidth: '60ch', color: color.ink2, fontSize: '1.125rem' }}>
-                Here is your license key. Save it now: you paste it into Ready Up or the platform&apos;s settings.
-                {emailConfig() ? ' We also email it to the address you paid with.' : ''}
+                Here is your license key. You paste it into Ready Up or the platform&apos;s settings.
+                You can see it again any time in the console.
               </Typography>
               <LicenseKeyView
                 token={state.record.token}
