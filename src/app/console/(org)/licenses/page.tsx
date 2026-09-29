@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
 import { LicenseCard, type RepoCoverage } from '@/components/console/LicenseCard';
@@ -87,10 +88,12 @@ export default async function Licenses() {
       )}
 
       {records.length === 0 && mine.length === 0 && staff && (
-        <Typography sx={{ maxWidth: '62ch' }}>
-          Licenses bought from the <a href={consoleHref('/buy')}>Buy</a> page land here. Bought one on the website? It is in the organization made from your
-          checkout, which you own once you sign in with the email you paid with.
-        </Typography>
+        <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', maxWidth: '62ch' }}>
+          <Typography>No licenses yet. Licenses you buy land here.</Typography>
+          <Button variant="contained" href={consoleHref('/buy')}>
+            Buy a license
+          </Button>
+        </Box>
       )}
 
       {records.map((r) => (
