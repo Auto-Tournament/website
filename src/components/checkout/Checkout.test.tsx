@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { useEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { StripeCheckoutAmount, StripeCheckoutTotalSummary } from '@stripe/stripe-js';
@@ -49,8 +50,35 @@ const actions = {
       return { type: 'error', error: { message: 'server update failed' } };
     }
   }),
-  confirm: vi.fn(async (_args: unknown): Promise<Result> => ok),
+  confirm: vi.fn(async (_args: unknown): Promise<Result> => {
+    requirePaymentElement();
+    return ok;
+  }),
 };
+
+// Stripe.js in a payment-mode session (payment_method_collection `always`,
+// the only value payment mode allows): confirm() goes through the Payment
+// Element at every total, €0 included, and throws an IntegrationError when
+// none is mounted.
+class IntegrationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'IntegrationError';
+  }
+}
+let paymentElementsMounted = 0;
+function requirePaymentElement() {
+  if (paymentElementsMounted < 1) throw new IntegrationError('Please ensure that the Payment Element is mounted and the ready event has been emitted before calling confirm().');
+}
+function MockPaymentElement() {
+  useEffect(() => {
+    paymentElementsMounted += 1;
+    return () => {
+      paymentElementsMounted -= 1;
+    };
+  }, []);
+  return <div data-testid="payment-element" />;
+}
 let checkoutState: { type: 'loading' } | { type: 'error'; error: { message: string } } | { type: 'success'; checkout: unknown } = { type: 'loading' };
 const providerOptions = vi.fn();
 vi.mock('@stripe/react-stripe-js/checkout', () => ({
@@ -59,7 +87,7 @@ vi.mock('@stripe/react-stripe-js/checkout', () => ({
     return children;
   },
   useCheckoutElements: () => checkoutState,
-  PaymentElement: () => <div data-testid="payment-element" />,
+  PaymentElement: () => <MockPaymentElement />,
 }));
 
 const order: CheckoutOrder = {
@@ -309,7 +337,7 @@ describe('custom checkout form', () => {
     expect(actions.confirm).not.toHaveBeenCalled();
   });
 
-  it('at a total of 0 (full promo) hides the Payment Element and confirms without a payment method', async () => {
+  it('at a total of 0 (full promo) keeps the Payment Element mounted, so confirm() does not throw', async () => {
     const discounted: SummarySession = {
       ...session,
       total: totals(49900, 49900),
@@ -317,8 +345,8 @@ describe('custom checkout form', () => {
     };
     checkoutState = { type: 'success', checkout: { ...discounted, ...actions } };
     const fetchMock = await openForm();
-    expect(screen.queryByTestId('payment-element')).toBeNull();
-    expect(screen.getByTestId('checkout-free').textContent).toBe('Nothing to pay: your promo code covers the full price.');
+    expect(screen.getByTestId('payment-element')).toBeTruthy();
+    expect(screen.getByTestId('checkout-free').textContent).toContain('Nothing to pay: your promo code covers the full price.');
     expect(screen.getByTestId('checkout-pay').textContent).toBe('Get my license');
     fillValid();
     fireEvent.click(screen.getByTestId('checkout-pay'));
@@ -326,6 +354,23 @@ describe('custom checkout form', () => {
     expect(actions.runServerUpdate).toHaveBeenCalled();
     expect(fetchMock.mock.calls.some(([url]) => url === '/api/checkout/details')).toBe(true);
     expect(actions.confirm.mock.calls[0][0]).not.toHaveProperty('paymentMethod');
+    await waitFor(() => expect(actions.confirm.mock.results[0]?.type).toBe('return'));
+    await expect(actions.confirm.mock.results[0].value).resolves.toEqual(ok);
+    expect(screen.queryByTestId('checkout-form-error')).toBeNull();
+  });
+
+  it('logs the IntegrationError message when confirm() throws', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const message = 'Please ensure that the Payment Element is mounted and the ready event has been emitted before calling confirm().';
+    actions.confirm.mockImplementationOnce(async () => {
+      throw new IntegrationError(message);
+    });
+    await openForm();
+    fillValid();
+    fireEvent.click(screen.getByTestId('checkout-pay'));
+    expect((await screen.findByTestId('checkout-form-error')).textContent).toContain('Nothing was charged');
+    expect(log).toHaveBeenCalledWith('[checkout] pay step failed', { step: 'confirm', error: 'IntegrationError', message });
+    log.mockRestore();
   });
 
   // A free session the way Stripe.js behaves: confirm() throws unless the page
@@ -341,7 +386,8 @@ describe('custom checkout form', () => {
     Object.defineProperty(total, 'amount', { enumerable: true, get: () => ((amountRead = true), '€0.00') });
     const withGetter = { ...discounted, total: { ...discounted.total, total } };
     actions.confirm.mockImplementationOnce(async (args: unknown) => {
-      if (!amountRead) throw new Error('IntegrationError: total.total.amount was not displayed');
+      if (!amountRead) throw new IntegrationError("checkout.confirm() - You must read the session's total amount before calling confirm().");
+      requirePaymentElement();
       return confirm(args);
     });
     checkoutState = { type: 'success', checkout: { ...withGetter, ...actions } };
@@ -376,7 +422,7 @@ describe('custom checkout form', () => {
       });
       expect((await screen.findByTestId('checkout-form-error')).textContent).toContain('Something went wrong. Nothing was charged. Try again or contact us.');
       expect(screen.getByTestId('checkout-pay').textContent).toBe('Get my license');
-      expect(log).toHaveBeenCalledWith('[checkout] pay step failed', { step: 'confirm', error: 'StepTimeout' });
+      expect(log).toHaveBeenCalledWith('[checkout] pay step failed', { step: 'confirm', error: 'StepTimeout', message: 'confirm timed out' });
     } finally {
       vi.useRealTimers();
       log.mockRestore();

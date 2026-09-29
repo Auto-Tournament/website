@@ -171,7 +171,7 @@ export function CheckoutPreview({ packs }: { packs: Pack[] }) {
           Checkout dialog preview
         </Typography>
         <Typography sx={{ color: color.ink2, mt: 1, maxWidth: '60ch' }}>
-          Development only. Every state of the checkout dialog: our own form, with a mock in place of Stripe&apos;s Payment Element and session. Try promo code PREVIEW10 (10 % off) or PREVIEW100 (free order: no card form). Resize the window below 600 px for the phone
+          Development only. Every state of the checkout dialog: our own form, with a mock in place of Stripe&apos;s Payment Element and session. Try promo code PREVIEW10 (10 % off) or PREVIEW100 (free order: the card form stays, nothing is charged). Resize the window below 600 px for the phone
           (full-screen) layout.
         </Typography>
       </div>
