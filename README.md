@@ -326,6 +326,51 @@ and never "blocked". Warning codes: `updates_expired` (line date after
 codes: `malformed`, `unknown_kid`, `bad_signature`, `unsupported_version`.
 Tests: `src/lib/license/license.test.ts` (throwaway keys made at runtime).
 
+### License check-in (`POST /api/licenses/checkin`)
+
+A platform instance **with a license key saved** checks in at startup, once
+a day and when the key changes. Without a key nothing is sent. It never
+blocks anything: every answer but 200 is ignored by the instance, and
+offline/LAN instances just don't check in.
+
+Body (JSON, at most 8 KiB):
+
+```json
+{ "token": "ATL1.…", "key_id": "L-…", "instance_id": "<uuid, made once by the instance>",
+  "server_count": 12, "platform_version": "1.4.0", "sent_at": "2026-09-29T10:00:00Z",
+  "matches_played": 3, "tournaments_live": 1, "max_tournament_teams": 8,
+  "declared": "none | testing | new_event | dates_moved" }
+```
+
+The last four are optional (0 / `none`). The route checks the Ed25519
+signature against the published keys, that `key_id` is the payload's id, and
+that the token is exactly the one we issued (404 otherwise). The token is
+never stored or logged: `license_checkins` keeps per (license id, instance
+id) first/last seen, server count, version and the latest answer;
+`license_checkin_days` the daily activity numbers. Both are pruned 90 days
+after the instance was last seen. Rate limits (in memory): 6 an hour per
+key and instance, 120 an hour per IP.
+
+Answer: `{ ok, usage: { instances, servers, max_servers, window_days, overuse, outside_dates }, notice }`.
+`notice` is calm plain text for the instance's admins (no "reuse" wording).
+All thresholds are `CHECKIN_RULES` in `src/lib/license/checkin.ts` (the
+privacy policy quotes them):
+
+- Servers: instances seen in the last 3 days, their servers added up, above
+  `max_servers` → notice, "Overuse" in /admin, internal email.
+- Event licenses: a day outside `valid_from..valid_to` (± 1 day grace) with a
+  tournament or more than 2 finished matches → notice ("Planning something
+  new?") and "Outside dates" in /admin. Testing is the default assumption:
+  the internal email only goes out when it looks like a whole event (> 20
+  matches in a day or a tournament of ≥ 8 teams) and the answer isn't
+  `dates_moved`.
+- Internal emails go to `seller.email`, at most one per license per day
+  (`license_usage_alerts`), never to the customer.
+
+The console's Licenses page shows each license's instances (a short hash of
+the instance id, last seen, servers, version) for the last 30 days; the admin
+license list and page add the flags and the answer.
+
 ## VAT threshold alerts
 
 Sivert's ENK must register for Norwegian VAT (Merverdiavgiftsregisteret) once

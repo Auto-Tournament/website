@@ -13,4 +13,4 @@ export const seller = {
 } as const;
 
 /** Shown on each legal page. */
-export const legalLastUpdated = '28 September 2026';
+export const legalLastUpdated = '29 September 2026';

@@ -23,6 +23,8 @@ import { kindNames, licenseDurationText, packName, todayUtc } from '@/lib/licens
 import { LICENSE_ID } from '@/lib/license/verify';
 import { consoleHref } from '@/lib/console/urls';
 import { siteUrl } from '@/lib/site';
+import { LicenseUsage } from '@/components/console/LicenseUsage';
+import { usageForLicense } from '@/lib/license/checkinStore';
 import { addLicenseNoteAction, cancelRefundRequestAction, reissueAction, requestRefundAction, resendAction, revokeAction } from '../../actions';
 
 const { color } = tokens;
@@ -48,6 +50,7 @@ export default async function AdminLicense({ params }: { params: Promise<{ id: s
   const { record: r, status, org } = detail;
   const payment = await refundable(db(), id);
   const pending = await pendingRequests(db(), id);
+  const usage = await usageForLicense(db(), detail.record.payload);
   const canEmail = emailConfig() !== null;
   const p = r.payload;
   const href = (path: string) => consoleHref(path);
@@ -123,6 +126,10 @@ export default async function AdminLicense({ params }: { params: Promise<{ id: s
         </Box>
         <PublicCheckLink url={`${site}/verify/${p.id}`} />
       </Box>
+
+      <Panel title="Usage (check-ins)">
+        <LicenseUsage usage={usage} admin />
+      </Panel>
 
       {detail.chain.length > 1 && (
         <Panel title="Reissue history">

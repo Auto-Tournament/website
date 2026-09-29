@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { H2, LegalPage } from '@/components/legal';
 import { links } from '@/components/links';
 import { seller } from '@/components/seller';
+import { CHECKIN_RULES } from '@/lib/license/checkin';
 
 const title = 'Privacy Policy';
 const description = 'What personal data we collect when you buy or ask about an Auto Tournament license, why, who we share it with, and your rights.';
@@ -46,8 +47,42 @@ export default function Privacy() {
         Stripe customer id, the business name you gave at checkout, the product, pack and server limit, the period, when it was issued, how long updates run
         and, for one event, the event dates. It doesn&apos;t contain your email, name or address, but anyone you give the key to can read what it contains. We
         keep the issued keys on our server with a one-way hash of your email (not the email itself), so you can <a href={links.account}>sign in to the console</a> and
-        see it again. The software checks the key offline and sends nothing to us.
+        see it again. The software checks the key offline. With a key saved, it also checks in once a day (see the next paragraph).
       </p>
+      <div id="license-checkin">
+        <p>
+          <strong>The license check-in.</strong> Only an Auto Tournament instance that has a license key saved checks in with us: at startup, once a day,
+          and when the key is changed. Without a key (free non-commercial use) it sends nothing. It sends exactly:
+        </p>
+        <ul>
+          <li>the license key, so we can check its signature. We keep only the license id from it, never the key;</li>
+          <li>a random instance id that the instance made for itself (it says nothing about you or your machine);</li>
+          <li>the number of game servers set up, and the platform version;</li>
+          <li>
+            since the last check-in, three numbers: finished matches, tournaments with a finished match, and the largest of those tournaments in teams.
+            No names, teams, players, matches or ids;
+          </li>
+          <li>for an event license used outside its dates, the answer an admin gave to our question (testing, a new event, or the dates moved), if any;</li>
+          <li>the time it was sent.</li>
+        </ul>
+        <p>
+          <strong>Why:</strong> a license covers a number of servers and, for one event, its dates. The check-in lets us see that a key is used within
+          that, and lets your instance and the console show you where your key is in use. It never blocks, disables or slows anything, and an instance
+          that can&apos;t reach us (offline, LAN) simply doesn&apos;t check in. Removing the key stops it.
+        </p>
+        <p>
+          <strong>What we do with it:</strong> we keep, per license and instance, when it was first and last seen, the server count and the version,
+          and the daily activity numbers, for {CHECKIN_RULES.retentionDays} days after the instance was last seen. We don&apos;t keep the IP address it
+          came from (it is held in memory for up to an hour, to limit abuse). Members of the license&apos;s organization see its instances in the console.
+          When the servers of the instances seen in the last {CHECKIN_RULES.activeDays} days add up to more than the pack covers, your instance and the
+          console tell you so. For an event license, testing and setting up before and after the event is expected: up to{' '}
+          {CHECKIN_RULES.testingMatchesPerDay} finished matches a day with no tournament is ignored, and the day before and after the dates count as the
+          event. More than that outside the dates shows a note in your instance and may ask an admin what it is; we email ourselves (never you) only
+          when it looks like a whole event (more than {CHECKIN_RULES.fullEventMatchesPerDay} matches in a day, or a tournament of{' '}
+          {CHECKIN_RULES.fullEventTeams} or more teams) and you haven&apos;t told us your dates moved, or when the servers are above the pack, at most once a
+          day per license, so we can follow up personally.
+        </p>
+      </div>
       <p id="license-email">
         <strong>The license email.</strong> We email your license key to the address you paid with, once, right after payment. The email contains the key,
         the license details above, the order reference and the invoice number. We send it through Postmark
@@ -132,6 +167,10 @@ export default function Privacy() {
           (GDPR art. 6(1)(b)).
         </li>
         <li>
+          <strong>To check that a license key is used within its terms</strong> (the license check-in): the license contract (GDPR art. 6(1)(b)) and our
+          legitimate interest in knowing our licenses are used as sold (GDPR art. 6(1)(f)).
+        </li>
+        <li>
           <strong>To stop abuse of the checkout and the console, and to keep the activity log</strong>: our legitimate interest in keeping them secure (GDPR
           art. 6(1)(f)).
         </li>
@@ -142,7 +181,7 @@ export default function Privacy() {
         Sales records, invoices and the license log: 5 years after the end of the accounting year, as the Bookkeeping Act requires. Emails that don&apos;t lead to
         a sale: deleted when we no longer need them to answer you. Contact form messages in our database: 24 months after the last activity. Your console account and your membership of organizations: until you ask us to delete
         them. An organization&apos;s details: as long as it has members, and after that as long as its licenses and invoices must be kept. Sessions end after
-        30 days or when you sign out; sign-in links after 15 minutes; invites as described above. The activity log: 2 years.
+        30 days or when you sign out; sign-in links after 15 minutes; invites as described above. The activity log: 2 years. License check-ins: {CHECKIN_RULES.retentionDays} days after the instance was last seen.
       </p>
 
       <H2 id="recipients">5. Who gets your data</H2>

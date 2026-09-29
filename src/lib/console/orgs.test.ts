@@ -328,7 +328,7 @@ describe('retention', () => {
     await createInvite(t.db, owner, org, 'old@x.example', 'member', new Date('2026-08-01'));
     await createInvite(t.db, owner, org, 'new@x.example', 'member', new Date('2026-09-27'));
     await t.db.insert(auditLog).values({ action: 'old', at: new Date('2024-01-01') });
-    expect(await pruneExpired(t.db, now)).toEqual({ sessions: 1, signInLinks: 1, invites: 1, auditLog: 1, leads: 0, refundRequests: 0, passkeyRows: 0, memberships: 0 });
+    expect(await pruneExpired(t.db, now)).toEqual({ sessions: 1, signInLinks: 1, invites: 1, auditLog: 1, leads: 0, refundRequests: 0, passkeyRows: 0, memberships: 0, licenseCheckins: 0 });
     expect((await t.db.select().from(invites)).map((i) => i.email)).toEqual(['new@x.example']);
   });
 });
