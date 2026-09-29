@@ -183,6 +183,25 @@ describe('checkout session → payload', () => {
     expect(p).not.toHaveProperty('eventname');
   });
 
+  it('issues normally when the event/client name was never given: it is optional, named only on request', () => {
+    const custom = session({
+      customer_details: { email: 'buyer@example.com', business_name: null },
+      collected_information: null,
+      custom_fields: [],
+      metadata: {
+        pack: 'platform-l', period: 'event', servers: '34', tools: 'platform', max_servers: '40',
+        company: 'Example LAN AS', eventdates: '3-5 October 2026', buyertype: 'business', terms_accepted_at: '2026-09-28T10:00:00.000Z',
+      },
+    });
+    const { payload: p, datesFromForm } = payloadForSession(custom, {
+      kid: key.kid, id: 'L-3c', packId: 'platform-l', kind: 'event', maxServers: 40, now: new Date('2026-09-28T10:11:12.345Z'),
+    });
+    expect(datesFromForm).toBe(true);
+    // Licensee is the buyer's own company; the event window comes from the start date, not the event name.
+    expect(p).toMatchObject({ licensee: 'Example LAN AS', valid_from: '2026-10-03', valid_to: '2026-10-05' });
+    expect(p).not.toHaveProperty('eventname');
+  });
+
   it('prefers the hosted form fields over metadata of the same name', () => {
     const both = session({ metadata: { ...session().metadata, eventdates: '1-2 January 2027', company: 'Other AS' } });
     const { payload: p } = payloadForSession(both, {

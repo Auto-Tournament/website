@@ -255,7 +255,7 @@ function faqFor(packs: readonly Pack[]): { q: string; a: React.ReactNode }[] {
     },
     {
       q: 'Who does the license cover?',
-      a: 'The named licensee and its contractors, for the named event (or, for yearly and founding supporter licenses, the licensee’s own events). A freelancer working on someone else’s event is covered by that organizer’s license, or needs one that names the event.',
+      a: 'The named licensee and its contractors, for one event (or, for yearly and founding supporter licenses, the licensee’s own events). A freelancer working on someone else’s event is covered by that organizer’s license, or needs its own.',
     },
     {
       q: 'I’m paid to run servers at a volunteer event. Do I need a license?',
