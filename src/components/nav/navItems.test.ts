@@ -96,9 +96,11 @@ describe('site links from the console', () => {
     const all = items(m);
     expect(all.some((i) => i.icon === 'console')).toBe(false);
     for (const i of all) expect(i.href).toMatch(/^https:\/\//);
-    expect(all.find((i) => i.label === 'Features')?.href).toBe('https://autotournament.gg/#features');
+    expect(all.find((i) => i.label === 'Platform')?.href).toBe('https://autotournament.gg/platform');
+    expect(all.find((i) => i.label === 'Ready Up')?.href).toBe('https://autotournament.gg/games/cs2/ready-up');
     expect(all.find((i) => i.label === 'Pricing')?.href).toBe('https://autotournament.gg/pricing');
-    expect(m.find((x) => x.id === 'product')?.fallbackHref).toBe('https://autotournament.gg/#features');
+    expect(m.find((x) => x.id === 'product')?.fallbackHref).toBe('https://autotournament.gg/platform');
+    expect(m.find((x) => x.id === 'games')?.fallbackHref).toBe('https://autotournament.gg/games');
     const hrefs = [barLinks.install.href, ...all.map((i) => i.href)];
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });

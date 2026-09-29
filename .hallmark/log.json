@@ -1,5 +1,14 @@
 [
   {
+    "date": "2026-09-29",
+    "macrostructure": "Product pages (hero + facts \u2192 split sections \u2192 commercial use \u2192 related tools) and a games index",
+    "theme": "Auto Tournament system (tokens.ts)",
+    "enrichment": "none (game app icons, Phosphor marks)",
+    "nav": "N5 (existing, + Games menu)",
+    "footer": "Ft5 (existing)",
+    "brief": "autotournament.gg/platform, /games, /games/cs2 and a page per CS2 tool (Ready Up, csm, skins, Midas)"
+  },
+  {
     "date": "2026-09-28",
     "macrostructure": "Guided flow (stepped questions \u2192 one answer \u2192 folded details)",
     "theme": "Auto Tournament system (tokens.ts)",
