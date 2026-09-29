@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box';
 import { tokens } from '@/theme/tokens';
 import { CodeBlock } from './CodeBlock';
+import { LicenseKeyField } from './LicenseKeyField';
 import { licenseDurationText, updatesText } from '@/lib/license/describe';
 import type { LicensePayload } from '@/lib/license/format';
 
@@ -32,7 +33,7 @@ export function LicenseKeyView({
   ];
   return (
     <Box sx={{ mt: 3, display: 'grid', gap: 2 }}>
-      <CodeBlock code={token} what="license key" size="sm" data-testid="license-key" />
+      <LicenseKeyField token={token} data-testid="license-key" />
       <DetailList rows={rows} />
       {checkUrl && <PublicCheckLink url={checkUrl} />}
     </Box>

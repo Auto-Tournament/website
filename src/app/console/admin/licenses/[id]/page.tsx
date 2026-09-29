@@ -4,7 +4,7 @@ import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import { tokens } from '@/theme/tokens';
 import { PageTitle, Panel } from '@/components/console/ConsoleShell';
-import { CodeBlock } from '@/components/CodeBlock';
+import { LicenseKeyField } from '@/components/LicenseKeyField';
 import { DetailList, PublicCheckLink } from '@/components/LicenseKeyView';
 import { AdminForm } from '@/components/admin/AdminClient';
 import { ApprovedForm } from '@/components/admin/Passkeys';
@@ -119,7 +119,7 @@ export default async function AdminLicense({ params }: { params: Promise<{ id: s
       <Box sx={{ mt: 3, display: 'grid', gap: 2 }}>
         <Box>
           <Box sx={{ color: color.muted, fontSize: '0.875rem', mb: 0.75 }}>License key</Box>
-          <CodeBlock code={r.token} what="license key" size="sm" />
+          <LicenseKeyField token={r.token} />
         </Box>
         <PublicCheckLink url={`${site}/verify/${p.id}`} />
       </Box>

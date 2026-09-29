@@ -55,12 +55,9 @@ export function licenseEmail(r: LicenseEmailInput, site: string): LicenseEmail {
   ];
 
   const text = [
-    'Thanks for your order. Here is your Auto Tournament license key.',
+    'Your license key is ready.',
     '',
-    "Paste it into Ready Up or the platform's settings. The software checks it offline and never locks anything: if something is off, you get a warning.",
-    '',
-    'LICENSE KEY',
-    r.token,
+    `See it and copy it in the console: sign in at ${consoleHost} with this email address.`,
     '',
     'DETAILS',
     ...rows.map(([k, v]) => `${k}: ${v}`),
@@ -69,8 +66,6 @@ export function licenseEmail(r: LicenseEmailInput, site: string): LicenseEmail {
     coverage,
     rules,
     `Commercial License Terms: ${termsUrl}`,
-    '',
-    `See your licenses any time at ${consoleHost}, signing in with this email address.`,
     '',
     'Questions? Reply to this email.',
     '',
@@ -86,10 +81,8 @@ export function licenseEmail(r: LicenseEmailInput, site: string): LicenseEmail {
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(subject)}</title></head>
 <body style="margin:0;padding:0;background:#ffffff;color:#1a1a1a;${font};font-size:15px;line-height:1.55">
 <div style="max-width:600px;margin:0 auto;padding:24px 16px">
-<p style="margin:0 0 16px">Thanks for your order. Here is your Auto Tournament license key.</p>
-<p style="margin:0 0 16px">Paste it into Ready Up or the platform&#39;s settings. The software checks it offline and never locks anything: if something is off, you get a warning.</p>
-<p style="margin:0 0 6px;font-weight:600">License key</p>
-<pre style="margin:0 0 24px;padding:12px;background:#f4f4f5;border:1px solid #e4e4e7;border-radius:6px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;white-space:pre-wrap;word-break:break-all">${e(r.token)}</pre>
+<p style="margin:0 0 16px">Your license key is ready.</p>
+<p style="margin:0 0 24px">See it and copy it in the console: sign in at <a href="${e(consoleLink)}" style="color:#1a1a1a">${e(consoleHost)}</a> with this email address.</p>
 <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin:0 0 24px">
 ${rows.map(([k, v]) => `<tr><td style="padding:4px 16px 4px 0;color:#71717a;vertical-align:top;white-space:nowrap">${e(k)}</td><td style="padding:4px 0;vertical-align:top;word-break:break-word">${e(v)}</td></tr>`).join('\n')}
 </table>
@@ -97,7 +90,6 @@ ${rows.map(([k, v]) => `<tr><td style="padding:4px 16px 4px 0;color:#71717a;vert
 <p style="margin:0 0 8px">${e(coverage)}</p>
 <p style="margin:0 0 8px">${e(rules)}</p>
 <p style="margin:0 0 24px"><a href="${e(termsUrl)}" style="color:#1a1a1a">Commercial License Terms</a></p>
-<p style="margin:0 0 16px">See your licenses any time at <a href="${e(consoleLink)}" style="color:#1a1a1a">${e(consoleHost)}</a>, signing in with this email address.</p>
 <p style="margin:0 0 24px">Questions? Reply to this email.</p>
 <p style="margin:0;padding-top:16px;border-top:1px solid #e4e4e7;color:#71717a;font-size:13px">${footer.map(e).join('<br>')}</p>
 </div>
