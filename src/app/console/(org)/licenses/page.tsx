@@ -51,7 +51,7 @@ export default async function Licenses() {
         sub={
           records.length > 0
             ? `${records.length} ${records.length === 1 ? 'license' : 'licenses'} for ${org.name}, newest first.`
-            : `${org.name} has no licenses yet.`
+            : undefined
         }
       >
         Licenses
@@ -89,7 +89,7 @@ export default async function Licenses() {
 
       {records.length === 0 && mine.length === 0 && staff && (
         <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', maxWidth: '62ch' }}>
-          <Typography>No licenses yet. Licenses you buy land here.</Typography>
+          <Typography>{org.name} has no licenses yet. Licenses you buy land here.</Typography>
           <Button variant="contained" href={consoleHref('/buy')}>
             Buy a license
           </Button>
