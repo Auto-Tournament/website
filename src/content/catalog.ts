@@ -110,11 +110,11 @@ sudo csm`;
 
 export const releases = {
   /** Newest Ready Up release (a pre-release counts), without the v. null while there is none. */
-  readyUp: null as string | null,
+  readyUp: '0.1.0-beta.1' as string | null,
   /** Newest stable csm release line, as it shows in labels. */
-  csm: '1.11',
+  csm: '1.12',
   /** Whether that csm release has csm link, instance mode, versioned CS2 updates and the Ready Up stack. */
-  csmHasFleet: false,
+  csmHasFleet: true,
   /** Newest platform 3.0 beta number (v3.0.0-beta.N). */
   platformBeta: 13,
   /** Whether that beta has failover, auto-scaling, and webhooks with the teams API. */
