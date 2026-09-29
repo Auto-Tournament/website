@@ -19,9 +19,13 @@ import { Coins } from '@phosphor-icons/react/dist/csr/Coins';
 import { HardDrives } from '@phosphor-icons/react/dist/csr/HardDrives';
 import { PaintBrush } from '@phosphor-icons/react/dist/csr/PaintBrush';
 import { Plugs } from '@phosphor-icons/react/dist/csr/Plugs';
+import { PlayCircle } from '@phosphor-icons/react/dist/csr/PlayCircle';
+import { ShieldCheck } from '@phosphor-icons/react/dist/csr/ShieldCheck';
+import { ChartBar } from '@phosphor-icons/react/dist/csr/ChartBar';
+import { Target } from '@phosphor-icons/react/dist/csr/Target';
 import { tokens } from '@/theme/tokens';
 import { fontDisplay } from '@/theme/theme';
-import type { Badge, Block, Game, IconKey, LinkOut, Product } from '@/content/catalog';
+import type { Badge, Block, FeatureGroup, Game, IconKey, LinkOut, Product } from '@/content/catalog';
 import { gamePath, licensing, toolPath } from '@/content/catalog';
 import { AtIcon } from '../AtIcon';
 import { CodeBlock } from '../CodeBlock';
@@ -378,6 +382,75 @@ export function MoreForGame({ game, current }: { game: Game & { tools: Product[]
         {others.map((t) => (
           <ToolCard key={t.slug} game={game} tool={t} />
         ))}
+      </Box>
+    </Container>
+  );
+}
+
+const featureGroupIcons: Record<FeatureGroup['icon'], typeof Plugs> = {
+  match: PlayCircle,
+  admins: ShieldCheck,
+  after: ChartBar,
+  practice: Target,
+};
+
+/**
+ * What Ready Up does in a match, grouped for organizers and players. Each
+ * item names the plugin behind it small and secondary — that's an
+ * implementation detail, not the headline.
+ */
+export function FeatureGroups({ intro, groups }: { intro: string; groups: FeatureGroup[] }) {
+  return (
+    <Container maxWidth="lg" component="section" aria-labelledby="features-title" sx={{ py: { xs: 5, md: 8 } }}>
+      <Typography id="features-title" variant="h2" sx={{ fontSize: 'clamp(1.75rem, 1.6vw + 1rem, 2.25rem)', maxWidth: '30ch' }}>
+        What Ready Up does
+      </Typography>
+      <Typography sx={{ mt: 1.5, maxWidth: '56ch', color: color.ink2, fontSize: '1.0625rem' }}>{intro}</Typography>
+      <Box sx={{ mt: 5, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0,1fr))' }, gap: { xs: 4, md: 5 } }}>
+        {groups.map((group) => {
+          const Icon = featureGroupIcons[group.icon];
+          return (
+            <Box key={group.id} component="section" aria-labelledby={`${group.id}-title`}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+                <Box
+                  aria-hidden
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    flex: 'none',
+                    display: 'grid',
+                    placeItems: 'center',
+                    borderRadius: `${radius.md}px`,
+                    bgcolor: color.paper3,
+                    border: `1px solid ${color.rule}`,
+                    color: color.accent,
+                  }}
+                >
+                  <Icon size={20} weight="duotone" />
+                </Box>
+                <Typography id={`${group.id}-title`} variant="h3" component="h3" sx={{ fontSize: '1.1875rem' }}>
+                  {group.title}
+                </Typography>
+              </Box>
+              <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 2 }}>
+                {group.items.map((item) => (
+                  <Box
+                    component="li"
+                    key={item.title}
+                    sx={{ p: 2.5, bgcolor: color.paper2, border: `1px solid ${color.rule}`, borderRadius: `${radius.md}px` }}
+                  >
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 0.75 }}>
+                      <Typography sx={{ color: color.ink, fontWeight: 600 }}>{item.title}</Typography>
+                      {item.status && <BadgeChip badge={item.status} />}
+                    </Box>
+                    <Typography sx={{ color: color.ink2, fontSize: '0.9375rem' }}>{item.text}</Typography>
+                    <Typography sx={{ mt: 1, color: color.muted, fontSize: '0.75rem' }}>plugin: {item.plugin}</Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          );
+        })}
       </Box>
     </Container>
   );

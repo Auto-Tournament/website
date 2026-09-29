@@ -553,6 +553,170 @@ const midas: Product = {
 };
 
 /* ------------------------------------------------------------------------ */
+/* Ready Up features: what it lets people do, grouped for organizers and     */
+/* players. Under the hood each one is its own Ready Up plugin (secondary).  */
+/* ------------------------------------------------------------------------ */
+
+export type FeatureItem = {
+  /** Short, unique title. */
+  title: string;
+  /** One plain sentence: what it lets people do. */
+  text: string;
+  /** Only set when the feature isn't in the default, stable bundle. */
+  status?: Badge;
+  /** The plugin behind it, shown small and secondary, e.g. "match". */
+  plugin: string;
+};
+
+export type FeatureGroup = {
+  id: string;
+  title: string;
+  icon: 'match' | 'admins' | 'after' | 'practice';
+  items: FeatureItem[];
+};
+
+const fullBundleOnly: Badge = { label: 'Full bundle only', tone: 'soon' };
+
+export const readyUpFeaturesIntro =
+  'Everything Ready Up does in a match. Each feature is its own small plugin on top of a tiny core, so you run only what you need and CS2 updates only touch the core.';
+
+export const readyUpFeatures: FeatureGroup[] = [
+  {
+    id: 'running-the-match',
+    title: 'Running the match',
+    icon: 'match',
+    items: [
+      {
+        title: 'Ready up and go live',
+        text: 'Players type .r to ready up; once enough of each team is ready, a countdown runs and the match goes live on its own.',
+        plugin: 'match',
+      },
+      {
+        title: 'Knife round and side pick',
+        text: 'The knife round winner picks a side, or chooses to stay, switch or swap, before the match starts.',
+        plugin: 'match',
+      },
+      {
+        title: 'Tactical and tech pauses',
+        text: '.pause and .unpause for a tactical break; a tech pause covers a broken PC or connection instead.',
+        plugin: 'match',
+      },
+      {
+        title: 'Forfeit on a no-show',
+        text: 'If a team does not come back within a set time, the match ends in a forfeit.',
+        plugin: 'match',
+      },
+      {
+        title: 'Call an admin',
+        text: '.admin [message] pings the admins on duty and tells them what happened.',
+        plugin: 'match',
+      },
+    ],
+  },
+  {
+    id: 'admins-and-fairness',
+    title: 'Admins and fairness',
+    icon: 'admins',
+    items: [
+      {
+        title: 'Admin commands',
+        text: 'Admins get their own command set, from adding admins to running a raw console command, kept in a small file with no database.',
+        plugin: 'essentials',
+      },
+      {
+        title: 'Round backups and restore',
+        text: 'Every round is backed up; an admin can restore any of them with .restore <round> if something goes wrong.',
+        plugin: 'match',
+      },
+      {
+        title: 'Crash and restart recovery',
+        text: 'If the server crashes or restarts mid-match, the live match, score and stats carry on from where they left off.',
+        plugin: 'match',
+      },
+      {
+        title: 'Only listed players join',
+        text: 'A whitelist keeps a practice or scrim server to the players on the list; a loaded match roster decides once a match starts.',
+        status: fullBundleOnly,
+        plugin: 'whitelist',
+      },
+      {
+        title: 'Map and server commands',
+        text: 'Admins change, reload or restart the map from chat; it refuses to during a live map unless forced.',
+        plugin: 'essentials',
+      },
+    ],
+  },
+  {
+    id: 'after-the-match',
+    title: 'After the match',
+    icon: 'after',
+    items: [
+      {
+        title: 'Demos, recorded automatically',
+        text: 'GOTV demos record for every map and stream to the platform as they record, so there is no upload wait at the end.',
+        plugin: 'match + fleet',
+      },
+      {
+        title: 'Full player stats',
+        text: 'Kills, deaths, damage, KAST, clutches and entries, worked out for every round and map.',
+        plugin: 'match',
+      },
+      {
+        title: 'Results go back to the platform',
+        text: 'Match state, round results and the final score stream live to whatever is running the event, over one outbound connection.',
+        plugin: 'fleet',
+      },
+    ],
+  },
+  {
+    id: 'practice-and-fun',
+    title: 'Practice and fun',
+    icon: 'practice',
+    items: [
+      {
+        title: 'Practice mode',
+        text: '.prac switches on cheats, a full grenade set and infinite ammo, with tools like .savepos, .rethrow and .bot; set it to always on for a dedicated practice server.',
+        plugin: 'practice',
+      },
+      {
+        title: 'Scenarios',
+        text: 'Replay a recorded pro round: you stand where they stood while bots replay the other nine players.',
+        plugin: 'practice',
+      },
+      {
+        title: 'Grenade lineups',
+        text: 'Save, load and list your own grenade lineups per map, kept in a shared library on the server.',
+        plugin: 'practice',
+      },
+      {
+        title: 'Deathmatch',
+        text: 'Free-for-all or team deathmatch with a kill or time limit and a live leaderboard, on the same server.',
+        status: fullBundleOnly,
+        plugin: 'deathmatch',
+      },
+      {
+        title: 'Loadouts and skins',
+        text: 'Weapon paints, knives, gloves and agents, from a JSON file or set by the platform; switched off for esports matches.',
+        status: fullBundleOnly,
+        plugin: 'skins',
+      },
+      {
+        title: 'Midas',
+        text: "Turn a player, or the map's best player, into Midas: everything they pick up turns gold.",
+        status: fullBundleOnly,
+        plugin: 'midas',
+      },
+      {
+        title: 'Steam Workshop addons',
+        text: 'The server downloads and mounts the Workshop addons you list, on every map change.',
+        status: fullBundleOnly,
+        plugin: 'addons',
+      },
+    ],
+  },
+];
+
+/* ------------------------------------------------------------------------ */
 /* Games                                                                     */
 /* ------------------------------------------------------------------------ */
 

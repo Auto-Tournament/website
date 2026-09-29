@@ -4,8 +4,8 @@
  */
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { Blocks, CommercialUse, MoreForGame, MoreLinks, ProductHero } from '@/components/product/ProductParts';
-import { findTool, gamePath, gamesWithPages, toolPath } from '@/content/catalog';
+import { Blocks, CommercialUse, FeatureGroups, MoreForGame, MoreLinks, ProductHero } from '@/components/product/ProductParts';
+import { findTool, gamePath, gamesWithPages, readyUpFeatures, readyUpFeaturesIntro, toolPath } from '@/content/catalog';
 
 type Params = { game: string; tool: string };
 
@@ -47,6 +47,7 @@ export default async function ToolPage({ params }: { params: Promise<Params> }) 
             { label: tool.name, href: toolPath(game, tool) },
           ]}
         />
+        {tool.slug === 'ready-up' && <FeatureGroups intro={readyUpFeaturesIntro} groups={readyUpFeatures} />}
         <Blocks blocks={tool.sections} />
         <CommercialUse extra={tool.licenseExtra} />
         <MoreForGame game={game} current={tool.slug} />

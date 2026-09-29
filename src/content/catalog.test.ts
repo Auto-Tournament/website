@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { findGame, findTool, games, gamesWithPages, licensing, platform, productPaths, releases } from './catalog';
+import { findGame, findTool, games, gamesWithPages, licensing, platform, productPaths, readyUpFeatures, releases } from './catalog';
 import { menus } from '../components/nav/navItems';
 
 describe('product catalog', () => {
@@ -47,6 +47,15 @@ describe('product catalog', () => {
     const text = JSON.stringify({ platform, csm });
     expect(text.includes('Next csm release')).toBe(!releases.csmHasFleet);
     expect(text.includes('Coming in 3.0')).toBe(!releases.platformHasFleet);
+  });
+
+  it('lists Ready Up features with unique titles, non-empty', () => {
+    expect(readyUpFeatures.length).toBeGreaterThan(0);
+    const titles = readyUpFeatures.flatMap((g) => g.items.map((i) => i.title));
+    expect(titles.length).toBeGreaterThan(0);
+    expect(new Set(titles).size).toBe(titles.length);
+    const groupIds = readyUpFeatures.map((g) => g.id);
+    expect(new Set(groupIds).size).toBe(groupIds.length);
   });
 
   it('links the platform and every game with a page from the nav', () => {
