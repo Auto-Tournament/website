@@ -34,7 +34,7 @@ export type Block = {
   links?: LinkOut[];
 };
 
-export type Fact = { label: string; value: string };
+export type Fact = { label: string; value: string; /** Makes the value a link. */ href?: string };
 
 export type IconKey = 'platform' | 'readyUp' | 'csm' | 'skins' | 'midas' | 'plugin';
 
@@ -273,7 +273,7 @@ const readyUp: Product = {
   facts: [
     { label: 'Needs', value: 'A Linux CS2 dedicated server. Nothing else.' },
     { label: 'Works with', value: 'Auto Tournament, or on its own' },
-    { label: 'CS2 updates', value: 'Checked by CI, usually within minutes' },
+    { label: 'CS2 updates', value: 'See the live compatibility status', href: '/compatibility' },
     { label: 'Status', value: readyUpStatus },
   ],
   primary: { label: 'Ready Up on GitHub', href: repo.readyUp },

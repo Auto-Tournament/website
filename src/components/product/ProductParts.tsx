@@ -191,7 +191,13 @@ export function ProductHero({ product, crumbs }: { product: Product; crumbs?: Li
                 {f.label}
               </Box>
               <Box component="dd" sx={{ m: 0, color: color.ink, fontWeight: 500 }}>
-                {f.value}
+                {f.href ? (
+                  <Box component="a" href={f.href} sx={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule, textUnderlineOffset: '0.2em', '&:hover': { color: color.accent } }}>
+                    {f.value}
+                  </Box>
+                ) : (
+                  f.value
+                )}
               </Box>
             </Box>
           ))}
