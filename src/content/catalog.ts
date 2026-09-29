@@ -406,7 +406,16 @@ const csm: Product = {
       body: [
         'Normally every server is a full copy of CS2. In instance mode, every server runs the one install read-only and only stores the files it writes itself: logs, demos, backups and its own settings. Ten servers cost about as much disk as one.',
       ],
-      points: ['No root and no sudo (Linux 5.11 or newer)', 'A server that crashes is started again after 10 seconds', 'Ready Up is installed once, into a layer every server shares'],
+      points: [
+        '1 server ≈ 69 GB, 10 servers ≈ 69 GB (instance mode), against ≈ 760 GB as full copies',
+        'Each server starts in about 5 seconds',
+        'RAM is not shared: each server still uses 1–2 GB of RAM',
+        'No root and no sudo (Linux 5.11 or newer)',
+        'A server that crashes is started again after 10 seconds',
+        'Ready Up is installed once, into a layer every server shares',
+      ],
+      note: 'Measured on one CS2 host in September 2026 (CS2 1.41.8.5). CS2’s size changes with updates.',
+      links: [{ label: 'How much disk? (csm README)', href: `${repo.csm}/blob/master/README.md#how-much-disk` }],
     },
     {
       id: 'cs2-updates',
