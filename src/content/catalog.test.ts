@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { findGame, findTool, games, gamesWithPages, platform, productPaths } from './catalog';
+import { findGame, findTool, games, gamesWithPages, licensing, platform, productPaths, releases } from './catalog';
 import { menus } from '../components/nav/navItems';
 
 describe('product catalog', () => {
@@ -31,9 +31,22 @@ describe('product catalog', () => {
   });
 
   it('follows the wording rules: no "full price", no MatchZy branding', () => {
-    const text = JSON.stringify({ platform, games });
+    const text = JSON.stringify({ platform, games, licensing });
     expect(text).not.toMatch(/full price/i);
     expect(text).not.toMatch(/matchzy/i);
+    expect(text).not.toMatch(/personal use/i);
+    expect(licensing.headline).toBe('Free for non-commercial use');
+  });
+
+  it('drives the status labels from releases', () => {
+    const readyUp = findTool('cs2', 'ready-up')!.tool;
+    const csm = findTool('cs2', 'csm')!.tool;
+    expect(readyUp.badges[0].label).toBe(releases.readyUp ? `Beta: ${releases.readyUp}` : 'No release yet');
+    expect(csm.badges[0].label).toBe(`v${releases.csm}`);
+    expect(platform.badges.map((b) => b.label)).toContain(`3.0 beta ${releases.platformBeta}`);
+    const text = JSON.stringify({ platform, csm });
+    expect(text.includes('Next csm release')).toBe(!releases.csmHasFleet);
+    expect(text.includes('Coming in 3.0')).toBe(!releases.platformHasFleet);
   });
 
   it('links the platform and every game with a page from the nav', () => {

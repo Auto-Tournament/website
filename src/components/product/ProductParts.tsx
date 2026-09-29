@@ -22,7 +22,7 @@ import { Plugs } from '@phosphor-icons/react/dist/csr/Plugs';
 import { tokens } from '@/theme/tokens';
 import { fontDisplay } from '@/theme/theme';
 import type { Badge, Block, Game, IconKey, LinkOut, Product } from '@/content/catalog';
-import { gamePath, toolPath } from '@/content/catalog';
+import { gamePath, licensing, toolPath } from '@/content/catalog';
 import { AtIcon } from '../AtIcon';
 import { CodeBlock } from '../CodeBlock';
 import { links } from '../links';
@@ -266,10 +266,11 @@ export function Blocks({ blocks }: { blocks: Block[] }) {
 }
 
 /**
- * Commercial use, in the pricing page's words: free when nobody earns money,
- * otherwise you need a license. `extra` is the product's own counting rule.
+ * Commercial use, the same words on every product page (licensing in the
+ * catalog): free for non-commercial use, and a license when you earn money
+ * from your event. `extra` is the product's own counting rule.
  */
-export function CommercialUse({ title = 'Commercial use', lede, extra, mit }: { title?: string; lede?: string; extra?: string[]; mit?: React.ReactNode }) {
+export function CommercialUse({ extra, mit }: { extra?: string[]; mit?: React.ReactNode }) {
   return (
     <Container maxWidth="lg" component="section" id="commercial-use" aria-labelledby="commercial-use-title" sx={{ py: { xs: 6, md: 9 } }}>
       <Box
@@ -285,8 +286,9 @@ export function CommercialUse({ title = 'Commercial use', lede, extra, mit }: { 
       >
         <div>
           <Typography id="commercial-use-title" variant="h2" sx={{ fontSize: 'clamp(1.75rem, 1.6vw + 1rem, 2.25rem)' }}>
-            {title}
+            {licensing.headline}
           </Typography>
+          <Typography sx={{ mt: 1.5, color: color.ink2, fontSize: '1.0625rem' }}>{licensing.who}</Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 3 }}>
             <Button variant="contained" href={links.pricing}>
               See pricing
@@ -297,9 +299,8 @@ export function CommercialUse({ title = 'Commercial use', lede, extra, mit }: { 
           </Box>
         </div>
         <Box sx={{ display: 'grid', gap: 2, color: color.ink2 }}>
-          <Typography sx={{ color: 'inherit' }}>
-            {lede ?? 'Free for personal and non-commercial use. If you earn money from it, you need a license.'} That means a profit-making event, use inside a
-            business, paid hosting, or being paid to set up or run servers or tournaments for someone else.
+          <Typography sx={{ color: color.ink, fontWeight: 600 }}>
+            {licensing.earning} <TextLink href={links.pricing}>See pricing</TextLink>
           </Typography>
           {extra?.map((line) => (
             <Typography key={line} sx={{ color: 'inherit' }}>

@@ -104,9 +104,37 @@ sudo install -m 0755 "$tmp" /usr/local/bin/csm && \\
 rm "$tmp" && \\
 sudo csm`;
 
-const soon30: Badge = { label: 'Coming in 3.0', tone: 'soon' };
-const csmNext: Badge = { label: 'Next csm release', tone: 'soon' };
-const noRelease: Badge = { label: 'No release yet', tone: 'beta' };
+/* ------------------------------------------------------------------------ */
+/* Releases: flip these when a release is published, and every label follows */
+/* ------------------------------------------------------------------------ */
+
+export const releases = {
+  /** Newest Ready Up release (a pre-release counts), without the v. null while there is none. */
+  readyUp: '0.1.0-beta.1' as string | null,
+  /** Newest stable csm release line, as it shows in labels. */
+  csm: '1.12',
+  /** Whether that csm release has csm link, instance mode, versioned CS2 updates and the Ready Up stack. */
+  csmHasFleet: true,
+  /** Newest platform 3.0 beta number (v3.0.0-beta.N). */
+  platformBeta: 14,
+  /** Whether that beta has failover, auto-scaling, and webhooks with the teams API. */
+  platformHasFleet: true,
+};
+
+/** The licensing words on every product page. Not "personal use", never "full price". */
+export const licensing = {
+  headline: 'Free for non-commercial use',
+  who: 'For players, clubs, schools and non-profit events.',
+  earning: 'Earning money from your event? You need a license — every server running Ready Up counts.',
+};
+
+/** On a section: in the 3.0 beta if it shipped there, otherwise not released yet. */
+const in30: Badge = releases.platformHasFleet ? { label: '3.0 beta', tone: 'beta' } : { label: 'Coming in 3.0', tone: 'soon' };
+/** On a csm section that is merged after the current release. Undefined once it shipped. */
+const csmNext: Badge | undefined = releases.csmHasFleet ? undefined : { label: 'Next csm release', tone: 'soon' };
+/** Ready Up's (and its plugins') release label. */
+const readyUpRelease: Badge = releases.readyUp ? { label: `Beta: ${releases.readyUp}`, tone: 'beta' } : { label: 'No release yet', tone: 'beta' };
+const readyUpStatus = releases.readyUp ? `Beta, ${releases.readyUp}` : 'Early development, no release yet';
 
 /* ------------------------------------------------------------------------ */
 /* The platform                                                              */
@@ -119,7 +147,7 @@ export const platform: Product = {
   icon: 'platform',
   badges: [
     { label: '2.4 stable', tone: 'stable' },
-    { label: '3.0 in beta', tone: 'beta' },
+    { label: `3.0 beta ${releases.platformBeta}`, tone: 'beta' },
   ],
   tagline: 'The tournament website that runs the matches too.',
   summary:
@@ -165,7 +193,7 @@ export const platform: Product = {
     {
       id: 'failover',
       title: 'Failover',
-      badge: soon30,
+      badge: in30,
       body: [
         'When a Ready Up server dies or hangs in the middle of a match, the platform restarts the match from the last round backup. If the server comes back, the match resumes there. If not, it moves to a free server, and the players get the new address and password on the match page.',
         'Once two servers are online, one idle server is kept free for this. On machines linked with CS2 Server Manager, the platform first restarts the server that died, and creates a new one when none is free.',
@@ -175,7 +203,7 @@ export const platform: Product = {
     {
       id: 'scaling',
       title: 'Auto-scaling',
-      badge: soon30,
+      badge: in30,
       body: [
         'On machines linked with CS2 Server Manager, the platform starts stopped servers when matches are waiting or about to start, creates one when it runs short, and stops servers that have been idle for a while. It never stops a busy server and never deletes one.',
       ],
@@ -187,7 +215,7 @@ export const platform: Product = {
     {
       id: 'integrations',
       title: 'Webhooks and a teams API for event sites',
-      badge: soon30,
+      badge: in30,
       body: [
         'Your LAN’s own website can push its teams (name, tag and the players’ Steam IDs) under its own IDs. Auto Tournament creates or updates its teams to match.',
         'The site then gets a signed webhook when a match changes: ready, with the server address, password and a steam://connect link, then live, map started, score, map ended, finished, cancelled or reset. That is enough for a “connect now” banner for every player.',
@@ -215,7 +243,7 @@ export const platform: Product = {
       title: 'Install',
       body: ['One Docker Compose file runs the web app, the API and the database. Add your Steam API key to .env, open http://localhost:3069 and create a tournament.'],
       code: { code: installCommands, comment: '# no clone needed: download the compose file and start' },
-      note: 'The first time an admin signs in, they pick personal or commercial use once.',
+      note: 'The first time an admin signs in, they pick non-commercial or commercial use once.',
     },
   ],
   more: [
@@ -236,7 +264,7 @@ const readyUp: Product = {
   name: 'Ready Up',
   kind: 'CS2 server plugin suite',
   icon: 'readyUp',
-  badges: [noRelease],
+  badges: [readyUpRelease],
   tagline: 'The match plugin for CS2. No Metamod, no CounterStrikeSharp.',
   summary:
     'Ready Up runs the match on your CS2 server: players ready up, the match goes live, and the result goes back to whatever runs the event. A small core loads straight into CS2 and every feature is its own plugin, so a CS2 update only ever means fixing the core.',
@@ -246,7 +274,7 @@ const readyUp: Product = {
     { label: 'Needs', value: 'A Linux CS2 dedicated server. Nothing else.' },
     { label: 'Works with', value: 'Auto Tournament, or on its own' },
     { label: 'CS2 updates', value: 'Checked by CI, usually within minutes' },
-    { label: 'Status', value: 'Early development, no release yet' },
+    { label: 'Status', value: readyUpStatus },
   ],
   primary: { label: 'Ready Up on GitHub', href: repo.readyUp },
   secondary: { label: 'CS2 compatibility', href: '/compatibility' },
@@ -315,8 +343,10 @@ const readyUp: Product = {
       title: 'Install',
       badge: { label: 'Beta channel', tone: 'beta' },
       body: [
-        'The installer asks for personal or commercial use first, then you type I AGREE. It shows the plugins with a checkbox each, checks every download against its checksum and adds Ready Up to gameinfo.gi. It never uses sudo, never stops the server and never overwrites your config.',
-        'There is no release yet. The first builds come out as pre-releases, which only the beta channel installs. Run the same command again to update, or let CS2 Server Manager do it between matches.',
+        'The installer first asks whether you use it non-commercially or commercially, then you type I AGREE. It shows the plugins with a checkbox each, checks every download against its checksum and adds Ready Up to gameinfo.gi. It never uses sudo, never stops the server and never overwrites your config.',
+        releases.readyUp
+          ? `Ready Up is in beta: the current release, ${releases.readyUp}, is a pre-release, which only the beta channel installs. Run the same command again to update, or let CS2 Server Manager do it between matches.`
+          : 'There is no release yet. The first builds come out as pre-releases, which only the beta channel installs. Run the same command again to update, or let CS2 Server Manager do it between matches.',
       ],
       code: { code: readyUpInstall },
       links: [
@@ -331,7 +361,7 @@ const readyUp: Product = {
     { label: 'Admin commands', href: `${repo.readyUp}/blob/master/docs/ADMINS.md` },
   ],
   license: 'polyform',
-  licenseExtra: ["Every server that runs Ready Up at a for-profit event needs to be covered by a license, spares included. The license is sized by how many servers you run."],
+  licenseExtra: ["Spares count too. The license is sized by how many servers you run."],
 };
 
 const csm: Product = {
@@ -339,7 +369,7 @@ const csm: Product = {
   name: 'CS2 Server Manager',
   kind: 'Command-line tool (csm)',
   icon: 'csm',
-  badges: [{ label: 'v1.11 stable', tone: 'stable' }],
+  badges: [{ label: `v${releases.csm}`, tone: 'stable' }],
   tagline: 'Many CS2 servers on one Linux machine, installed and kept up to date.',
   summary:
     'csm installs CS2 with SteamCMD, puts the match plugin on every server, runs each server in its own tmux session and keeps game and plugin updates going. It has a terminal UI and a command line.',
@@ -411,7 +441,7 @@ const csm: Product = {
       title: 'Install',
       body: ['On a Linux server, this downloads the latest release to /usr/local/bin/csm and starts the installer. It sets up 3 servers by default.'],
       code: { code: csmInstall, what: 'install commands' },
-      note: 'Features marked “Next csm release” are merged and come out with the next release after v1.11.',
+      note: releases.csmHasFleet ? undefined : `Features marked “Next csm release” are merged and come out with the next release after v${releases.csm}.`,
     },
   ],
   more: [
@@ -428,7 +458,7 @@ const skins: Product = {
   name: 'Skins',
   kind: 'Ready Up plugin',
   icon: 'skins',
-  badges: [noRelease, { label: 'Full bundle only', tone: 'soon' }],
+  badges: [readyUpRelease, { label: 'Full bundle only', tone: 'soon' }],
   tagline: 'Weapon paints, knives, gloves and agents on Ready Up servers.',
   summary:
     'The skins plugin gives each player their loadout: weapon paints, knives, gloves and agents. On its own it reads them from a JSON file. On a server linked to Auto Tournament, the loadouts come from the platform.',
@@ -437,7 +467,7 @@ const skins: Product = {
     { label: 'Part of', value: 'Ready Up, Full bundle' },
     { label: 'Loadouts from', value: 'A JSON file, or the platform' },
     { label: 'Valve ruleset', value: 'Off: players keep their own inventory' },
-    { label: 'Status', value: 'Early development, no release yet' },
+    { label: 'Status', value: readyUpStatus },
   ],
   primary: { label: 'Skins plugin on GitHub', href: `${repo.readyUp}/tree/master/plugins/skins` },
   secondary: { label: 'About Ready Up', href: '/games/cs2/ready-up' },
@@ -466,7 +496,7 @@ const skins: Product = {
     { label: 'GitHub', href: repo.readyUp },
   ],
   license: 'polyform',
-  licenseExtra: ["Skins is part of Ready Up and covered by the same license. Every server that runs Ready Up at a for-profit event needs to be covered by a license, spares included. The license is sized by how many servers you run."],
+  licenseExtra: ["Skins is part of Ready Up and covered by the same license. Spares count too."],
 };
 
 const midas: Product = {
@@ -474,7 +504,7 @@ const midas: Product = {
   name: 'Midas',
   kind: 'Ready Up plugin',
   icon: 'midas',
-  badges: [noRelease, { label: 'Full bundle only', tone: 'soon' }],
+  badges: [readyUpRelease, { label: 'Full bundle only', tone: 'soon' }],
   tagline: 'Everything a Midas player touches turns gold.',
   summary:
     'A fun plugin for scrims. Weapons picked up by a Midas player turn gold, and stay gold when someone else picks them up. Off until you turn it on.',
@@ -483,7 +513,7 @@ const midas: Product = {
     { label: 'Part of', value: 'Ready Up, Full bundle' },
     { label: 'Default', value: 'Off until enabled' },
     { label: 'Valve ruleset', value: 'Never active' },
-    { label: 'Status', value: 'Early development, no release yet' },
+    { label: 'Status', value: readyUpStatus },
   ],
   primary: { label: 'Midas on GitHub', href: `${repo.readyUp}/tree/master/plugins/midas` },
   secondary: { label: 'About Ready Up', href: '/games/cs2/ready-up' },
@@ -519,7 +549,7 @@ const midas: Product = {
     { label: 'GitHub', href: repo.readyUp },
   ],
   license: 'polyform',
-  licenseExtra: ["Midas is part of Ready Up and covered by the same license. Every server that runs Ready Up at a for-profit event needs to be covered by a license, spares included. The license is sized by how many servers you run."],
+  licenseExtra: ["Midas is part of Ready Up and covered by the same license. Spares count too."],
 };
 
 /* ------------------------------------------------------------------------ */

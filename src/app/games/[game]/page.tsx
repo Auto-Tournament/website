@@ -137,13 +137,9 @@ export default async function GamePage({ params }: { params: Promise<Params> }) 
         </Container>
 
         <CommercialUse
-          title={`Commercial use with ${game.name}`}
-          lede="Everything on this page is free when nobody earns money from the event. If you earn money from it, you need a license."
           extra={
             cs2
-              ? [
-                  'The license is sized by how many game servers you run. Every server that runs Ready Up at a for-profit event counts, spares included. CS2 Server Manager counts every server it set up.',
-                ]
+              ? ['Spares count too. The license is sized by how many game servers you run, and CS2 Server Manager counts every server it set up.']
               : undefined
           }
           mit={cs2 ? 'The Auto Tournament CS2 plugin is MIT licensed and never needs a license on its own.' : undefined}
