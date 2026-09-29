@@ -30,6 +30,7 @@ import { AccountMenu, type NavAccount } from '../nav/AccountMenu';
 import { NavMenu, NavMenuItem } from '../nav/NavMenu';
 import { OrgSwitcherMenu } from './forms';
 import type { ActionState } from '@/app/console/actions';
+import type { Role } from '@/lib/db/schema';
 import { activeSection, navArea, navEntriesFor, navGroups, type ConsoleArea, type ConsoleNavEntry } from './consoleNav';
 
 const { color, radius, ease, duration } = tokens;
@@ -110,13 +111,13 @@ function NavEntry({ entry, active, hydrated }: { entry: ConsoleNavEntry; active:
   );
 }
 
-export function ConsoleNavBar({ base, account, org }: { base: string; account?: NavAccount; org?: ConsoleOrgSwitch }) {
+export function ConsoleNavBar({ base, account, org, role }: { base: string; account?: NavAccount; org?: ConsoleOrgSwitch; /** The role in the current organization; null with none. Undefined shows every section. */ role?: Role | null }) {
   const hydrated = useHydrated();
   const pathname = usePathname() ?? '';
   const area: ConsoleArea | null = navArea(pathname);
   const active = area ? activeSection(area, pathname) : null;
-  const entries = area ? navEntriesFor(area, base) : [];
-  const groups = area ? navGroups(area, base) : [];
+  const entries = area ? navEntriesFor(area, base, role) : [];
+  const groups = area ? navGroups(area, base, role) : [];
 
   const [accountOpen, setAccountOpen] = useState(false);
   const [sheet, setSheet] = useState(false);

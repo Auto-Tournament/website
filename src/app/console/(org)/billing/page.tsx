@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: 'Billing' };
 export const dynamic = 'force-dynamic';
 
 export default async function Billing() {
-  const { org } = await requireOrg();
+  const { org } = await requireOrg({ staff: true });
   const manage = canManage(org.role);
   const values = {
     name: org.name,

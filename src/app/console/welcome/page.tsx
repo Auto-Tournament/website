@@ -1,35 +1,44 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-import { ActionButton, OrgForm } from '@/components/console/forms';
+import { roleName } from '@/lib/console/roles';
+import { ActionButton } from '@/components/console/forms';
 import { PageTitle, Panel } from '@/components/console/ConsoleShell';
 import { db } from '@/lib/db/client';
-import { countryOptions } from '@/lib/console/countries';
 import { invitesForUser, listOrgs, verifiedEmail } from '@/lib/console/orgs';
 import { requireUser } from '@/lib/console/session';
 import { consoleHref } from '@/lib/console/urls';
-import { acceptInviteAction, createOrgAction } from '../actions';
+import { acceptInviteAction } from '../actions';
 
 export const metadata: Metadata = { title: 'Welcome' };
 export const dynamic = 'force-dynamic';
 
-const roleName = { owner: 'an owner', admin: 'an admin', member: 'a member' } as const;
-
-// First sign-in (or any time): accept a pending invite, or create an organization.
+// Signed in with no organization: there is nothing to create here.
+// Organizations come from checkout (src/lib/console/checkoutOrg.ts) or an
+// admin, so this page points at the Buy page (which works without one:
+// checkout makes the organization), and lists any invites.
 export default async function Welcome() {
   const user = await requireUser();
   const [pending, orgs] = await Promise.all([invitesForUser(db(), user), listOrgs(db(), user.id)]);
+  if (orgs.length > 0 && pending.length === 0) redirect(consoleHref('/licenses'));
   const verified = verifiedEmail(user);
 
   return (
     <>
-      <PageTitle sub="Licenses, members and billing belong to an organization: the company or club that buys the licenses. If you run events for several clients, you can be in more than one.">
-        {orgs.length > 0 ? 'Add an organization' : 'Welcome'}
-      </PageTitle>
-      {orgs.length > 0 && (
-        <Typography>
-          Or go back to <a href={consoleHref('/licenses')}>your licenses</a>.
-        </Typography>
+      <PageTitle sub="Buy a license and your organization is set up for you.">Welcome</PageTitle>
+      {orgs.length === 0 && (
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'center' }}>
+          <Button variant="contained" href={consoleHref('/buy')} data-testid="welcome-buy">
+            Buy a license
+          </Button>
+          {!verified && (
+            <Typography sx={{ fontSize: '0.9375rem' }}>
+              Bought one already? Sign in with an email link to the address you paid with, and it shows up here.
+            </Typography>
+          )}
+        </Box>
       )}
 
       {pending.length > 0 && (
@@ -47,13 +56,11 @@ export default async function Welcome() {
         </Panel>
       )}
 
-      <Panel title="Create an organization">
-        <Typography sx={{ mb: 3, fontSize: '0.9375rem' }}>
-          The details go on your invoices. You become its owner, and can invite others.
-          {!verified && ' (Your email address is not verified yet, so invites and licenses for it show up after you sign in with an email link.)'}
+      {orgs.length > 0 && (
+        <Typography sx={{ mt: 3 }}>
+          Or go back to <a href={consoleHref('/licenses')}>your licenses</a>.
         </Typography>
-        <OrgForm action={createOrgAction} countries={countryOptions()} submitLabel="Create organization" />
-      </Panel>
+      )}
     </>
   );
 }

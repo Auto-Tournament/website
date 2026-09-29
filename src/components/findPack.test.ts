@@ -195,3 +195,16 @@ describe('games', () => {
     expect(packGames).toHaveLength(34);
   });
 });
+
+describe('console context (a signed-in organization buying)', () => {
+  const console_: Context = { ...ctx, skipMoney: true };
+  it('never asks whether anyone earns money', () => {
+    expect(stepsFor(q('g=cs2&do=servers').answers, console_)).toEqual(['games', 'job', 'servers', 'freq', 'result']);
+    expect(stepsFor(q('g=valorant').answers, console_)).toEqual(['games', 'freq', 'result']);
+  });
+  it('ends on a pack to buy', () => {
+    const r = rec('g=cs2&do=servers&servers=8&freq=event', console_);
+    expect(r.kind).toBe('pack');
+    expect(rec('g=cs2&do=servers&money=no&servers=8&freq=event', console_).kind).toBe('pack');
+  });
+});

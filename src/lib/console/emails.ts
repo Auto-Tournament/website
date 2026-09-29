@@ -43,7 +43,7 @@ export function inviteEmail(input: { link: string; orgName: string; inviter: str
   const org = input.orgName.slice(0, 120);
   const inviter = input.inviter.slice(0, 120);
   const subject = `You're invited to ${org} on Auto Tournament`;
-  const intro = `${inviter} invited you to join ${org} in the Auto Tournament console as ${input.role === 'admin' ? 'an admin' : `a ${input.role}`}. Members see the organization's licenses and keys.`;
+  const intro = `${inviter} invited you to join ${org} in the Auto Tournament console as ${input.role === 'admin' ? 'an admin' : input.role === 'provider' ? 'a server provider' : `a ${input.role}`}. ${input.role === 'provider' ? "You'll see the organization's licenses and keys, nothing else." : "Members see the organization's licenses and keys."}`;
   const how = 'Open the link, sign in with this email address, and accept the invite.';
   const after = ['The invite works once and expires in 7 days.', "Don't know them? Ignore this email; nothing happens."];
   const text = [intro, '', how, '', input.link, '', ...after, '', '-- ', ...footer, ''].join('\n');

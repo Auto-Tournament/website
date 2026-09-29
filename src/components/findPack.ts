@@ -197,7 +197,15 @@ export function answerFields(answers: Answers, except: StepId): [string, string]
 
 /* ------------------------------------------------------------------ steps */
 
-export type Context = { packs: readonly Pack[]; founderOpen: boolean };
+export type Context = {
+  packs: readonly Pack[];
+  founderOpen: boolean;
+  /**
+   * The console's Buy page: a signed-in organization buying, so the "Does
+   * anyone earn money?" step is skipped and treated as yes.
+   */
+  skipMoney?: boolean;
+};
 
 export const hasCs2 = (a: Answers) => a.games.includes(cs2.slug);
 /** Games other than CS2, including "another game". */
@@ -232,8 +240,8 @@ export function stepsFor(a: Answers, ctx: Context): StepId[] {
   if (jobOptions(a).length > 1) steps.push('job');
   const job = effectiveJob(a);
   if (job !== 'plugin') {
-    steps.push('money');
-    if (a.money !== 'no') {
+    if (!ctx.skipMoney) steps.push('money');
+    if (ctx.skipMoney || a.money !== 'no') {
       if (countsServers(a)) steps.push('servers');
       const overLimit = countsServers(a) && a.servers !== undefined && a.servers > maxPackServers(ctx.packs);
       if (!overLimit) steps.push('freq');
@@ -329,7 +337,7 @@ export function recommend(a: Answers, ctx: Context): Recommendation {
   if (step !== 'result') return { kind: 'incomplete' };
   const job = effectiveJob(a);
   if (job === 'plugin') return { kind: 'free-plugin' };
-  if (a.money === 'no') return { kind: 'free' };
+  if (a.money === 'no' && !ctx.skipMoney) return { kind: 'free' };
   const product: PackProduct = job === 'servers' ? 'servers' : 'platform';
   const counts = countsServers(a);
   const servers = counts ? (a.servers ?? 1) : 1;

@@ -10,6 +10,7 @@ import { formatDay, packName, todayUtc } from '@/lib/license/describe';
 import type { LicenseRecord } from '@/lib/license/store';
 import { licensesForOrg, unassignedLicenses, verifiedEmail } from '@/lib/console/orgs';
 import { requireOrg } from '@/lib/console/session';
+import { isStaff } from '@/lib/console/roles';
 import { consoleHref } from '@/lib/console/urls';
 import { repoLines, repoNames, reposFor } from '@/lib/releases/github';
 import { coverageFor, type Line } from '@/lib/releases/versions';
@@ -36,7 +37,9 @@ function versionsFor(record: LicenseRecord, lines: Map<string, Line[]> | null): 
 
 export default async function Licenses() {
   const { user, org } = await requireOrg();
-  const [records, mine] = await Promise.all([licensesForOrg(db(), user.id, org.id), unassignedLicenses(db(), user)]);
+  const staff = isStaff(org.role);
+  // A server provider sees the organization's licenses and keys, and nothing to add or buy.
+  const [records, mine] = await Promise.all([licensesForOrg(db(), user.id, org.id), staff ? unassignedLicenses(db(), user) : Promise.resolve([])]);
   const lines = records.length > 0 ? await releaseLinesFor(records) : null;
   const site = siteUrl() ?? '';
   const today = todayUtc();
@@ -83,7 +86,7 @@ export default async function Licenses() {
         </Panel>
       )}
 
-      {records.length === 0 && mine.length === 0 && (
+      {records.length === 0 && mine.length === 0 && staff && (
         <Typography sx={{ maxWidth: '62ch' }}>
           Licenses bought from the <a href={consoleHref('/buy')}>Buy</a> page land here. Bought one on the website? It is in the organization made from your
           checkout, which you own once you sign in with the email you paid with.

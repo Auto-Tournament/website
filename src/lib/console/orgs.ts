@@ -1,11 +1,12 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { and, asc, desc, eq, gt, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, isNull, lte, or, sql } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { invites, licenses, memberships, organizations, ROLES, users, type Role } from '../db/schema';
 import { emailHash } from '../license/format';
 import { fromRow, type LicenseRecord } from '../license/store';
 import { audit, type Tx } from './audit';
 import { isCountryCode } from './countries';
+import { isStaff } from './roles';
 
 /**
  * Organizations, members, invites and license assignment for the console.
@@ -27,6 +28,9 @@ export type ConsoleUser = {
 };
 
 export type ConsoleErrorCode = 'not-found' | 'forbidden' | 'invalid' | 'last-owner' | 'already-member' | 'wrong-email' | 'unverified';
+
+/** A membership that hasn't ended: no end date, or one still ahead. Every membership read goes through this. */
+export const activeMembership = (now = new Date()) => or(isNull(memberships.expiresAt), gt(memberships.expiresAt, now));
 
 export class ConsoleError extends Error {
   constructor(
@@ -106,7 +110,7 @@ export async function listOrgs(db: Db, userId: string): Promise<OrgSummary[]> {
     .select({ id: organizations.id, name: organizations.name, role: memberships.role })
     .from(memberships)
     .innerJoin(organizations, eq(organizations.id, memberships.orgId))
-    .where(eq(memberships.userId, userId))
+    .where(and(eq(memberships.userId, userId), activeMembership()))
     .orderBy(asc(organizations.name), asc(organizations.createdAt));
 }
 
@@ -114,25 +118,35 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isUuid = (v: unknown): v is string => typeof v === 'string' && UUID.test(v);
 
 /** The organization with the user's role in it, or null when there is none or the user isn't a member. */
-export async function getOrg(db: Db | Tx, userId: string, orgId: string): Promise<(Org & { role: Role }) | null> {
+export async function getOrg(db: Db | Tx, userId: string, orgId: string, now = new Date()): Promise<(Org & { role: Role; expiresAt: Date | null }) | null> {
   if (!isUuid(orgId)) return null;
   const [row] = await db
-    .select({ org: organizations, role: memberships.role })
+    .select({ org: organizations, role: memberships.role, expiresAt: memberships.expiresAt })
     .from(memberships)
     .innerJoin(organizations, eq(organizations.id, memberships.orgId))
-    .where(and(eq(memberships.orgId, orgId), eq(memberships.userId, userId)))
+    .where(and(eq(memberships.orgId, orgId), eq(memberships.userId, userId), activeMembership(now)))
     .limit(1);
-  return row ? { ...row.org, role: row.role } : null;
+  return row ? { ...row.org, role: row.role, expiresAt: row.expiresAt } : null;
 }
 
-/** Like getOrg, but throws; with `manage`, only for owners and admins. */
-async function requireOrg(db: Db | Tx, userId: string, orgId: string, options: { manage?: boolean } = {}) {
+/**
+ * Like getOrg, but throws. With `manage`, only for owners and admins; with
+ * `staff`, not for server providers (they see licenses and keys only). A
+ * provider gets not-found, so nothing tells them what else is there.
+ */
+async function requireOrg(db: Db | Tx, userId: string, orgId: string, options: { manage?: boolean; staff?: boolean } = {}) {
   const org = await getOrg(db, userId, orgId);
   if (!org) throw new ConsoleError('not-found', 'No such organization.');
+  if ((options.manage || options.staff) && !isStaff(org.role)) throw new ConsoleError('not-found', 'No such organization.');
   if (options.manage && !canManage(org.role)) throw new ConsoleError('forbidden', 'Only owners and admins can do that.');
   return org;
 }
 
+/**
+ * Makes an organization with `user` as its owner. Not a customer action:
+ * organizations come from checkout (checkoutOrg.ts) or an admin; the tests
+ * use this to set one up.
+ */
 export async function createOrg(db: Db, user: ConsoleUser, input: OrgInput): Promise<string> {
   return db.transaction(async (tx) => {
     const [org] = await tx.insert(organizations).values(input).returning({ id: organizations.id });
@@ -154,15 +168,15 @@ export async function updateOrg(db: Db, user: ConsoleUser, orgId: string, input:
 // ---------------------------------------------------------------------------
 // Members
 
-export type Member = { userId: string; name: string | null; email: string | null; role: Role; since: Date };
+export type Member = { userId: string; name: string | null; email: string | null; role: Role; since: Date; until: Date | null };
 
 export async function listMembers(db: Db, userId: string, orgId: string): Promise<Member[]> {
-  await requireOrg(db, userId, orgId);
+  await requireOrg(db, userId, orgId, { staff: true });
   return db
-    .select({ userId: users.id, name: users.name, email: users.email, role: memberships.role, since: memberships.createdAt })
+    .select({ userId: users.id, name: users.name, email: users.email, role: memberships.role, since: memberships.createdAt, until: memberships.expiresAt })
     .from(memberships)
     .innerJoin(users, eq(users.id, memberships.userId))
-    .where(eq(memberships.orgId, orgId))
+    .where(and(eq(memberships.orgId, orgId), activeMembership()))
     .orderBy(asc(memberships.createdAt));
 }
 
@@ -192,13 +206,17 @@ export async function changeRole(db: Db, user: ConsoleUser, orgId: string, targe
     const [target] = await tx
       .select({ role: memberships.role })
       .from(memberships)
-      .where(and(eq(memberships.orgId, orgId), eq(memberships.userId, targetUserId)))
+      .where(and(eq(memberships.orgId, orgId), eq(memberships.userId, targetUserId), activeMembership()))
       .limit(1);
     if (!target) throw new ConsoleError('not-found', 'No such member.');
     if (target.role === role) return;
     if ((role === 'owner' || target.role === 'owner') && org.role !== 'owner') throw new ConsoleError('forbidden', 'Only an owner can change who is an owner.');
     if (target.role === 'owner' && (await ownerCount(tx, orgId)) <= 1) throw new ConsoleError('last-owner', 'An organization needs at least one owner. Make someone else an owner first.');
-    await tx.update(memberships).set({ role }).where(and(eq(memberships.orgId, orgId), eq(memberships.userId, targetUserId)));
+    // An end date only belongs to a server provider: a promoted provider stays.
+    await tx
+      .update(memberships)
+      .set(role === 'provider' ? { role } : { role, expiresAt: null })
+      .where(and(eq(memberships.orgId, orgId), eq(memberships.userId, targetUserId)));
     await audit(tx, { actor: user.id, action: 'member.role', orgId, targetType: 'user', targetId: targetUserId, details: { from: target.role, to: role } });
   });
 }
@@ -212,7 +230,7 @@ export async function removeMember(db: Db, user: ConsoleUser, orgId: string, tar
     const [target] = await tx
       .select({ role: memberships.role })
       .from(memberships)
-      .where(and(eq(memberships.orgId, orgId), eq(memberships.userId, targetUserId)))
+      .where(and(eq(memberships.orgId, orgId), eq(memberships.userId, targetUserId), activeMembership()))
       .limit(1);
     if (!target) throw new ConsoleError('not-found', 'No such member.');
     if (target.role === 'owner' && !self && org.role !== 'owner') throw new ConsoleError('forbidden', 'Only an owner can remove an owner.');
@@ -225,13 +243,13 @@ export async function removeMember(db: Db, user: ConsoleUser, orgId: string, tar
 // ---------------------------------------------------------------------------
 // Invites
 
-export type PendingInvite = { id: string; email: string; role: Role; expiresAt: Date; createdAt: Date };
+export type PendingInvite = { id: string; email: string; role: Role; expiresAt: Date; accessUntil: Date | null; createdAt: Date };
 
 /** Pending invites of an organization, for its owners and admins. */
 export async function listInvites(db: Db, userId: string, orgId: string, now = new Date()): Promise<PendingInvite[]> {
   await requireOrg(db, userId, orgId, { manage: true });
   return db
-    .select({ id: invites.id, email: invites.email, role: invites.role, expiresAt: invites.expiresAt, createdAt: invites.createdAt })
+    .select({ id: invites.id, email: invites.email, role: invites.role, expiresAt: invites.expiresAt, accessUntil: invites.accessUntil, createdAt: invites.createdAt })
     .from(invites)
     .where(and(eq(invites.orgId, orgId), isNull(invites.acceptedAt), isNull(invites.revokedAt), gt(invites.expiresAt, now)))
     .orderBy(desc(invites.createdAt));
@@ -242,7 +260,8 @@ export const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
 /**
  * Invites `email` to the organization. Returns the link token (only its hash is
  * kept); the caller emails it. An earlier pending invite for the same address
- * is replaced. Admins can't invite owners.
+ * is replaced. Admins can't invite owners. A server provider invite may carry
+ * `accessUntil`: once accepted, their access ends then.
  */
 export async function createInvite(
   db: Db,
@@ -251,10 +270,13 @@ export async function createInvite(
   rawEmail: string,
   role: Role,
   now = new Date(),
+  accessUntil: Date | null = null,
 ): Promise<{ id: string; token: string; email: string; orgName: string }> {
   const email = rawEmail.trim().toLowerCase();
   if (!EMAIL.test(email) || email.length > 254) throw new ConsoleError('invalid', 'Enter a valid email address.');
   if (!isRole(role)) throw new ConsoleError('invalid', 'Unknown role.');
+  if (accessUntil && role !== 'provider') throw new ConsoleError('invalid', 'Only a server provider has an access end date.');
+  if (accessUntil && (Number.isNaN(accessUntil.getTime()) || accessUntil <= now)) throw new ConsoleError('invalid', 'The access end date must be in the future.');
   return db.transaction(async (tx) => {
     const org = await requireOrg(tx, user.id, orgId, { manage: true });
     if (role === 'owner' && org.role !== 'owner') throw new ConsoleError('forbidden', 'Only an owner can invite an owner.');
@@ -262,7 +284,7 @@ export async function createInvite(
       .select({ userId: memberships.userId })
       .from(memberships)
       .innerJoin(users, eq(users.id, memberships.userId))
-      .where(and(eq(memberships.orgId, orgId), eq(users.email, email)))
+      .where(and(eq(memberships.orgId, orgId), eq(users.email, email), activeMembership(now)))
       .limit(1);
     if (existing) throw new ConsoleError('already-member', 'That person is already a member.');
     await tx
@@ -272,9 +294,16 @@ export async function createInvite(
     const token = randomBytes(32).toString('base64url');
     const [invite] = await tx
       .insert(invites)
-      .values({ orgId, email, role, tokenHash: sha256(token), invitedBy: user.id, expiresAt: new Date(now.getTime() + INVITE_TTL_MS), createdAt: now })
+      .values({ orgId, email, role, accessUntil, tokenHash: sha256(token), invitedBy: user.id, expiresAt: new Date(now.getTime() + INVITE_TTL_MS), createdAt: now })
       .returning({ id: invites.id });
-    await audit(tx, { actor: user.id, action: 'invite.create', orgId, targetType: 'invite', targetId: invite.id, details: { role } });
+    await audit(tx, {
+      actor: user.id,
+      action: 'invite.create',
+      orgId,
+      targetType: 'invite',
+      targetId: invite.id,
+      details: accessUntil ? { role, access_until: accessUntil.toISOString() } : { role },
+    });
     return { id: invite.id, token, email, orgName: org.name };
   });
 }
@@ -345,7 +374,12 @@ export async function acceptInvite(db: Db, user: ConsoleUser, by: { token: strin
       .where(and(eq(invites.id, invite.id), isNull(invites.acceptedAt), isNull(invites.revokedAt), gt(invites.expiresAt, now)))
       .returning({ id: invites.id });
     if (used.length === 0) throw new ConsoleError('not-found', 'This invite has expired or was already used. Ask for a new one.');
-    await tx.insert(memberships).values({ orgId: invite.orgId, userId: user.id, role: invite.role }).onConflictDoNothing();
+    // An ended membership (a provider whose access ran out) makes way for the new one.
+    await tx.delete(memberships).where(and(eq(memberships.orgId, invite.orgId), eq(memberships.userId, user.id), lte(memberships.expiresAt, now)));
+    await tx
+      .insert(memberships)
+      .values({ orgId: invite.orgId, userId: user.id, role: invite.role, expiresAt: invite.role === 'provider' ? invite.accessUntil : null })
+      .onConflictDoNothing();
     await audit(tx, { actor: user.id, action: 'invite.accept', orgId: invite.orgId, targetType: 'invite', targetId: invite.id, details: { role: invite.role } });
     return invite.orgId;
   });
@@ -403,7 +437,7 @@ export async function claimLicense(db: Db, user: ConsoleUser, orgId: string, ses
   const email = verifiedEmail(user);
   if (!email) throw new ConsoleError('unverified', 'Your email address is not verified.');
   await db.transaction(async (tx) => {
-    await requireOrg(tx, user.id, orgId);
+    await requireOrg(tx, user.id, orgId, { staff: true });
     const [row] = await tx
       .update(licenses)
       .set({ orgId })

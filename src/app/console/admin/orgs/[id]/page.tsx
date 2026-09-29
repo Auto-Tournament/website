@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { roleLabel } from '@/lib/console/roles';
 import { notFound } from 'next/navigation';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
@@ -22,7 +23,6 @@ const { color } = tokens;
 export const metadata: Metadata = { title: 'Organization' };
 export const dynamic = 'force-dynamic';
 
-const roleLabel = { owner: 'Owner', admin: 'Admin', member: 'Member' } as const;
 
 export default async function AdminOrg({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin();

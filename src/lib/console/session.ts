@@ -8,6 +8,7 @@ import { orgsWithPendingClaimed } from './checkoutOrg';
 import { getOrg, type ConsoleUser, type Org, type OrgSummary } from './orgs';
 import type { Role } from '@/lib/db/schema';
 import { consoleHref, consoleOrigin } from './urls';
+import { isStaff } from './roles';
 
 /** The signed-in user, or null (also when the console is off or the database can't be reached). Once per request. */
 export const currentUser = cache(async (): Promise<ConsoleUser | null> => {
@@ -57,10 +58,15 @@ export async function currentOrg(user: ConsoleUser): Promise<CurrentOrg | null> 
   return org ? { org, orgs } : null;
 }
 
-/** For pages inside an organization: the user and org, or off to sign-in / the welcome page. */
-export async function requireOrg(): Promise<{ user: ConsoleUser } & CurrentOrg> {
+/**
+ * For pages inside an organization: the user and org, or off to sign-in / the
+ * welcome page. With `staff`, a server provider (licenses and keys only) is
+ * sent to the Licenses page instead.
+ */
+export async function requireOrg(options: { staff?: boolean } = {}): Promise<{ user: ConsoleUser } & CurrentOrg> {
   const user = await requireUser();
   const current = await currentOrg(user);
   if (!current) redirect(consoleHref('/welcome'));
+  if (options.staff && !isStaff(current.org.role)) redirect(consoleHref('/licenses'));
   return { user, ...current };
 }

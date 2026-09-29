@@ -1,7 +1,7 @@
 import { lt, or, and, eq, isNotNull, ne, sql } from 'drizzle-orm';
 import type { Db } from './client';
 import { prunePasskeyRows } from '../admin/passkeys';
-import { auditLog, invites, leads, refundRequests, sessions, verificationTokens } from './schema';
+import { auditLog, invites, leads, memberships, refundRequests, sessions, verificationTokens } from './schema';
 
 /** How long the console keeps what it no longer needs (also in the privacy policy, section 4). */
 export const AUDIT_RETENTION_DAYS = 2 * 365;
@@ -26,12 +26,21 @@ export function monthsBefore(now: Date, months: number): Date {
  * Deletes expired sessions and sign-in links, invites 30 days after they were
  * used, withdrawn or expired, activity log entries older than 2 years, and
  * contact form leads 24 months after their last activity, refund requests
- * whose confirmation link expired, and finished ones after 30 days.
+ * whose confirmation link expired, and finished ones after 30 days, and
+ * memberships whose access ended (server providers), each with an activity
+ * log entry.
  * Runs at startup and then daily (src/lib/db/startup.ts).
  */
 export async function pruneExpired(db: Db, now = new Date()): Promise<Record<string, number>> {
   const daysAgo = (days: number) => new Date(now.getTime() - days * 24 * 60 * 60_000);
   const inviteCutoff = daysAgo(INVITE_RETENTION_DAYS);
+  // Ended memberships first, with the activity log entry, so the audit prune below never races them.
+  const ended = await db.delete(memberships).where(lt(memberships.expiresAt, now)).returning({ orgId: memberships.orgId, userId: memberships.userId, role: memberships.role });
+  if (ended.length > 0) {
+    await db.insert(auditLog).values(
+      ended.map((m) => ({ actorUserId: null, action: 'member.expire', orgId: m.orgId, targetType: 'user', targetId: m.userId, details: { role: m.role } })),
+    );
+  }
   const [s, v, i, a, l, r, p] = await Promise.all([
     db.delete(sessions).where(lt(sessions.expires, now)).returning({ x: sessions.userId }),
     db.delete(verificationTokens).where(lt(verificationTokens.expires, now)).returning({ x: verificationTokens.expires }),
@@ -58,5 +67,5 @@ export async function pruneExpired(db: Db, now = new Date()): Promise<Record<str
       .returning({ x: refundRequests.id }),
     prunePasskeyRows(db, now),
   ]);
-  return { sessions: s.length, signInLinks: v.length, invites: i.length, auditLog: a.length, leads: l.length, refundRequests: r.length, passkeyRows: p };
+  return { sessions: s.length, signInLinks: v.length, invites: i.length, auditLog: a.length, leads: l.length, refundRequests: r.length, passkeyRows: p, memberships: ended.length };
 }

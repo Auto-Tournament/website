@@ -208,7 +208,7 @@ export async function assignCheckoutOrg(
 /** The buyer becomes the owner: now, when they have a verified account, else once they sign in with that address. */
 async function makeOwner(tx: Tx, orgId: string, buyerId: string | null, hash: string, sessionId: string): Promise<void> {
   if (buyerId) {
-    await tx.insert(memberships).values({ orgId, userId: buyerId, role: 'owner' }).onConflictDoUpdate({ target: [memberships.orgId, memberships.userId], set: { role: 'owner' } });
+    await tx.insert(memberships).values({ orgId, userId: buyerId, role: 'owner' }).onConflictDoUpdate({ target: [memberships.orgId, memberships.userId], set: { role: 'owner', expiresAt: null } });
     await audit(tx, { actor: null, action: 'member.owner_from_checkout', orgId, targetType: 'user', targetId: buyerId, details: { session: sessionId } });
     return;
   }
@@ -231,7 +231,7 @@ export async function claimPendingOwnership(db: Db, userId: string): Promise<str
   return db.transaction(async (tx) => {
     const claimed = await tx.delete(orgPendingOwners).where(eq(orgPendingOwners.emailHash, hash)).returning();
     for (const p of claimed) {
-      await tx.insert(memberships).values({ orgId: p.orgId, userId, role: 'owner' }).onConflictDoUpdate({ target: [memberships.orgId, memberships.userId], set: { role: 'owner' } });
+      await tx.insert(memberships).values({ orgId: p.orgId, userId, role: 'owner' }).onConflictDoUpdate({ target: [memberships.orgId, memberships.userId], set: { role: 'owner', expiresAt: null } });
       await audit(tx, { actor: userId, action: 'member.owner_from_checkout', orgId: p.orgId, targetType: 'user', targetId: userId, details: { session: p.sessionId } });
     }
     return claimed.map((p) => p.orgId);
