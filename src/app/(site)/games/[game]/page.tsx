@@ -8,8 +8,8 @@ import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
-import { BadgeChip, CommercialUse, Crumbs, LinkButton, ProductIcon, TextLink, ToolCard } from '@/components/product/ProductParts';
-import { findGame, gamePath, gamesWithPages, platform } from '@/content/catalog';
+import { BadgeChip, CommercialUse, Crumbs, FeatureGroups, LinkButton, ProductIcon, TextLink, ToolCard } from '@/components/product/ProductParts';
+import { findGame, gamePath, gamesWithPages, platform, readyUpFeatures, readyUpFeaturesIntro } from '@/content/catalog';
 import { links } from '@/components/links';
 
 const { color, radius } = tokens;
@@ -103,6 +103,8 @@ export default async function GamePage({ params }: { params: Promise<Params> }) 
             </Box>
           )}
         </Container>
+
+        {cs2 && <FeatureGroups intro={readyUpFeaturesIntro} groups={readyUpFeatures} />}
 
         <Container maxWidth="lg" component="section" aria-labelledby="platform-title" sx={{ py: { xs: 5, md: 8 } }}>
           <Box
