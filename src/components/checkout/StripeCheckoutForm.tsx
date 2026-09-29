@@ -15,7 +15,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
-import type { Stripe, StripeCheckoutSession } from '@stripe/stripe-js';
+import type { Stripe, StripeCheckoutAmount, StripeCheckoutSession } from '@stripe/stripe-js';
 import { CheckoutElementsProvider, PaymentElement, useCheckoutElements } from '@stripe/react-stripe-js/checkout';
 import { tokens } from '@/theme/tokens';
 import { stripeTaxId } from '@/lib/checkout';
@@ -27,14 +27,43 @@ const { color } = tokens;
 
 type Checkout = Extract<ReturnType<typeof useCheckoutElements>, { type: 'success' }>['checkout'];
 
-export function summaryOf(session: StripeCheckoutSession): CheckoutSummary {
+/**
+ * Minor units as a number. The types say `number`; the value crosses from
+ * Stripe's iframe, so coerce defensively (a "0" string must still count as 0).
+ */
+function minor(a: StripeCheckoutAmount): number {
+  const n = Number(a.minorUnitsAmount);
+  return Number.isFinite(n) ? Math.round(n) : NaN;
+}
+
+/**
+ * True when the buyer owes nothing: `total.total` (StripeCheckoutTotalSummary,
+ * after discounts and applied balance) is zero. Checks the minor units and,
+ * as a second source, Stripe's own formatted `amount` ("€0.00"). The SDK has
+ * no `paymentRequired` flag; `canConfirm` only says the session is complete
+ * enough to confirm, not whether a payment method is needed.
+ */
+export function isFreeOrder(session: Pick<StripeCheckoutSession, 'total'>): boolean {
+  const due = session.total.total;
+  const n = minor(due);
+  if (!Number.isNaN(n)) return n <= 0;
+  const digits = String(due.amount ?? '').replace(/[^0-9]/g, '');
+  return digits !== '' && /^0+$/.test(digits);
+}
+
+/** The session fields the form reads; the /dev/checkout mock builds exactly this shape. */
+export type SummarySession = Pick<StripeCheckoutSession, 'id' | 'currency' | 'email' | 'discountAmounts' | 'total'>;
+
+export function summaryOf(session: SummarySession): CheckoutSummary {
   const discount = session.discountAmounts?.find((d) => d.promotionCode) ?? session.discountAmounts?.[0] ?? null;
+  const free = isFreeOrder(session);
   return {
     sessionId: session.id,
     currency: session.currency,
-    subtotal: session.total.subtotal.minorUnitsAmount,
-    discount: session.total.discount.minorUnitsAmount,
-    total: session.total.total.minorUnitsAmount,
+    subtotal: minor(session.total.subtotal),
+    discount: minor(session.total.discount),
+    total: free ? 0 : minor(session.total.total),
+    free,
     promotionCode: discount?.promotionCode ?? null,
     email: session.email,
   };
