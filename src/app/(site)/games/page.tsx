@@ -7,7 +7,6 @@ import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
-import { Footer, Nav } from '@/components/sections';
 import { BadgeChip, TextLink } from '@/components/product/ProductParts';
 import { gamePath, games, gamesWithPages, repo } from '@/content/catalog';
 
@@ -29,7 +28,6 @@ export default function GamesPage() {
   const reported = games.filter((g) => !g.tools?.length);
   return (
     <>
-      <Nav />
       <main>
         <Container maxWidth="lg" component="section" sx={{ pt: { xs: 8, md: 14 }, pb: { xs: 5, md: 8 } }}>
           <Typography variant="h1" sx={{ fontSize: 'clamp(2.5rem, 3.4vw + 1rem, 4.25rem)', maxWidth: '16ch' }}>
@@ -115,7 +113,6 @@ export default function GamesPage() {
           </Typography>
         </Container>
       </main>
-      <Footer />
     </>
   );
 }

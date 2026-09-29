@@ -4,7 +4,6 @@
  */
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { Footer, Nav } from '@/components/sections';
 import { Blocks, CommercialUse, MoreForGame, MoreLinks, ProductHero } from '@/components/product/ProductParts';
 import { findTool, gamePath, gamesWithPages, toolPath } from '@/content/catalog';
 
@@ -39,7 +38,6 @@ export default async function ToolPage({ params }: { params: Promise<Params> }) 
   const { game, tool } = found;
   return (
     <>
-      <Nav />
       <main>
         <ProductHero
           product={tool}
@@ -54,7 +52,6 @@ export default async function ToolPage({ params }: { params: Promise<Params> }) 
         <MoreForGame game={game} current={tool.slug} />
         <MoreLinks items={tool.more} />
       </main>
-      <Footer />
     </>
   );
 }

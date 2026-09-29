@@ -27,7 +27,7 @@ describe('Buy entry points', () => {
   });
 
   it('the pricing page and the console Buy page wrap them in CheckoutProvider with the runtime key', () => {
-    for (const file of ['app/pricing/page.tsx', 'app/console/buy/page.tsx']) {
+    for (const file of ['app/(site)/pricing/page.tsx', 'app/console/buy/page.tsx']) {
       const code = read(file);
       expect(code, file).toContain('<CheckoutProvider publishableKey=');
       expect(code, file).toContain('stripePublishableKey()');

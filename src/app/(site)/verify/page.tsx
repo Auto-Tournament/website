@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
-import { Footer, Nav } from '@/components/sections';
 import { VerifyForm } from '@/components/VerifyForm';
 import { LICENSE_ID } from '@/lib/license/verify';
 
@@ -23,7 +22,6 @@ export default async function VerifyIndex({ searchParams }: { searchParams: Prom
   if (LICENSE_ID.test(id)) redirect(`/verify/${id}`);
   return (
     <>
-      <Nav />
       <main>
         <Container maxWidth="md" component="section" sx={{ pt: { xs: 8, md: 14 }, pb: { xs: 8, md: 12 }, color: color.ink2 }}>
           <Typography variant="h1" sx={{ fontSize: 'clamp(2.25rem, 3vw + 1rem, 3.5rem)', color: color.ink }}>
@@ -35,7 +33,6 @@ export default async function VerifyIndex({ searchParams }: { searchParams: Prom
           <VerifyForm defaultValue={id.slice(0, 60)} />
         </Container>
       </main>
-      <Footer />
     </>
   );
 }

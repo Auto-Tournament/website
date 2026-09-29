@@ -5,7 +5,6 @@ import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
-import { Footer, Nav } from '@/components/sections';
 import { DetailList } from '@/components/LicenseKeyView';
 import { VerifyForm } from '@/components/VerifyForm';
 import { links } from '@/components/links';
@@ -61,7 +60,6 @@ export default async function VerifyLicense({ params }: { params: Promise<{ id: 
 
   return (
     <>
-      <Nav />
       <main>
         <Container maxWidth="md" component="section" sx={{ pt: { xs: 8, md: 14 }, pb: { xs: 8, md: 12 }, color: color.ink2 }}>
           <Typography variant="h1" sx={{ fontSize: 'clamp(2.25rem, 3vw + 1rem, 3.5rem)', color: color.ink }}>
@@ -103,7 +101,6 @@ export default async function VerifyLicense({ params }: { params: Promise<{ id: 
           )}
         </Container>
       </main>
-      <Footer />
     </>
   );
 }

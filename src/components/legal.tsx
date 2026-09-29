@@ -2,7 +2,6 @@ import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import { tokens } from '@/theme/tokens';
-import { Footer, Nav } from '@/components/sections';
 import { legalLastUpdated, seller } from '@/components/seller';
 
 const { color, radius } = tokens;
@@ -15,7 +14,6 @@ const { color, radius } = tokens;
 export function LegalPage({ title, intro, children }: { title: string; intro?: React.ReactNode; children: React.ReactNode }) {
   return (
     <>
-      <Nav />
       <main>
         <Container
           maxWidth="md"
@@ -45,7 +43,6 @@ export function LegalPage({ title, intro, children }: { title: string; intro?: R
           {children}
         </Container>
       </main>
-      <Footer />
     </>
   );
 }
