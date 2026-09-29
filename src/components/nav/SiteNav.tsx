@@ -10,6 +10,9 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import { ArrowUpRight } from '@phosphor-icons/react/dist/csr/ArrowUpRight';
 import { CaretDown } from '@phosphor-icons/react/dist/csr/CaretDown';
+import { CheckCircle } from '@phosphor-icons/react/dist/csr/CheckCircle';
+import { Crosshair } from '@phosphor-icons/react/dist/csr/Crosshair';
+import { HardDrives } from '@phosphor-icons/react/dist/csr/HardDrives';
 import { BookOpen } from '@phosphor-icons/react/dist/csr/BookOpen';
 import { ChatCircle } from '@phosphor-icons/react/dist/csr/ChatCircle';
 import { DiscordLogo } from '@phosphor-icons/react/dist/csr/DiscordLogo';
@@ -46,8 +49,11 @@ const HOVER_CLICK_GRACE = 400;
 const PANEL_GAP = 8;
 
 const icons: Record<NavIcon, typeof Trophy> = {
-  features: Trophy,
+  platform: Trophy,
   games: GameController,
+  cs2: Crosshair,
+  readyUp: CheckCircle,
+  csm: HardDrives,
   docs: BookOpen,
   github: GithubLogo,
   discord: DiscordLogo,
@@ -221,7 +227,7 @@ function focusables(root: HTMLElement | null): HTMLElement[] {
 type Geometry = { left: number; top: number; width: number; height: number };
 
 /*
- * N5 floating pill with an N11 panel: Product ▾ · Resources ▾, then the CS2 status and Install
+ * N5 floating pill with an N11 panel: Product ▾ · Games ▾ · Resources ▾, then the CS2 status and Install
  * in the bar; the two menus share one panel that moves under the trigger,
  * resizes to the menu, and slides the contents in the direction of travel.
  * Below md the bar collapses to a menu button that opens a full-width sheet.
@@ -524,7 +530,6 @@ export function SiteNav({ site = '', account }: { site?: string; account?: NavAc
     );
   };
 
-  const [product, resources] = menus;
   const panelOpen = open !== null;
   const shownIndex = menus.findIndex((m) => m.id === shown);
   const slide = (moving: boolean) => (moving ? `${duration.base}ms ${ease.out}` : '0s');
@@ -569,8 +574,9 @@ export function SiteNav({ site = '', account }: { site?: string; account?: NavAc
 
         <Box component="nav" aria-label="Main" sx={{ display: { xs: 'none', md: 'block' } }}>
           <Box component="ul" ref={barRef} onKeyDown={onBarKeyDown} sx={{ listStyle: 'none', m: 0, p: 0, display: 'flex', alignItems: 'center', gap: 0.25, fontSize: '0.875rem' }}>
-            <li>{trigger(product)}</li>
-            <li>{trigger(resources)}</li>
+            {menus.map((m) => (
+              <li key={m.id}>{trigger(m)}</li>
+            ))}
           </Box>
         </Box>
 

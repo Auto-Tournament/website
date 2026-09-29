@@ -27,6 +27,10 @@ export function Footer({ site = '', consoleHome }: { site?: string; consoleHome?
       <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 2, mt: 6, color: color.muted, fontSize: '0.875rem' }}>
         <Box component="nav" id="site-links" aria-label="Footer" sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
           {[
+            ['Platform', href('/platform')],
+            ['Games', href('/games')],
+            ['Ready Up', href('/games/cs2/ready-up')],
+            ['CS2 Server Manager', href('/games/cs2/csm')],
             ['Pricing', href(links.pricing)],
             ['CS2 compatibility', href(links.compatibility)],
             ['Check a license', href(links.verify)],

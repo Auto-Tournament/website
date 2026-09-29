@@ -15,6 +15,7 @@ import { ProfileCard } from './cards/ProfileCard';
 import { AtIcon } from './AtIcon';
 import { CodeBlock } from './CodeBlock';
 import { links } from './links';
+import { installCommands } from '@/content/install';
 
 const { color, radius } = tokens;
 
@@ -177,13 +178,33 @@ export function Games() {
         <Typography sx={{ color: color.ink2 }}>
           Games plug in as modules. CS2 ships built in. The rest are planned, starting with games that let you host servers or run lobbies through an API.
         </Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 1 }}>
+          <Button variant="outlined" href="/games">
+            Games we support
+          </Button>
+          <Button variant="outlined" href="/games/cs2">
+            CS2 plugins and tools
+          </Button>
+        </Box>
       </Box>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 14rem), 1fr))', gap: 2, mt: 6 }}>
         {games.map((g) => (
           <Box
-            component="article"
+            component={g.built ? 'a' : 'article'}
+            href={g.built ? '/games/cs2' : undefined}
             key={g.name}
-            sx={{ bgcolor: color.paper2, border: `1px solid ${g.built ? color.accent : color.rule}`, borderRadius: `${radius.lg}px`, p: 3, display: 'grid', gap: 1, alignContent: 'start' }}
+            sx={{
+              bgcolor: color.paper2,
+              border: `1px solid ${g.built ? color.accent : color.rule}`,
+              borderRadius: `${radius.lg}px`,
+              p: 3,
+              display: 'grid',
+              gap: 1,
+              alignContent: 'start',
+              color: 'inherit',
+              textDecoration: 'none',
+              ...(g.built && { '&:hover': { bgcolor: color.paper3 } }),
+            }}
           >
             <Chip size="small" color={g.built ? 'primary' : 'default'} label={g.built ? 'Built in' : 'Planned'} sx={{ justifySelf: 'start' }} />
             <Typography variant="h3">{g.name}</Typography>
@@ -194,17 +215,6 @@ export function Games() {
     </Container>
   );
 }
-
-const installCommands = `mkdir autotournament && cd autotournament
-curl -fsSLO https://autotournament.gg/docker-compose.yml
-cat > .env <<EOF
-SESSION_SECRET=$(openssl rand -base64 32)
-SERVER_TOKEN=$(openssl rand -base64 24 | tr -d '=+/')
-FRONTEND_BASE_URL=http://localhost:3069
-STEAM_API_KEY=
-AUTH_STEAM_ENABLED=true
-EOF
-docker compose up -d`;
 
 export function Install() {
   return (
