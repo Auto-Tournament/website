@@ -68,6 +68,7 @@ export default async function AdminLicense({ params }: { params: Promise<{ id: s
   const rows: [string, React.ReactNode][] = [
     ['Status', <Badge key="s" tone={statusTone[status]}>{adminStatusLabel[status]}{r.revoked_at ? ` ${day(r.revoked_at)}` : ''}</Badge>],
     ['Licensee', p.licensee ?? 'Not given'],
+    ['Buyer', r.buyer_name ?? 'Not given'],
     ['Pack', `${packName(p)}, up to ${p.max_servers} servers`],
     ['Kind', kindNames[p.kind]],
     ['License duration', licenseDurationText(p)],

@@ -81,6 +81,16 @@ describe('issuing against the database', () => {
     expect(gone).not.toBeNull();
   });
 
+  it('stores the buyer name from checkout metadata on the license row, never in the payload or the public check', async () => {
+    const result = await issueForSession(session('cs_live_buyer', { buyer_name: 'Kari Nordmann' }));
+    if (result.status !== 'issued') throw new Error('not issued');
+    const stored = await licenseStore().bySession('cs_live_buyer');
+    expect(stored?.buyer_name).toBe('Kari Nordmann');
+    expect(JSON.stringify(stored?.payload)).not.toContain('Kari Nordmann');
+    const check = publicCheck(await licenseStore().byLicenseId(result.record.payload.id), '2026-10-01');
+    expect(JSON.stringify(check)).not.toContain('Kari Nordmann');
+  });
+
   it('refuses unpaid and foreign sessions', async () => {
     expect((await issueForSession({ ...session('cs_live_x'), payment_status: 'unpaid' } as Stripe.Checkout.Session)).status).toBe('not_paid');
     expect((await issueForSession({ ...session('cs_live_y'), metadata: {} } as Stripe.Checkout.Session)).status).toBe('not_license');
