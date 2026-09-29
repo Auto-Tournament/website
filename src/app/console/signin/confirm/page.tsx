@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import { PageTitle } from '@/components/console/ConsoleShell';
+import { AutoSubmitForm } from '@/components/console/AutoSubmitForm';
 import { consoleHref, consoleUrl } from '@/lib/console/urls';
 
-// Where the emailed sign-in link lands. Opening it does nothing by itself (mail
-// scanners that open links don't use it up): the button sends the token to
-// Auth.js's email callback, which signs in and comes back to the console.
+// Where the emailed sign-in link lands. The server render does nothing by
+// itself (mail scanners that fetch links don't use the token up); in a real
+// browser the form submits itself to Auth.js's email callback, which signs in
+// and comes back to the console. The button is the fallback without scripts.
 export const metadata: Metadata = {
   title: 'Sign in',
   // The URL carries the sign-in token: send only the origin onwards.
@@ -23,14 +24,14 @@ export default async function ConfirmSignIn({ searchParams }: { searchParams: Pr
     <>
       <PageTitle>Sign in</PageTitle>
       {token ? (
-        <Box component="form" method="get" action="/api/auth/callback/email" sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
+        <AutoSubmitForm action="/api/auth/callback/email">
           <input type="hidden" name="token" value={token} />
           <input type="hidden" name="callbackUrl" value={consoleUrl('/')} />
-          <Typography>Continue to sign in to the Auto Tournament console.</Typography>
+          <Typography role="status">Signing you in…</Typography>
           <Button type="submit" variant="contained">
             Sign in
           </Button>
-        </Box>
+        </AutoSubmitForm>
       ) : (
         <Typography>
           This sign-in link isn&apos;t valid. <a href={consoleHref('/signin')}>Ask for a new one</a>.
