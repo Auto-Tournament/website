@@ -236,6 +236,21 @@ export const platform: Product = {
       links: [{ label: 'Webhooks and teams API', href: `${docs}/reference/webhooks` }],
     },
     {
+      id: 'sign-in',
+      title: 'Sign in with the account you already have',
+      badge: in30,
+      body: [
+        'Players sign in with Steam, Discord, Google, GitHub, Twitch or Epic Games. Or use your own login server: Keycloak, Authentik, Microsoft Entra ID or any other OpenID Connect server, with the button named after your event (“Sign in with NTLAN”).',
+        'Steam is not required. A player can join with any account, and a game that needs a certain one asks for it: Steam for CS2 and Dota 2, Epic Games for Rocket League and Fortnite.',
+      ],
+      points: [
+        'Turned on in Settings, no restart, with a test button and a guide for each one',
+        'Players link more accounts on their own and see which account each one is',
+        'A local admin login with two-factor codes, for when nothing else works',
+      ],
+      links: [{ label: 'Sign-in guides', href: `${docs}/guides/sign-in` }],
+    },
+    {
       id: 'games',
       title: 'Games as modules',
       body: [
