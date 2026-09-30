@@ -64,7 +64,7 @@ import { useCheckout } from '@/components/checkout/Checkout';
 
 const { color, radius, ease, duration } = tokens;
 
-const cs2PluginRepo = 'https://github.com/Auto-Tournament/cs2-plugin';
+const cs2PluginRepo = 'https://github.com/Auto-Tournament/matchzy-enhanced';
 
 const underline = { color: 'inherit', textDecoration: 'underline', textDecorationColor: color.rule, textUnderlineOffset: '0.15em' } as const;
 

@@ -142,7 +142,7 @@ export default async function GamePage({ params }: { params: Promise<Params> }) 
               ? ['Spares count too. The license is sized by how many game servers you run, and CS2 Server Manager counts every server it set up.']
               : undefined
           }
-          mit={cs2 ? 'The Auto Tournament CS2 plugin is MIT licensed and never needs a license on its own.' : undefined}
+          mit={cs2 ? 'MatchZy Enhanced is MIT licensed and never needs a license on its own.' : undefined}
         />
       </main>
     </>

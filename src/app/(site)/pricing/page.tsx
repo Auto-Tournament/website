@@ -194,7 +194,7 @@ const licenseGroups: {
     mit: true,
     summary: 'Free for any use, including paid work. No license needed.',
     items: [
-      { name: 'MatchZy Enhanced', href: 'https://github.com/Auto-Tournament/cs2-plugin', note: 'CS2 plugin, now named Auto Tournament CS2' },
+      { name: 'MatchZy Enhanced', href: 'https://github.com/Auto-Tournament/matchzy-enhanced', note: 'CS2 match plugin (MIT)' },
       { name: 'Auto Tournament platform 2.4.15 and older', note: 'released as MatchZy Auto Tournament' },
     ],
   },
@@ -206,7 +206,7 @@ function faqFor(packs: readonly Pack[]): { q: string; a: React.ReactNode }[] {
   return [
     {
       q: 'Do I need a license if I only run MatchZy Enhanced?',
-      a: 'No. MatchZy Enhanced (now named Auto Tournament CS2) is MIT licensed and free for any use, including paid work. Ready Up is a different plugin: it is under PolyForm Noncommercial, so commercial use of Ready Up needs a license.',
+      a: 'No. MatchZy Enhanced is MIT licensed and free for any use, including paid work. Ready Up is a different plugin: it is under PolyForm Noncommercial, so commercial use of Ready Up needs a license.',
     },
     {
       q: 'I only use CS2 Server Manager with MatchZy Enhanced. Do I need a license?',

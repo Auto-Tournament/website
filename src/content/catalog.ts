@@ -83,7 +83,7 @@ export const repo = {
   platform: 'https://github.com/Auto-Tournament/auto-tournament',
   readyUp: 'https://github.com/Auto-Tournament/ready-up',
   csm: 'https://github.com/Auto-Tournament/cs2-server-manager',
-  cs2Plugin: 'https://github.com/Auto-Tournament/cs2-plugin',
+  cs2Plugin: 'https://github.com/Auto-Tournament/matchzy-enhanced',
   packs: 'https://github.com/Auto-Tournament/packs',
 };
 
@@ -94,7 +94,7 @@ export const changelog = {
   platform: `${docs}/reference/changelog/platform`,
   readyUp: `${docs}/reference/changelog/ready-up`,
   csm: `${docs}/reference/changelog/csm`,
-  cs2Plugin: `${docs}/reference/changelog/cs2-plugin`,
+  cs2Plugin: `${docs}/reference/changelog/matchzy-enhanced`,
 };
 
 const readyUpInstall = `# from the server root (the folder that contains game/)
@@ -314,9 +314,9 @@ const readyUp: Product = {
     },
     {
       id: 'parity',
-      title: 'Replaces the Auto Tournament CS2 plugin',
+      title: 'Replaces the MatchZy Enhanced plugin',
       body: [
-        'Ready Up does the job of the older Auto Tournament CS2 plugin, with the same chat commands, so players don’t have to learn anything new. Every row of the parity list is done: 101 of 101. Most are covered by tests; playing it at real events is what is left.',
+        'Ready Up does the job of the older MatchZy Enhanced plugin, with the same chat commands, so players don’t have to learn anything new. Every row of the parity list is done: 101 of 101. Most are covered by tests; playing it at real events is what is left.',
       ],
       points: [
         'Ready-up (.r / .ur) with a countdown, knife round and side pick',
@@ -402,7 +402,7 @@ const csm: Product = {
     'CS2 Server Manager (csm) runs many CS2 servers on one Linux machine: one-command onboarding to Auto Tournament, instance mode, versioned CS2 updates and Ready Up updates between matches.',
   facts: [
     { label: 'Runs on', value: 'Linux, amd64 and arm64' },
-    { label: 'Plugin', value: 'Ready Up, or the older Auto Tournament CS2 stack' },
+    { label: 'Plugin', value: 'Ready Up, or the older MatchZy Enhanced stack' },
     { label: 'Updates', value: 'Never in the middle of a match' },
     { label: 'Interface', value: 'Terminal UI and command line' },
   ],
@@ -776,7 +776,7 @@ export const games: Game[] = [
     tools: [readyUp, csm, skins, midas],
     others: [
       {
-        name: 'Auto Tournament CS2',
+        name: 'MatchZy Enhanced',
         line: 'The older CS2 plugin, on Metamod and CounterStrikeSharp. What Auto Tournament 2.x talks to; 3.0 moves to Ready Up.',
         href: repo.cs2Plugin,
         badge: { label: 'MIT, free for any use', tone: 'free' },

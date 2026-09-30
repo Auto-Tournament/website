@@ -30,10 +30,12 @@ describe('product catalog', () => {
     }
   });
 
-  it('follows the wording rules: no "full price", no MatchZy branding', () => {
+  it('follows the wording rules: no "full price", no MatchZy branding except the plugin name', () => {
     const text = JSON.stringify({ platform, games, licensing });
     expect(text).not.toMatch(/full price/i);
-    expect(text).not.toMatch(/matchzy/i);
+    // "MatchZy Enhanced" is the older plugin's name (repo matchzy-enhanced);
+    // the platform itself is never MatchZy-branded again.
+    expect(text.replace(/matchzy[ -]enhanced/gi, '')).not.toMatch(/matchzy/i);
     expect(text).not.toMatch(/personal use/i);
     expect(licensing.headline).toBe('Free for non-commercial use');
   });

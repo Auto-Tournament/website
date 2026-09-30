@@ -69,7 +69,7 @@ export default async function Terms() {
         </li>
       </ul>
       <p>
-        MatchZy Enhanced (now named Auto Tournament CS2) is MIT licensed and needs no license. Selling Auto Tournament as a service (hosting or resale) isn&apos;t
+        MatchZy Enhanced is MIT licensed and needs no license. Selling Auto Tournament as a service (hosting or resale) isn&apos;t
         covered by these terms and needs a separate written agreement.
       </p>
 
